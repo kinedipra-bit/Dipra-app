@@ -90,13 +90,6 @@ function mapSesion(s) {
   };
 }
 
-async function insertAndGetIds(table, rows) {
-  if (rows.length === 0) return [];
-  const { data, error } = await supabase.from(table).insert(rows).select("id");
-  if (error) throw new Error(`Insert en ${table} falló: ${error.message}`);
-  return data.map((r) => r.id);
-}
-
 async function main() {
   const seed = await extractLegacySeed();
   console.log(`Migrando ${seed.clients.length} clientes...`);

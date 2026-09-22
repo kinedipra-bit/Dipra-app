@@ -1,26 +1,83 @@
 @import "tailwindcss";
 
+/*
+ * Paleta e identidad visual de DIPRA, migrada 1:1 desde useDipraStyles()
+ * en dipra-app.jsx (el prototipo la inyectaba como <style> a mano porque
+ * el sandbox de artefactos no compilaba clases arbitrarias de Tailwind;
+ * acá ya no hace falta ese workaround, pero se mantienen los mismos
+ * nombres de utilidad `.dp-*` para poder portar JSX sin reescribir clases).
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --dp-bg-app: #f3f6f2;
+  --dp-ink: #12161b;
+  --dp-surface: #ffffff;
+
+  --dp-brand: #1e8449;
+  --dp-brand-hover: #14622f;
+  --dp-amber: #c9871d;
+  --dp-alert: #d14343;
+  --dp-lime: #a8cc3c;
+
+  --dp-sidebar-bg: #0e1b14;
+  --dp-muted: #7a857f;
+  --dp-body: #4a534f;
+  --dp-text-faint: #9aa39c;
+  --dp-text-sidebar-muted: #8fae9c;
+  --dp-text-nav: #b9cfc0;
+  --dp-text-tagline: #5b655f;
+  --dp-text-heading: #0e1210;
+
+  --dp-scrim: rgba(0, 0, 0, 0.3);
+  --dp-bg-faint: rgba(0, 0, 0, 0.05);
+  --dp-bg-white-5: rgba(255, 255, 255, 0.05);
+  --dp-bg-white-10: rgba(255, 255, 255, 0.1);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: "Space Grotesk", sans-serif;
+  --font-sans: "Inter", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--dp-bg-app);
+  color: var(--dp-ink);
+  font-family: var(--font-sans);
+}
+
+.dp-bg-app { background-color: var(--dp-bg-app); }
+.dp-ink { color: var(--dp-ink); }
+.dp-bg-ink { background-color: var(--dp-ink); }
+.dp-surface { background-color: var(--dp-surface); }
+
+.dp-text-brand { color: var(--dp-brand); }
+.dp-bg-brand { background-color: var(--dp-brand); }
+.dp-bg-brand:hover { background-color: var(--dp-brand-hover); }
+.dp-border-brand { border-color: var(--dp-brand); }
+
+.dp-text-amber { color: var(--dp-amber); }
+.dp-bg-amber { background-color: var(--dp-amber); }
+.dp-border-amber { border-color: var(--dp-amber); }
+
+.dp-alert { color: var(--dp-alert); }
+.dp-bg-alert { background-color: var(--dp-alert); }
+.dp-border-alert { border-color: var(--dp-alert); }
+
+.dp-border-lime { border-color: var(--dp-lime); }
+
+.dp-muted { color: var(--dp-muted); }
+.dp-body { color: var(--dp-body); }
+.dp-text-faint { color: var(--dp-text-faint); }
+.dp-text-sidebar-muted { color: var(--dp-text-sidebar-muted); }
+.dp-text-nav { color: var(--dp-text-nav); }
+.dp-text-tagline { color: var(--dp-text-tagline); }
+.dp-text-heading { color: var(--dp-text-heading); }
+
+.dp-bg-scrim { background-color: var(--dp-scrim); }
+.dp-bg-faint { background-color: var(--dp-bg-faint); }
+.dp-bg-white-5 { background-color: var(--dp-bg-white-5); }
+.dp-bg-white-10 { background-color: var(--dp-bg-white-10); }
+
+.dp-gradient-access {
+  background: linear-gradient(135deg, var(--dp-brand), var(--dp-lime));
 }

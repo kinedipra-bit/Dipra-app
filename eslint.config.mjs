@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Prototipo de referencia, se va a borrar cuando termine la migración —
+    // no forma parte de la app y no vale la pena lintearlo.
+    "dipra-app.jsx",
   ]),
 ]);
 
