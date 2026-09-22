@@ -5,6 +5,7 @@ import { Avatar } from "@/components/Avatar";
 import type { Cliente } from "@/lib/dipra/types";
 import { DeleteClienteButton } from "./DeleteClienteButton";
 import { ClienteTabs } from "./ClienteTabs";
+import { CopyPortalLink } from "./CopyPortalLink";
 
 export default async function ClienteLayout({
   children,
@@ -40,6 +41,7 @@ export default async function ClienteLayout({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <CopyPortalLink portalToken={cliente.portal_token} />
           <Link
             href={`/agenda/nueva?clienteId=${cliente.id}&clienteNombre=${encodeURIComponent(cliente.nombre)}`}
             className="dp-bg-brand rounded-lg px-3 py-1.5 text-sm font-medium text-white"

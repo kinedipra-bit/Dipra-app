@@ -8,10 +8,12 @@ export function EscalaUnoADiez({
   value,
   onChange,
   invertido,
+  readOnly = false,
 }: {
   value: string;
-  onChange: (value: string) => void;
+  onChange?: (value: string) => void;
   invertido?: boolean;
+  readOnly?: boolean;
 }) {
   const numerico = value === "" ? null : Number(value);
 
@@ -24,10 +26,11 @@ export function EscalaUnoADiez({
           <button
             key={n}
             type="button"
-            onClick={() => onChange(String(n))}
+            disabled={readOnly}
+            onClick={() => onChange?.(String(n))}
             className={`flex h-7 w-7 items-center justify-center rounded-md font-mono text-xs font-medium transition-colors ${
               activo ? `${tono} text-white` : "dp-muted border border-black/10 hover:border-black/20"
-            }`}
+            } ${readOnly ? "cursor-default" : ""}`}
           >
             {n}
           </button>
