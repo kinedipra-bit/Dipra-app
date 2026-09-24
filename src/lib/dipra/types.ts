@@ -100,6 +100,10 @@ export interface EjercicioPlan {
   tipoCarga?: string;
   // Marca reps/series "por lado" (ej. "5 reps por brazo") en vez de bilateral.
   unilateral?: boolean;
+  // Distinto de `unilateral`: acá el peso cargado (kg o cada pesosSeries) es
+  // el de CADA implemento (ej. dos mancuernas de 7,5 kg cada una), así que
+  // el volumen real por repetición es el doble del número cargado.
+  pesoCadaUno?: boolean;
   link: string;
   rpe: string;
   rir: string;

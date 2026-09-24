@@ -20,23 +20,29 @@ type Ejercicio = {
   kg?: number | string;
   pesosSeries?: (number | string)[];
   unilateral?: boolean;
+  pesoCadaUno?: boolean;
 };
 type Bloque = { exercises: Ejercicio[] };
 type Dia = { bloques: Bloque[] };
 
 // Si `pesosSeries` tiene valores cargados, el volumen se calcula sumando
 // reps × cada peso de serie individual (una serie por entrada del array).
-// Si no, se usa la fórmula uniforme series × reps × kg. Un ejercicio
-// unilateral ("10 reps por lado") hace el doble de repeticiones reales
-// (una tanda por lado), así que se duplican las reps para el cálculo.
+// Si no, se usa la fórmula uniforme series × reps × kg.
+//
+// Dos formas distintas de "duplicar" que no son lo mismo:
+// - `unilateral` ("10 reps por lado"): se hacen el doble de repeticiones
+//   reales (una tanda por lado) → se duplican las reps.
+// - `pesoCadaUno` (ej. dos mancuernas de 7,5 kg cada una): el número
+//   cargado es el peso de CADA implemento, no el total → se duplica el kg.
 export function volumenEjercicio(e: Ejercicio): number {
   const repsBase = Number(e.reps) || 0;
   const reps = e.unilateral ? repsBase * 2 : repsBase;
+  const factorPeso = e.pesoCadaUno ? 2 : 1;
   const pesos = (e.pesosSeries ?? []).map((p) => Number(p) || 0).filter((p) => p > 0);
   if (pesos.length > 0) {
-    return pesos.reduce((sum, p) => sum + reps * p, 0);
+    return pesos.reduce((sum, p) => sum + reps * p * factorPeso, 0);
   }
-  return (Number(e.series) || 0) * reps * (Number(e.kg) || 0);
+  return (Number(e.series) || 0) * reps * (Number(e.kg) || 0) * factorPeso;
 }
 
 export function calcVolumenBloque(bloque: Bloque) {

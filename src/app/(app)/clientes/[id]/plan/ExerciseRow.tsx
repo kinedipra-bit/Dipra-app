@@ -167,23 +167,31 @@ export function ExerciseRow({
           </div>
         )}
 
-        {/* Kg (uniforme, o texto "12/14/16" si hay peso por serie cargado) */}
+        {/* Kg (uniforme, o texto "12/14/16" si hay peso por serie cargado; + badge "c/u" si es peso por implemento) */}
         {readOnly ? (
-          <span className="dp-body text-center font-mono text-sm">{kgTexto}</span>
+          <span className="dp-body flex items-center justify-center gap-1 text-center font-mono text-sm">
+            {kgTexto}
+            {ex.pesoCadaUno && <span className="dp-text-brand text-[10px] font-semibold">c/u</span>}
+          </span>
         ) : pesoPorSerieAbierto ? (
           <span
-            className="dp-muted text-center font-mono text-xs"
+            className="dp-muted flex items-center justify-center gap-1 text-center font-mono text-xs"
             title="Editando peso por serie más abajo"
           >
             por serie
+            {ex.pesoCadaUno && <span className="dp-text-brand text-[10px] font-semibold">c/u</span>}
           </span>
         ) : (
-          <input
-            type="number"
-            value={ex.kg}
-            onChange={(e) => onChange({ ...ex, kg: Number(e.target.value) })}
-            className="rounded-lg border border-black/10 px-2 py-1 text-center font-mono text-sm outline-none focus:dp-border-brand"
-          />
+          <div className="flex items-center gap-1">
+            <input
+              type="number"
+              value={ex.kg}
+              onChange={(e) => onChange({ ...ex, kg: Number(e.target.value) })}
+              style={{ minWidth: 40 }}
+              className="flex-1 rounded-lg border border-black/10 px-2 py-1 text-center font-mono text-sm outline-none focus:dp-border-brand"
+            />
+            {ex.pesoCadaUno && <span className="dp-text-brand shrink-0 text-[10px] font-semibold">c/u</span>}
+          </div>
         )}
 
         <span className="dp-muted text-right font-mono text-xs">{volumen.toLocaleString("es-CL")} kg</span>
@@ -248,7 +256,16 @@ export function ExerciseRow({
               onChange={(e) => onChange({ ...ex, unilateral: e.target.checked })}
               className="h-3 w-3"
             />
-            <span className="dp-muted text-[10px] font-medium">Unilateral (c/u)</span>
+            <span className="dp-muted text-[10px] font-medium">Unilateral (reps c/u)</span>
+          </label>
+          <label className="flex cursor-pointer items-center gap-1 select-none" title="Ej. dos mancuernas de 7,5 kg cada una — el volumen se calcula duplicando el kg cargado">
+            <input
+              type="checkbox"
+              checked={!!ex.pesoCadaUno}
+              onChange={(e) => onChange({ ...ex, pesoCadaUno: e.target.checked })}
+              className="h-3 w-3"
+            />
+            <span className="dp-muted text-[10px] font-medium">Peso c/u (2 mancuernas)</span>
           </label>
           {seriesCount > 1 && (
             <button
