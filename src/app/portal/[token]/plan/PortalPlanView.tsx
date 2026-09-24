@@ -76,14 +76,13 @@ export function PortalPlanView({
               {bloque.exercises.length > 0 && (
                 <div
                   className="dp-muted grid gap-2 pb-1 text-[10px] font-medium tracking-wide uppercase"
-                  style={{ gridTemplateColumns: "1.5fr 0.5fr 0.75fr 0.6fr 0.7fr auto" }}
+                  style={{ gridTemplateColumns: "1.3fr 0.5fr 0.8fr 1fr 0.9fr" }}
                 >
                   <span>Ejercicio</span>
                   <span className="text-center">Ser.</span>
                   <span className="text-center">Rep.</span>
                   <span className="text-center">Kg</span>
                   <span className="text-right">Vol.</span>
-                  <span />
                 </div>
               )}
 

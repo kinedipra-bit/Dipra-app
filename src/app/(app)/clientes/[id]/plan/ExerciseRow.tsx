@@ -102,9 +102,14 @@ export function ExerciseRow({
     ? (ex.pesosSeries ?? []).map((p) => Number(p) || 0).join("/")
     : String(ex.kg ?? 0);
 
+  // En modo solo-lectura (portal del cliente) no hay botón de eliminar, así
+  // que se usa una grilla propia sin esa columna y con más espacio para Kg
+  // (puede mostrar varios valores tipo "12/14/16/18") y Vol.
+  const gridTemplateColumns = readOnly ? "1.3fr 0.5fr 0.8fr 1fr 0.9fr" : "1.5fr 0.5fr 0.75fr 0.6fr 0.7fr auto";
+
   return (
     <div className="py-1.5">
-      <div className="grid items-center gap-2" style={{ gridTemplateColumns: "1.5fr 0.5fr 0.75fr 0.6fr 0.7fr auto" }}>
+      <div className="grid items-center gap-2" style={{ gridTemplateColumns }}>
         {readOnly ? (
           embedUrl ? (
             <button
