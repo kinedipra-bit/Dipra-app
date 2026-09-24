@@ -1,18 +1,30 @@
+import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { Cliente, PlanSemana, Sesion } from "@/lib/dipra/types";
+import { enmascararCorreo } from "@/lib/dipra/portalPin";
+import type { PlanSemana, Sesion } from "@/lib/dipra/types";
+import { obtenerClientePortal, sesionValidaPara } from "../acceso";
+import { PortalAcceso } from "../PortalAcceso";
 import { PortalPlanView } from "./PortalPlanView";
 
 export default async function PortalPlanPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
+  const cliente = await obtenerClientePortal(token);
+  if (!cliente) notFound();
+
+  if (!(await sesionValidaPara(cliente.id))) {
+    return (
+      <PortalAcceso
+        token={token}
+        nombre={cliente.nombre}
+        correoEnmascarado={cliente.correo ? enmascararCorreo(cliente.correo) : ""}
+        pinConfigurado={!!cliente.pinHash}
+      />
+    );
+  }
+
   const admin = createAdminClient();
 
-  const { data: cliente } = await admin
-    .from("clients")
-    .select("id, semana_activa_id")
-    .eq("portal_token", token)
-    .single<Pick<Cliente, "id" | "semana_activa_id">>();
-
-  if (!cliente?.semana_activa_id) {
+  if (!cliente.semana_activa_id) {
     return <p className="dp-muted text-sm">Todavía no tenés una rutina asignada.</p>;
   }
 

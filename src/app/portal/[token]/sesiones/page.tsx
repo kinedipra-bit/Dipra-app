@@ -1,18 +1,29 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { Cliente, PlanSemana } from "@/lib/dipra/types";
+import { enmascararCorreo } from "@/lib/dipra/portalPin";
+import type { PlanSemana } from "@/lib/dipra/types";
+import { obtenerClientePortal, sesionValidaPara } from "../acceso";
+import { PortalAcceso } from "../PortalAcceso";
 import { PortalNuevaSesionForm } from "./PortalNuevaSesionForm";
 
 export default async function PortalSesionesPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const admin = createAdminClient();
+  const cliente = await obtenerClientePortal(token);
+  if (!cliente) notFound();
 
-  const { data: cliente } = await admin
-    .from("clients")
-    .select("id, semana_activa_id")
-    .eq("portal_token", token)
-    .single<Pick<Cliente, "id" | "semana_activa_id">>();
-  if (!cliente) return <p className="dp-muted text-sm">Link inválido.</p>;
+  if (!(await sesionValidaPara(cliente.id))) {
+    return (
+      <PortalAcceso
+        token={token}
+        nombre={cliente.nombre}
+        correoEnmascarado={cliente.correo ? enmascararCorreo(cliente.correo) : ""}
+        pinConfigurado={!!cliente.pinHash}
+      />
+    );
+  }
+
+  const admin = createAdminClient();
 
   const { data: semana } = cliente.semana_activa_id
     ? await admin.from("plan_semanas").select("dias").eq("id", cliente.semana_activa_id).single<Pick<PlanSemana, "dias">>()

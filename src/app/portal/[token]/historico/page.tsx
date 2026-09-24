@@ -1,6 +1,10 @@
+import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { volumenEjercicioSesion } from "@/lib/dipra/calc";
-import type { Cliente, PlanSemana, Sesion } from "@/lib/dipra/types";
+import { enmascararCorreo } from "@/lib/dipra/portalPin";
+import type { PlanSemana, Sesion } from "@/lib/dipra/types";
+import { obtenerClientePortal, sesionValidaPara } from "../acceso";
+import { PortalAcceso } from "../PortalAcceso";
 import { EliminarSesionButton } from "../sesiones/EliminarSesionButton";
 
 const MESES = [
@@ -25,14 +29,21 @@ function fmtFecha(f: string) {
 
 export default async function PortalHistoricoPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const admin = createAdminClient();
+  const cliente = await obtenerClientePortal(token);
+  if (!cliente) notFound();
 
-  const { data: cliente } = await admin
-    .from("clients")
-    .select("id, semana_activa_id")
-    .eq("portal_token", token)
-    .single<Pick<Cliente, "id" | "semana_activa_id">>();
-  if (!cliente) return <p className="dp-muted text-sm">Link inválido.</p>;
+  if (!(await sesionValidaPara(cliente.id))) {
+    return (
+      <PortalAcceso
+        token={token}
+        nombre={cliente.nombre}
+        correoEnmascarado={cliente.correo ? enmascararCorreo(cliente.correo) : ""}
+        pinConfigurado={!!cliente.pinHash}
+      />
+    );
+  }
+
+  const admin = createAdminClient();
 
   const [{ data: sesiones }, { data: semana }] = await Promise.all([
     admin
