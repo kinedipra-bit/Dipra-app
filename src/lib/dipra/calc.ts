@@ -14,14 +14,29 @@ export function tonoEscalaPilar(valor: number, invertido?: boolean) {
   return tonoEscala(efectivo);
 }
 
-type Bloque = { exercises: { series?: number | string; reps?: number | string; kg?: number | string }[] };
+type Ejercicio = {
+  series?: number | string;
+  reps?: number | string;
+  kg?: number | string;
+  pesosSeries?: (number | string)[];
+};
+type Bloque = { exercises: Ejercicio[] };
 type Dia = { bloques: Bloque[] };
 
+// Si `pesosSeries` tiene valores cargados, el volumen se calcula sumando
+// reps × cada peso de serie individual (una serie por entrada del array).
+// Si no, se usa la fórmula uniforme series × reps × kg.
+export function volumenEjercicio(e: Ejercicio): number {
+  const reps = Number(e.reps) || 0;
+  const pesos = (e.pesosSeries ?? []).map((p) => Number(p) || 0).filter((p) => p > 0);
+  if (pesos.length > 0) {
+    return pesos.reduce((sum, p) => sum + reps * p, 0);
+  }
+  return (Number(e.series) || 0) * reps * (Number(e.kg) || 0);
+}
+
 export function calcVolumenBloque(bloque: Bloque) {
-  return bloque.exercises.reduce(
-    (sum, e) => sum + (Number(e.series) || 0) * (Number(e.reps) || 0) * (Number(e.kg) || 0),
-    0
-  );
+  return bloque.exercises.reduce((sum, e) => sum + volumenEjercicio(e), 0);
 }
 
 export function calcVolumenDia(dia: Dia) {

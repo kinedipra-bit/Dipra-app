@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { volumenEjercicio } from "@/lib/dipra/calc";
 import type { EjercicioPlan, EjercicioBiblioteca } from "@/lib/dipra/types";
 
 const CAMPOS: { key: "rpe" | "rir" | "tut" | "descanso"; label: string; width?: number }[] = [
@@ -15,10 +17,13 @@ const CAMPOS: { key: "rpe" | "rir" | "tut" | "descanso"; label: string; width?: 
  *
  * `readOnly` / `allowClientComment` quedan cableados desde ya aunque hoy
  * esta pestaña siempre se usa en modo profesional (ambos en false): el
- * portal del atleta (otro agente/orquestador) va a poder reusar este mismo
- * componente pasando readOnly=true (todo de solo lectura salvo que
- * allowClientComment=true habilite el campo de comentario del atleta) sin
- * reescribirlo.
+ * portal del atleta reusa este mismo componente pasando
+ * readOnly=true (todo de solo lectura salvo que allowClientComment=true
+ * habilite el campo de comentario del atleta) sin reescribirlo.
+ *
+ * Campos de carga extendidos (pesosSeries / tiempoSerie / tipoCarga /
+ * unilateral) se muestran tanto en modo edición (inputs) como en modo
+ * readOnly (texto/badges) — ver AGENTS.md del módulo de plan.
  */
 export function ExerciseRow({
   ex,
@@ -39,7 +44,13 @@ export function ExerciseRow({
   allowClientComment?: boolean;
   datalistId?: string;
 }) {
-  const volumen = (Number(ex.series) || 0) * (Number(ex.reps) || 0) * (Number(ex.kg) || 0);
+  const volumen = volumenEjercicio(ex);
+  const seriesCount = Number(ex.series) || 0;
+  const pesosSeriesActivo = (ex.pesosSeries ?? []).some((p) => Number(p) > 0);
+
+  // El toggle "peso por serie" arranca abierto si el ejercicio ya trae
+  // valores cargados en pesosSeries (ej. al reabrir un plan guardado).
+  const [pesoPorSerieAbierto, setPesoPorSerieAbierto] = useState(pesosSeriesActivo);
 
   // Autocompletado contra la biblioteca: si el nombre tipeado matchea
   // (case-insensitive) un ejercicio de la biblioteca y el ejercicio del plan
@@ -61,8 +72,32 @@ export function ExerciseRow({
     window.open(`https://www.youtube.com/results?search_query=${q}`, "_blank", "noopener,noreferrer");
   };
 
+  // Activa el modo "peso por serie": prellena un array de largo `series`
+  // usando los valores de pesosSeries ya guardados (si hay) y, para el
+  // resto, el valor uniforme de `kg` como default.
+  const togglePesoPorSerie = () => {
+    if (pesoPorSerieAbierto) {
+      setPesoPorSerieAbierto(false);
+      return;
+    }
+    const base = ex.pesosSeries ?? [];
+    const next = Array.from({ length: Math.max(seriesCount, 1) }, (_, i) => base[i] ?? ex.kg ?? 0);
+    onChange({ ...ex, pesosSeries: next });
+    setPesoPorSerieAbierto(true);
+  };
+
+  const handlePesoSerieChange = (i: number, value: string) => {
+    const current = Array.from({ length: seriesCount }, (_, idx) => ex.pesosSeries?.[idx] ?? ex.kg ?? 0);
+    current[i] = value === "" ? "" : Number(value);
+    onChange({ ...ex, pesosSeries: current });
+  };
+
   const campoInputClass =
     "font-mono text-xs border border-black/10 rounded-md px-1 py-0.5 outline-none focus:dp-border-brand text-center";
+
+  const kgTexto = pesosSeriesActivo
+    ? (ex.pesosSeries ?? []).map((p) => Number(p) || 0).join("/")
+    : String(ex.kg ?? 0);
 
   return (
     <div className="py-1.5">
@@ -85,21 +120,56 @@ export function ExerciseRow({
             className="rounded-lg border border-black/10 px-2 py-1 text-sm outline-none focus:dp-border-brand"
           />
         )}
-        {(["series", "reps", "kg"] as const).map((k) =>
-          readOnly ? (
-            <span key={k} className="dp-body text-center font-mono text-sm">
-              {ex[k]}
-            </span>
-          ) : (
-            <input
-              key={k}
-              type="number"
-              value={ex[k]}
-              onChange={(e) => onChange({ ...ex, [k]: Number(e.target.value) })}
-              className="rounded-lg border border-black/10 px-2 py-1 text-center font-mono text-sm outline-none focus:dp-border-brand"
-            />
-          )
+
+        {/* Series */}
+        {readOnly ? (
+          <span className="dp-body text-center font-mono text-sm">{ex.series}</span>
+        ) : (
+          <input
+            type="number"
+            value={ex.series}
+            onChange={(e) => onChange({ ...ex, series: Number(e.target.value) })}
+            className="rounded-lg border border-black/10 px-2 py-1 text-center font-mono text-sm outline-none focus:dp-border-brand"
+          />
         )}
+
+        {/* Reps (+ badge "c/u" si es unilateral) */}
+        {readOnly ? (
+          <span className="dp-body flex items-center justify-center gap-1 text-center font-mono text-sm">
+            {ex.reps}
+            {ex.unilateral && <span className="dp-text-brand text-[10px] font-semibold">c/u</span>}
+          </span>
+        ) : (
+          <div className="flex items-center justify-center gap-1">
+            <input
+              type="number"
+              value={ex.reps}
+              onChange={(e) => onChange({ ...ex, reps: Number(e.target.value) })}
+              className="w-full min-w-0 rounded-lg border border-black/10 px-2 py-1 text-center font-mono text-sm outline-none focus:dp-border-brand"
+            />
+            {ex.unilateral && <span className="dp-text-brand shrink-0 text-[10px] font-semibold">c/u</span>}
+          </div>
+        )}
+
+        {/* Kg (uniforme, o texto "12/14/16" si hay peso por serie cargado) */}
+        {readOnly ? (
+          <span className="dp-body text-center font-mono text-sm">{kgTexto}</span>
+        ) : pesoPorSerieAbierto ? (
+          <span
+            className="dp-muted text-center font-mono text-xs"
+            title="Editando peso por serie más abajo"
+          >
+            por serie
+          </span>
+        ) : (
+          <input
+            type="number"
+            value={ex.kg}
+            onChange={(e) => onChange({ ...ex, kg: Number(e.target.value) })}
+            className="rounded-lg border border-black/10 px-2 py-1 text-center font-mono text-sm outline-none focus:dp-border-brand"
+          />
+        )}
+
         <span className="dp-muted text-right font-mono text-xs">{volumen.toLocaleString("es-CL")} kg</span>
         {!readOnly && (
           <button type="button" onClick={onRemove} className="dp-muted hover:dp-alert text-sm">
@@ -107,6 +177,84 @@ export function ExerciseRow({
           </button>
         )}
       </div>
+
+      {/* Carga extendida: tipo de carga no numérica, tiempo, unilateral y toggle de peso por serie */}
+      {!readOnly && (
+        <div className="mt-1 flex flex-wrap items-center gap-3 pl-0.5">
+          <div className="flex items-center gap-1">
+            <span className="dp-muted text-[10px] font-medium">Carga</span>
+            <input
+              value={ex.tipoCarga || ""}
+              onChange={(e) => onChange({ ...ex, tipoCarga: e.target.value })}
+              placeholder="Banda / peso corporal…"
+              style={{ width: 120 }}
+              className={campoInputClass}
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="dp-muted text-[10px] font-medium">Tiempo</span>
+            <input
+              value={ex.tiempoSerie || ""}
+              onChange={(e) => onChange({ ...ex, tiempoSerie: e.target.value })}
+              placeholder="30 seg"
+              style={{ width: 64 }}
+              className={campoInputClass}
+            />
+          </div>
+          <label className="flex cursor-pointer items-center gap-1 select-none">
+            <input
+              type="checkbox"
+              checked={!!ex.unilateral}
+              onChange={(e) => onChange({ ...ex, unilateral: e.target.checked })}
+              className="h-3 w-3"
+            />
+            <span className="dp-muted text-[10px] font-medium">Unilateral (c/u)</span>
+          </label>
+          {seriesCount > 1 && (
+            <button
+              type="button"
+              onClick={togglePesoPorSerie}
+              className="dp-text-brand text-[11px] font-medium hover:underline"
+            >
+              {pesoPorSerieAbierto ? "− Peso uniforme" : "+ Peso por serie"}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Inputs de peso por serie individual */}
+      {!readOnly && pesoPorSerieAbierto && seriesCount > 0 && (
+        <div className="dp-bg-faint mt-1 ml-0.5 flex flex-wrap items-center gap-2 rounded-lg px-2 py-1">
+          {Array.from({ length: seriesCount }).map((_, i) => (
+            <div key={i} className="flex items-center gap-1">
+              <span className="dp-muted text-[10px] font-medium">S{i + 1}</span>
+              <input
+                type="number"
+                value={ex.pesosSeries?.[i] ?? ex.kg ?? 0}
+                onChange={(e) => handlePesoSerieChange(i, e.target.value)}
+                style={{ width: 48 }}
+                className={campoInputClass}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Badges de solo lectura para tipo de carga / tiempo (unilateral ya se ve junto a reps) */}
+      {readOnly && (ex.tipoCarga || ex.tiempoSerie) && (
+        <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-0.5">
+          {ex.tipoCarga && (
+            <span className="dp-bg-faint dp-body rounded-full px-2 py-0.5 text-[10px] font-medium">
+              {ex.tipoCarga}
+            </span>
+          )}
+          {ex.tiempoSerie && (
+            <span className="dp-bg-faint dp-body rounded-full px-2 py-0.5 text-[10px] font-medium">
+              ⏱ {ex.tiempoSerie}
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="mt-1 flex items-center gap-3 pl-0.5">
         {CAMPOS.map(({ key, label, width }) => (

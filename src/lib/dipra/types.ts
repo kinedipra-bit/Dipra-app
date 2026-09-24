@@ -89,6 +89,17 @@ export interface EjercicioPlan {
   series: number;
   reps: number;
   kg: number;
+  // Peso por serie individual (ej. 4 series con pesos distintos). Si tiene
+  // al menos un valor cargado, tiene prioridad sobre `kg` para mostrar y
+  // calcular volumen; `kg` queda como valor uniforme de respaldo/legacy.
+  pesosSeries?: (number | string)[];
+  // Trabajo por tiempo en vez de (o además de) reps — ej. "30 seg" para un
+  // isométrico. Texto libre.
+  tiempoSerie?: string;
+  // Anotación de carga no numérica — ej. "Banda", "Peso corporal", "Lastre 5kg".
+  tipoCarga?: string;
+  // Marca reps/series "por lado" (ej. "5 reps por brazo") en vez de bilateral.
+  unilateral?: boolean;
   link: string;
   rpe: string;
   rir: string;

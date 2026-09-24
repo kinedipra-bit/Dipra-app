@@ -2,10 +2,19 @@
 
 import { useState, useTransition } from "react";
 import { ExerciseRow } from "@/app/(app)/clientes/[id]/plan/ExerciseRow";
-import type { PlanSemana, EjercicioPlan } from "@/lib/dipra/types";
+import { SesionesPorDia } from "@/components/SesionesPorDia";
+import type { PlanSemana, EjercicioPlan, Sesion } from "@/lib/dipra/types";
 import { updateComentarioCliente } from "./actions";
 
-export function PortalPlanView({ token, semana }: { token: string; semana: PlanSemana }) {
+export function PortalPlanView({
+  token,
+  semana,
+  sesiones,
+}: {
+  token: string;
+  semana: PlanSemana;
+  sesiones: Sesion[];
+}) {
   const [dias, setDias] = useState(semana.dias);
   const [, startTransition] = useTransition();
 
@@ -42,6 +51,8 @@ export function PortalPlanView({ token, semana }: { token: string; semana: PlanS
         <section key={dia.id} className="dp-surface rounded-2xl p-5 shadow-sm">
           <h2 className="font-medium dp-text-heading">{dia.label}</h2>
           {dia.foco && <p className="dp-muted mb-3 text-sm">{dia.foco}</p>}
+
+          <SesionesPorDia sesiones={sesiones} diaLabel={dia.label} />
 
           {dia.bloques.map((bloque) => (
             <div key={bloque.id} className="mt-3 first:mt-0">
