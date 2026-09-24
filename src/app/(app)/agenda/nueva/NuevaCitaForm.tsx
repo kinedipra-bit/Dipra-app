@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { ESTADOS_CITA, TIPOS_CITA } from "@/lib/dipra/constants";
 import type { Cita } from "@/lib/dipra/types";
-import { crearCita } from "../actions";
+import { crearCita, obtenerDiasPlan } from "../actions";
 
 function labelEstado(estado: (typeof ESTADOS_CITA)[number]) {
   return estado === "alerta" ? "Alerta leve" : estado.charAt(0).toUpperCase() + estado.slice(1);
@@ -27,6 +27,8 @@ export function NuevaCitaForm({
   const [hora, setHora] = useState("09:00");
   const [tipo, setTipo] = useState<string>(TIPOS_CITA[0]);
   const [estado, setEstado] = useState<Cita["estado"]>("pendiente");
+  const [diasPlan, setDiasPlan] = useState<{ id: string; label: string }[]>([]);
+  const [diaPlanLabel, setDiaPlanLabel] = useState("");
   const [pending, startTransition] = useTransition();
 
   const filtrados = useMemo(() => {
@@ -38,6 +40,22 @@ export function NuevaCitaForm({
   // Si la búsqueda deja afuera al cliente seleccionado, se cae al primero
   // de los resultados filtrados para que el <select> y el envío coincidan.
   const clienteIdEfectivo = filtrados.some((c) => c.id === clienteId) ? clienteId : filtrados[0]?.id ?? "";
+
+  // Al cambiar de cliente, trae los días de su semana activa para el
+  // selector "Día del plan" — permite cruzar la agenda real con el
+  // recordatorio de descanso por grupo muscular (ver ResumenProgramacion).
+  useEffect(() => {
+    if (!clienteIdEfectivo) return;
+    let cancelado = false;
+    obtenerDiasPlan(clienteIdEfectivo).then((dias) => {
+      if (cancelado) return;
+      setDiasPlan(dias);
+      setDiaPlanLabel((prev) => (dias.some((d) => d.label === prev) ? prev : ""));
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [clienteIdEfectivo]);
 
   const inputClass = "rounded-lg border border-black/10 px-3 py-2 text-sm outline-none focus:dp-border-brand";
 
@@ -52,6 +70,7 @@ export function NuevaCitaForm({
         hora,
         tipo,
         estado,
+        dia_plan_label: diaPlanLabel || null,
       });
     });
   };
@@ -130,6 +149,24 @@ export function NuevaCitaForm({
                 ))}
               </select>
             </label>
+
+            {diasPlan.length > 0 && (
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="dp-body font-medium">Día del plan (opcional)</span>
+                <select
+                  value={diaPlanLabel}
+                  onChange={(e) => setDiaPlanLabel(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Sin asignar</option>
+                  {diasPlan.map((d) => (
+                    <option key={d.id} value={d.label}>
+                      {d.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
             <label className="flex flex-col gap-1 text-sm">
               <span className="dp-body font-medium">Estado inicial</span>

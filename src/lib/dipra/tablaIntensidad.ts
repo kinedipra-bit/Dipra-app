@@ -70,27 +70,82 @@ export interface AlertaDescanso {
   grupoMuscular: GrupoMuscular;
   cualidad: CualidadFuerza;
   diasCount: number;
+  // Si la agenda tiene al menos dos citas reales agendadas para los días
+  // involucrados, el gap real (en horas) entre el par más cercano, y sus
+  // fechas — reemplaza el aviso genérico por uno con el calendario real.
+  horasReales?: number;
+  fechaDesde?: string; // ISO datetime
+  fechaHasta?: string; // ISO datetime
 }
 
-// Recordatorio (no un chequeo de calendario real: el plan no tiene fechas
-// por día, solo etiquetas "Día 1".."Día 4") — si un mismo grupo muscular
-// aparece en más de un día trabajando una cualidad de alta demanda de SNC,
-// vale la pena recordar dejar 48-72h de por medio.
-export function alertasDescanso(dias: DiaPlan[]): AlertaDescanso[] {
-  const conteo = new Map<string, { grupoMuscular: GrupoMuscular; cualidad: CualidadFuerza; dias: Set<string> }>();
+// Cita mínima que necesita este cálculo (evita acoplar tablaIntensidad.ts
+// al tipo completo Cita de la agenda).
+export interface CitaParaDescanso {
+  fecha: string; // date
+  hora: string; // time
+  dia_plan_label?: string | null;
+}
+
+// Si un mismo grupo muscular aparece en más de un día trabajando una
+// cualidad de alta demanda de SNC, cruza los días con la agenda real
+// (`citas`, vía `dia_plan_label`) para calcular el gap real entre las dos
+// sesiones agendadas más cercanas. Con calendario real:
+//  - gap < 72h: alerta con las horas reales.
+//  - gap >= 72h: sin alerta (el calendario ya muestra que está bien).
+// Sin al menos dos citas agendadas para esos días todavía, se mantiene el
+// aviso genérico basado solo en la estructura del plan.
+export function alertasDescanso(dias: DiaPlan[], citas: CitaParaDescanso[] = []): AlertaDescanso[] {
+  const conteo = new Map<string, { grupoMuscular: GrupoMuscular; cualidad: CualidadFuerza; diasLabels: Set<string> }>();
   dias.forEach((dia) => {
     dia.bloques.forEach((b) => {
       if (!b.grupoMuscular || !b.cualidad || !ALTA_DEMANDA_SNC.includes(b.cualidad)) return;
       const key = `${b.grupoMuscular}::${b.cualidad}`;
-      const entry = conteo.get(key) ?? { grupoMuscular: b.grupoMuscular, cualidad: b.cualidad, dias: new Set() };
-      entry.dias.add(dia.id);
+      const entry =
+        conteo.get(key) ?? { grupoMuscular: b.grupoMuscular, cualidad: b.cualidad, diasLabels: new Set<string>() };
+      entry.diasLabels.add(dia.label);
       conteo.set(key, entry);
     });
   });
 
-  return [...conteo.values()]
-    .filter((e) => e.dias.size > 1)
-    .map((e) => ({ grupoMuscular: e.grupoMuscular, cualidad: e.cualidad, diasCount: e.dias.size }));
+  const resultado: AlertaDescanso[] = [];
+
+  conteo.forEach((e) => {
+    if (e.diasLabels.size <= 1) return;
+
+    const fechas = citas
+      .filter((c) => c.dia_plan_label && e.diasLabels.has(c.dia_plan_label))
+      .map((c) => new Date(`${c.fecha}T${c.hora}`))
+      .filter((d) => !Number.isNaN(d.getTime()))
+      .sort((a, b) => a.getTime() - b.getTime());
+
+    if (fechas.length >= 2) {
+      let minGapMs = Infinity;
+      let par: [Date, Date] = [fechas[0], fechas[1]];
+      for (let i = 1; i < fechas.length; i++) {
+        const gap = fechas[i].getTime() - fechas[i - 1].getTime();
+        if (gap < minGapMs) {
+          minGapMs = gap;
+          par = [fechas[i - 1], fechas[i]];
+        }
+      }
+      const horas = Math.round(minGapMs / 3_600_000);
+      if (horas < 72) {
+        resultado.push({
+          grupoMuscular: e.grupoMuscular,
+          cualidad: e.cualidad,
+          diasCount: e.diasLabels.size,
+          horasReales: horas,
+          fechaDesde: par[0].toISOString(),
+          fechaHasta: par[1].toISOString(),
+        });
+      }
+      return;
+    }
+
+    resultado.push({ grupoMuscular: e.grupoMuscular, cualidad: e.cualidad, diasCount: e.diasLabels.size });
+  });
+
+  return resultado;
 }
 
 // Al taggear un bloque con una cualidad, se puede aplicar el TUT sugerido

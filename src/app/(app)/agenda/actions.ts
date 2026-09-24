@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Cita } from "@/lib/dipra/types";
+import type { Cita, DiaPlan } from "@/lib/dipra/types";
 
 function revalidar() {
   revalidatePath("/agenda");
@@ -18,6 +18,10 @@ export interface NuevaCitaInput {
   hora: string;
   tipo: string;
   estado: Cita["estado"];
+  // A qué día del plan corresponde esta cita (ej. "Día 2"), si se asignó —
+  // permite cruzar la agenda real con la sugerencia de descanso por grupo
+  // muscular (ver tablaIntensidad.ts).
+  dia_plan_label?: string | null;
 }
 
 export async function crearCita(input: NuevaCitaInput) {
@@ -26,6 +30,25 @@ export async function crearCita(input: NuevaCitaInput) {
   if (error) throw new Error(error.message);
   revalidar();
   redirect(`/agenda?fecha=${input.fecha}`);
+}
+
+// Para el selector "Día del plan" al agendar: trae los días de la semana
+// activa del cliente (solo id + label, no hace falta el resto del plan).
+export async function obtenerDiasPlan(clienteId: string): Promise<{ id: string; label: string }[]> {
+  const supabase = await createClient();
+  const { data: cliente } = await supabase
+    .from("clients")
+    .select("semana_activa_id")
+    .eq("id", clienteId)
+    .single<{ semana_activa_id: string | null }>();
+  if (!cliente?.semana_activa_id) return [];
+
+  const { data: semana } = await supabase
+    .from("plan_semanas")
+    .select("dias")
+    .eq("id", cliente.semana_activa_id)
+    .single<{ dias: DiaPlan[] }>();
+  return (semana?.dias ?? []).map((d) => ({ id: d.id, label: d.label }));
 }
 
 export async function actualizarEstadoCita(citaId: string, estado: Cita["estado"]) {

@@ -206,6 +206,9 @@ export interface Cita {
   hora: string;
   tipo: string;
   estado: "pendiente" | "confirmada" | "alerta" | "cancelada";
+  // A qué día del plan corresponde esta cita (ej. "Día 2"), si se asignó —
+  // permite calcular descansos reales entre sesiones (ver tablaIntensidad.ts).
+  dia_plan_label?: string | null;
 }
 
 export interface EjercicioBiblioteca {

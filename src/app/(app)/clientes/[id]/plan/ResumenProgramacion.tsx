@@ -1,17 +1,28 @@
-import { alertasDescanso, resumenSetsPorCualidad } from "@/lib/dipra/tablaIntensidad";
+import { alertasDescanso, resumenSetsPorCualidad, type CitaParaDescanso } from "@/lib/dipra/tablaIntensidad";
 import type { DiaPlan } from "@/lib/dipra/types";
+
+function formatFechaHora(iso: string) {
+  return new Date(iso).toLocaleString("es-CL", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 /**
  * Resumen de programación semanal: sets totales por cualidad de fuerza
  * (sumados en todos los días de la semana activa) vs. el rango sugerido
  * por la tabla de intensidad, más un recordatorio de descanso cuando un
  * mismo grupo muscular aparece más de una vez a alta intensidad (Fuerza
- * Máxima / Potencia Máxima) en la semana. Son sugerencias generales, no
- * una validación — dependen de cada atleta.
+ * Máxima / Potencia Máxima) en la semana — cruzado con la agenda real
+ * (citas con día del plan asignado) cuando hay suficientes citas agendadas.
+ * Son sugerencias generales, no una validación — dependen de cada atleta.
  */
-export function ResumenProgramacion({ dias }: { dias: DiaPlan[] }) {
+export function ResumenProgramacion({ dias, citas }: { dias: DiaPlan[]; citas: CitaParaDescanso[] }) {
   const resumen = resumenSetsPorCualidad(dias);
-  const alertas = alertasDescanso(dias);
+  const alertas = alertasDescanso(dias, citas);
 
   if (resumen.length === 0) return null;
 
@@ -41,13 +52,21 @@ export function ResumenProgramacion({ dias }: { dias: DiaPlan[] }) {
 
       {alertas.length > 0 && (
         <div className="mt-3 flex flex-col gap-1.5 border-t border-black/5 pt-3">
-          {alertas.map((a) => (
-            <p key={`${a.grupoMuscular}-${a.cualidad}`} className="dp-alert text-xs">
-              ⚠ {a.grupoMuscular} aparece en {a.diasCount} días esta semana trabajando {a.cualidad.toLowerCase()} —
-              es alta demanda de SNC, dejá 48-72h de por medio (una sesión de fuerza general/hipertrofia sobre el
-              mismo grupo se recupera en 24-48h o menos).
-            </p>
-          ))}
+          {alertas.map((a) =>
+            a.horasReales !== undefined ? (
+              <p key={`${a.grupoMuscular}-${a.cualidad}`} className="dp-alert text-xs">
+                ⚠ {a.grupoMuscular} + {a.cualidad.toLowerCase()}: según la agenda real quedan solo {a.horasReales}h
+                de descanso entre el {formatFechaHora(a.fechaDesde!)} y el {formatFechaHora(a.fechaHasta!)} — es alta
+                demanda de SNC, recomendado 48-72h de por medio.
+              </p>
+            ) : (
+              <p key={`${a.grupoMuscular}-${a.cualidad}`} className="dp-alert text-xs">
+                ⚠ {a.grupoMuscular} aparece en {a.diasCount} días esta semana trabajando {a.cualidad.toLowerCase()} —
+                es alta demanda de SNC, dejá 48-72h de por medio (una sesión de fuerza general/hipertrofia sobre el
+                mismo grupo se recupera en 24-48h o menos). Agendá estos días para ver el descanso real.
+              </p>
+            )
+          )}
         </div>
       )}
     </div>

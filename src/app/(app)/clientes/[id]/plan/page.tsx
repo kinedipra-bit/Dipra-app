@@ -1,22 +1,28 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Cliente, PlanSemana, EjercicioBiblioteca, Sesion } from "@/lib/dipra/types";
+import type { Cita, Cliente, PlanSemana, EjercicioBiblioteca, Sesion } from "@/lib/dipra/types";
 import { PlanView } from "./PlanView";
 
 export default async function PlanPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: cliente }, { data: semanas }, { data: biblioteca }, { data: sesiones }] = await Promise.all([
-    supabase.from("clients").select("*").eq("id", id).single<Cliente>(),
-    supabase.from("plan_semanas").select("*").eq("client_id", id).order("numero").returns<PlanSemana[]>(),
-    supabase
-      .from("biblioteca_ejercicios")
-      .select("id, nombre, link")
-      .order("nombre")
-      .returns<EjercicioBiblioteca[]>(),
-    supabase.from("sesiones").select("*").eq("client_id", id).returns<Sesion[]>(),
-  ]);
+  const [{ data: cliente }, { data: semanas }, { data: biblioteca }, { data: sesiones }, { data: citas }] =
+    await Promise.all([
+      supabase.from("clients").select("*").eq("id", id).single<Cliente>(),
+      supabase.from("plan_semanas").select("*").eq("client_id", id).order("numero").returns<PlanSemana[]>(),
+      supabase
+        .from("biblioteca_ejercicios")
+        .select("id, nombre, link")
+        .order("nombre")
+        .returns<EjercicioBiblioteca[]>(),
+      supabase.from("sesiones").select("*").eq("client_id", id).returns<Sesion[]>(),
+      supabase
+        .from("citas")
+        .select("fecha, hora, dia_plan_label")
+        .eq("client_id", id)
+        .returns<Pick<Cita, "fecha" | "hora" | "dia_plan_label">[]>(),
+    ]);
 
   if (!cliente) notFound();
 
@@ -28,6 +34,7 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
       semanasIniciales={semanas ?? []}
       bibliotecaInicial={biblioteca ?? []}
       sesiones={sesiones ?? []}
+      citas={citas ?? []}
     />
   );
 }

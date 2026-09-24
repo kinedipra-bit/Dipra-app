@@ -12,6 +12,7 @@ import type {
   Sesion,
   CualidadFuerza,
   GrupoMuscular,
+  Cita,
 } from "@/lib/dipra/types";
 import { crearSemana, guardarSemana, setSemanaActiva as marcarSemanaActiva, guardarEnBiblioteca } from "./actions";
 import { ExerciseRow } from "./ExerciseRow";
@@ -65,6 +66,7 @@ export function PlanView({
   semanasIniciales,
   bibliotecaInicial,
   sesiones,
+  citas,
 }: {
   clienteId: string;
   fms: FmsData | null | undefined;
@@ -72,6 +74,7 @@ export function PlanView({
   semanasIniciales: PlanSemana[];
   bibliotecaInicial: EjercicioBiblioteca[];
   sesiones: Sesion[];
+  citas: Pick<Cita, "fecha" | "hora" | "dia_plan_label">[];
 }) {
   const [semanas, setSemanas] = useState<PlanSemana[]>(semanasIniciales);
   const [semanaActivaId, setSemanaActivaId] = useState<string | null>(
@@ -540,7 +543,7 @@ export function PlanView({
             </div>
           )}
 
-          <ResumenProgramacion dias={semana.dias} />
+          <ResumenProgramacion dias={semana.dias} citas={citas} />
 
           <div className="flex items-center gap-3">
             <button
