@@ -36,3 +36,20 @@ export async function crearSesionPortal(token: string, input: NuevaSesionPortalI
   revalidatePath(`/portal/${token}/sesiones`);
   revalidatePath(`/clientes/${cliente.id}/sesiones`);
 }
+
+// El atleta puede borrar una sesión que él mismo registró (ej. si eligió el
+// día equivocado). Igual que crearSesionPortal, valida ownership a partir
+// del token antes de borrar — así un token no puede usarse para tocar
+// sesiones de otro cliente aunque alguien adivinara/forzara un id ajeno.
+export async function eliminarSesionPortal(token: string, sesionId: string) {
+  const admin = createAdminClient();
+
+  const { data: cliente } = await admin.from("clients").select("id").eq("portal_token", token).single();
+  if (!cliente) throw new Error("Link inválido");
+
+  const { error } = await admin.from("sesiones").delete().eq("id", sesionId).eq("client_id", cliente.id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/portal/${token}/sesiones`);
+  revalidatePath(`/clientes/${cliente.id}/sesiones`);
+}

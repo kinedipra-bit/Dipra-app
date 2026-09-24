@@ -61,6 +61,7 @@ body {
 
 .dp-alert { color: var(--dp-alert); }
 .dp-bg-alert { background-color: var(--dp-alert); }
+.dp-bg-alert-soft { background-color: rgba(209, 67, 67, 0.1); }
 .dp-border-alert { border-color: var(--dp-alert); }
 
 .dp-border-lime { border-color: var(--dp-lime); }

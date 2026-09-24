@@ -27,7 +27,7 @@ export default async function LoginPage({
           <input type="hidden" name="next" value={next ?? "/"} />
 
           {error && (
-            <p className="dp-bg-alert/10 dp-alert rounded-lg px-3 py-2 text-sm">
+            <p className="dp-bg-alert-soft dp-alert rounded-lg px-3 py-2 text-sm">
               No pudimos iniciar sesión: {error}
             </p>
           )}

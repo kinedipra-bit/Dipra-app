@@ -3,6 +3,7 @@ import { PILARES_KEYS } from "@/lib/dipra/constants";
 import { EscalaUnoADiez } from "@/app/(app)/clientes/[id]/sesiones/EscalaUnoADiez";
 import type { Cliente, PlanSemana, Sesion } from "@/lib/dipra/types";
 import { PortalNuevaSesionForm } from "./PortalNuevaSesionForm";
+import { EliminarSesionButton } from "./EliminarSesionButton";
 
 export default async function PortalSesionesPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -41,7 +42,10 @@ export default async function PortalSesionesPage({ params }: { params: Promise<{
         <div key={s.id} className="dp-surface rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <p className="dp-text-heading font-medium">{s.tipo}</p>
-            <p className="dp-muted font-mono text-xs">{s.fecha}</p>
+            <div className="flex items-center gap-3">
+              <p className="dp-muted font-mono text-xs">{s.fecha}</p>
+              <EliminarSesionButton token={token} sesionId={s.id} />
+            </div>
           </div>
 
           <div className="mt-3 flex flex-wrap gap-4">
