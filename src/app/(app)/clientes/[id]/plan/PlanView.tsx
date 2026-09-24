@@ -376,70 +376,72 @@ export function PlanView({
 
               <SesionesPorDia sesiones={sesiones} diaLabel={dia.label} />
 
-              <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-3">
                 {dia.bloques.map((b, bIdx) => {
                   const vol = calcVolumenBloque(b);
                   return (
                     <div key={b.id}>
-                      <div className="mb-1.5 flex items-center justify-between">
-                        <input
-                          value={b.title}
-                          onChange={(e) => renameBloque(bIdx, e.target.value)}
-                          className="dp-ink border-none bg-transparent text-sm font-semibold tracking-wide uppercase outline-none focus:underline"
-                          style={{ minWidth: 120 }}
-                        />
-                        <div className="flex items-center gap-2">
-                          <span className="dp-muted font-mono text-xs">{vol.toLocaleString("es-CL")} kg vol.</span>
-                          <button
-                            type="button"
-                            onClick={() => removeBloque(bIdx)}
-                            title="Eliminar bloque"
-                            className="dp-muted hover:dp-alert text-sm"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      </div>
-
-                      {b.exercises.length > 0 && (
-                        <div
-                          className="dp-muted grid gap-2 pb-1 text-[10px] font-medium tracking-wide uppercase"
-                          style={{ gridTemplateColumns: "1.6fr 0.55fr 0.55fr 0.6fr 0.7fr auto" }}
-                        >
-                          <span>Ejercicio</span>
-                          <span className="text-center">Ser.</span>
-                          <span className="text-center">Rep.</span>
-                          <span className="text-center">Kg</span>
-                          <span className="text-right">Vol.</span>
-                          <span />
-                        </div>
-                      )}
-
-                      <div className="divide-y divide-black/5">
-                        {b.exercises.map((ex, eIdx) => (
-                          <ExerciseRow
-                            key={ex.id}
-                            ex={ex}
-                            onChange={(next) => changeExercise(bIdx, eIdx, next)}
-                            onRemove={() => removeExercise(bIdx, eIdx)}
-                            biblioteca={biblioteca}
-                            onSaveToBiblioteca={guardarEjercicioEnBiblioteca}
+                      <div className="dp-bg-faint dp-border-brand rounded-xl border-l-4 p-3">
+                        <div className="mb-1.5 flex items-center justify-between">
+                          <input
+                            value={b.title}
+                            onChange={(e) => renameBloque(bIdx, e.target.value)}
+                            className="dp-ink border-none bg-transparent text-sm font-semibold tracking-wide uppercase outline-none focus:underline"
+                            style={{ minWidth: 120 }}
                           />
-                        ))}
-                      </div>
+                          <div className="flex items-center gap-2">
+                            <span className="dp-muted font-mono text-xs">{vol.toLocaleString("es-CL")} kg vol.</span>
+                            <button
+                              type="button"
+                              onClick={() => removeBloque(bIdx)}
+                              title="Eliminar bloque"
+                              className="dp-muted hover:dp-alert text-sm"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
 
-                      <button
-                        type="button"
-                        onClick={() => addExercise(bIdx)}
-                        className="dp-text-brand mt-2 flex items-center gap-1 text-xs font-medium hover:underline"
-                      >
-                        + Agregar ejercicio
-                      </button>
+                        {b.exercises.length > 0 && (
+                          <div
+                            className="dp-muted grid gap-2 pb-1 text-[10px] font-medium tracking-wide uppercase"
+                            style={{ gridTemplateColumns: "1.6fr 0.55fr 0.55fr 0.6fr 0.7fr auto" }}
+                          >
+                            <span>Ejercicio</span>
+                            <span className="text-center">Ser.</span>
+                            <span className="text-center">Rep.</span>
+                            <span className="text-center">Kg</span>
+                            <span className="text-right">Vol.</span>
+                            <span />
+                          </div>
+                        )}
+
+                        <div className="divide-y divide-black/5">
+                          {b.exercises.map((ex, eIdx) => (
+                            <ExerciseRow
+                              key={ex.id}
+                              ex={ex}
+                              onChange={(next) => changeExercise(bIdx, eIdx, next)}
+                              onRemove={() => removeExercise(bIdx, eIdx)}
+                              biblioteca={biblioteca}
+                              onSaveToBiblioteca={guardarEjercicioEnBiblioteca}
+                            />
+                          ))}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => addExercise(bIdx)}
+                          className="dp-text-brand mt-2 flex items-center gap-1 text-xs font-medium hover:underline"
+                        >
+                          + Agregar ejercicio
+                        </button>
+                      </div>
 
                       <button
                         type="button"
                         onClick={() => insertBloqueAfter(bIdx)}
-                        className="dp-muted hover:dp-text-brand mt-3 flex w-full items-center justify-center gap-1 border-t border-dashed border-black/10 py-1 text-[11px] font-medium"
+                        className="dp-muted hover:dp-text-brand mt-1.5 flex w-full items-center justify-center gap-1 py-1 text-[11px] font-medium"
                       >
                         + Insertar bloque aquí
                       </button>

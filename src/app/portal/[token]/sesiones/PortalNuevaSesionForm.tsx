@@ -154,7 +154,7 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
   };
 
   const inputClass =
-    "rounded-md border border-black/10 px-1.5 py-0.5 text-center font-mono text-xs outline-none focus:dp-border-brand";
+    "rounded-md border border-white/20 bg-white/5 px-1.5 py-0.5 text-center font-mono text-xs text-white outline-none focus:dp-border-brand";
 
   if (!abierto) {
     return (
@@ -211,14 +211,14 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
       </div>
 
       {draft.diaPlanLabel && (
-        <div>
+        <div className="dp-scope-dark dp-border-brand rounded-xl border-l-4 p-3">
           <p className="dp-text-heading mb-2 text-xs font-semibold uppercase tracking-wide">
             Tu rutina de {draft.diaPlanLabel} — anotá lo que hiciste realmente
           </p>
           {draft.ejercicios.length === 0 ? (
             <p className="dp-muted text-xs">Este día no tiene ejercicios cargados todavía.</p>
           ) : (
-            <div className="flex flex-col divide-y divide-black/5">
+            <div className="flex flex-col divide-y divide-white/10">
               {draft.ejercicios.map((ex, idx) => (
                 <div key={ex.id} className="py-2">
                   <div className="flex items-center justify-between gap-2">
@@ -268,7 +268,7 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
                     value={ex.comentario ?? ""}
                     onChange={(e) => actualizarEjercicio(idx, { comentario: e.target.value })}
                     placeholder="Comentario de este ejercicio hoy — ej: no pude con el peso, dolió el hombro…"
-                    className="dp-muted mt-1 w-full rounded-md border border-black/10 px-2 py-1 text-xs outline-none focus:dp-border-brand"
+                    className="mt-1 w-full rounded-md border border-white/20 bg-white/5 px-2 py-1 text-xs text-white outline-none focus:dp-border-brand"
                   />
                 </div>
               ))}
