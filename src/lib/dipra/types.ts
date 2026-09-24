@@ -112,9 +112,24 @@ export interface EjercicioPlan {
   comentarioCliente: string;
 }
 
+export type GrupoMuscular = "Tren superior" | "Tren inferior" | "Full body" | "Core";
+
+export type CualidadFuerza =
+  | "Fuerza Máxima Relativa"
+  | "Potencia Máxima Relativa"
+  | "Fuerza General (Hipertrofia Funcional)"
+  | "Hipertrofia"
+  | "Resistencia a la Fuerza"
+  | "Resistencia a la Potencia";
+
 export interface BloquePlan {
   id: string;
   title: string;
+  // Etiquetas opcionales para la sugerencia de programación semanal (sets
+  // por cualidad vs. tabla de intensidad, y recordatorio de descanso por
+  // grupo muscular) — ver src/lib/dipra/tablaIntensidad.ts.
+  grupoMuscular?: GrupoMuscular;
+  cualidad?: CualidadFuerza;
   exercises: EjercicioPlan[];
 }
 

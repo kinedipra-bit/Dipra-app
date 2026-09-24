@@ -4,13 +4,28 @@ import { useState, useTransition } from "react";
 import { calcVolumenBloque } from "@/lib/dipra/calc";
 import type { FmsData } from "@/lib/dipra/calc";
 import { blockTemplate, nuevosDias } from "@/lib/dipra/constants";
-import type { PlanSemana, DiaPlan, EjercicioPlan, EjercicioBiblioteca, Sesion } from "@/lib/dipra/types";
+import type {
+  PlanSemana,
+  DiaPlan,
+  EjercicioPlan,
+  EjercicioBiblioteca,
+  Sesion,
+  CualidadFuerza,
+  GrupoMuscular,
+} from "@/lib/dipra/types";
 import { crearSemana, guardarSemana, setSemanaActiva as marcarSemanaActiva, guardarEnBiblioteca } from "./actions";
 import { ExerciseRow } from "./ExerciseRow";
 import { ResumenDia } from "./ResumenDia";
 import { BarraDeCarga } from "./BarraDeCarga";
 import { FmsResumenPlan } from "./FmsResumenPlan";
 import { SesionesPorDia } from "@/components/SesionesPorDia";
+import { ResumenProgramacion } from "./ResumenProgramacion";
+import {
+  CUALIDADES,
+  GRUPOS_MUSCULARES,
+  TABLA_INTENSIDAD,
+  aplicarTutSugerido,
+} from "@/lib/dipra/tablaIntensidad";
 
 type Vista = "editar" | "resumen-dia" | "resumen-semana";
 
@@ -134,7 +149,12 @@ export function PlanView({
   const addExercise = (bIdx: number) => {
     if (!dia) return;
     const nextDia = structuredClone(dia);
-    nextDia.bloques[bIdx].exercises.push(nuevoEjercicio());
+    const bloque = nextDia.bloques[bIdx];
+    const ex = nuevoEjercicio();
+    // Si el bloque ya tiene una cualidad asignada, el ejercicio nuevo
+    // arranca con el TUT sugerido de la tabla (editable después).
+    if (bloque.cualidad) ex.tiempoSerie = TABLA_INTENSIDAD[bloque.cualidad].tut;
+    bloque.exercises.push(ex);
     updateDia(nextDia);
   };
   const changeExercise = (bIdx: number, eIdx: number, nextEx: EjercicioPlan) => {
@@ -171,6 +191,24 @@ export function PlanView({
     if (!dia) return;
     const nextDia = structuredClone(dia);
     nextDia.bloques.splice(bIdx, 1);
+    updateDia(nextDia);
+  };
+  const setBloqueCualidad = (bIdx: number, cualidad: CualidadFuerza | "") => {
+    if (!dia) return;
+    const nextDia = structuredClone(dia);
+    nextDia.bloques[bIdx].cualidad = cualidad || undefined;
+    updateDia(nextDia);
+  };
+  const setBloqueGrupoMuscular = (bIdx: number, grupoMuscular: GrupoMuscular | "") => {
+    if (!dia) return;
+    const nextDia = structuredClone(dia);
+    nextDia.bloques[bIdx].grupoMuscular = grupoMuscular || undefined;
+    updateDia(nextDia);
+  };
+  const aplicarTut = (bIdx: number) => {
+    if (!dia) return;
+    const nextDia = structuredClone(dia);
+    nextDia.bloques[bIdx] = aplicarTutSugerido(nextDia.bloques[bIdx]);
     updateDia(nextDia);
   };
 
@@ -402,6 +440,48 @@ export function PlanView({
                           </div>
                         </div>
 
+                        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                          <select
+                            value={b.grupoMuscular ?? ""}
+                            onChange={(e) => setBloqueGrupoMuscular(bIdx, e.target.value as GrupoMuscular | "")}
+                            className="dp-body rounded-md border border-black/10 bg-white px-1.5 py-0.5 text-[11px] outline-none focus:dp-border-brand"
+                          >
+                            <option value="">Grupo muscular…</option>
+                            {GRUPOS_MUSCULARES.map((g) => (
+                              <option key={g} value={g}>
+                                {g}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            value={b.cualidad ?? ""}
+                            onChange={(e) => setBloqueCualidad(bIdx, e.target.value as CualidadFuerza | "")}
+                            className="dp-body rounded-md border border-black/10 bg-white px-1.5 py-0.5 text-[11px] outline-none focus:dp-border-brand"
+                          >
+                            <option value="">Cualidad de fuerza…</option>
+                            {CUALIDADES.map((c) => (
+                              <option key={c} value={c}>
+                                {c}
+                              </option>
+                            ))}
+                          </select>
+                          {b.cualidad && (
+                            <>
+                              <span className="dp-muted font-mono text-[10px]">
+                                reps {TABLA_INTENSIDAD[b.cualidad].reps} · {TABLA_INTENSIDAD[b.cualidad].porcentaje1RM}{" "}
+                                · TUT {TABLA_INTENSIDAD[b.cualidad].tut} · desc. {TABLA_INTENSIDAD[b.cualidad].descanso}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => aplicarTut(bIdx)}
+                                className="dp-text-amber text-[10px] font-medium hover:underline"
+                              >
+                                Aplicar TUT sugerido
+                              </button>
+                            </>
+                          )}
+                        </div>
+
                         {b.exercises.length > 0 && (
                           <div
                             className="dp-muted grid gap-2 pb-1 text-[10px] font-medium tracking-wide uppercase"
@@ -459,6 +539,8 @@ export function PlanView({
               </button>
             </div>
           )}
+
+          <ResumenProgramacion dias={semana.dias} />
 
           <div className="flex items-center gap-3">
             <button
