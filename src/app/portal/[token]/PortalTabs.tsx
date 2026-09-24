@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { segment: "plan", label: "Mi rutina" },
   { segment: "sesiones", label: "Mis sesiones" },
+  { segment: "historico", label: "Histórico" },
   { segment: "evolucion", label: "Mi progreso" },
 ];
 

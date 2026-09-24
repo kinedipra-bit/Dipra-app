@@ -45,6 +45,29 @@ export function volumenEjercicio(e: Ejercicio): number {
   return (Number(e.series) || 0) * reps * (Number(e.kg) || 0) * factorPeso;
 }
 
+type EjercicioSesionVol = {
+  seriesReal?: number | string;
+  repsReal?: number | string;
+  kgReal?: number | string;
+  pesosSeriesReal?: (number | string)[];
+  unilateral?: boolean;
+  pesoCadaUno?: boolean;
+};
+
+// Mismo criterio que volumenEjercicio, pero sobre lo REALMENTE ejecutado en
+// una sesión (EjercicioSesion) en vez de lo planificado — se usa para el
+// resumen histórico mensual del portal del atleta.
+export function volumenEjercicioSesion(e: EjercicioSesionVol): number {
+  const repsBase = Number(e.repsReal) || 0;
+  const reps = e.unilateral ? repsBase * 2 : repsBase;
+  const factorPeso = e.pesoCadaUno ? 2 : 1;
+  const pesos = (e.pesosSeriesReal ?? []).map((p) => Number(p) || 0).filter((p) => p > 0);
+  if (pesos.length > 0) {
+    return pesos.reduce((sum, p) => sum + reps * p * factorPeso, 0);
+  }
+  return (Number(e.seriesReal) || 0) * reps * (Number(e.kgReal) || 0) * factorPeso;
+}
+
 export function calcVolumenBloque(bloque: Bloque) {
   return bloque.exercises.reduce((sum, e) => sum + volumenEjercicio(e), 0);
 }
