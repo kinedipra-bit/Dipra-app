@@ -3,13 +3,14 @@
 import { useState, useTransition } from "react";
 import { calcVolumenBloque } from "@/lib/dipra/calc";
 import type { FmsData } from "@/lib/dipra/calc";
-import { nuevosDias } from "@/lib/dipra/constants";
-import type { PlanSemana, DiaPlan, EjercicioPlan, EjercicioBiblioteca } from "@/lib/dipra/types";
+import { blockTemplate, nuevosDias } from "@/lib/dipra/constants";
+import type { PlanSemana, DiaPlan, EjercicioPlan, EjercicioBiblioteca, Sesion } from "@/lib/dipra/types";
 import { crearSemana, guardarSemana, setSemanaActiva as marcarSemanaActiva, guardarEnBiblioteca } from "./actions";
 import { ExerciseRow } from "./ExerciseRow";
 import { ResumenDia } from "./ResumenDia";
 import { BarraDeCarga } from "./BarraDeCarga";
 import { FmsResumenPlan } from "./FmsResumenPlan";
+import { SesionesPorDia } from "@/components/SesionesPorDia";
 
 type Vista = "editar" | "resumen-dia" | "resumen-semana";
 
@@ -48,12 +49,14 @@ export function PlanView({
   semanaActivaId: semanaActivaIdInicial,
   semanasIniciales,
   bibliotecaInicial,
+  sesiones,
 }: {
   clienteId: string;
   fms: FmsData | null | undefined;
   semanaActivaId: string | null;
   semanasIniciales: PlanSemana[];
   bibliotecaInicial: EjercicioBiblioteca[];
+  sesiones: Sesion[];
 }) {
   const [semanas, setSemanas] = useState<PlanSemana[]>(semanasIniciales);
   const [semanaActivaId, setSemanaActivaId] = useState<string | null>(
@@ -169,6 +172,36 @@ export function PlanView({
     const nextDia = structuredClone(dia);
     nextDia.bloques.splice(bIdx, 1);
     updateDia(nextDia);
+  };
+
+  // Días agregables/eliminables sobre la semana ACTIVA que se está editando
+  // (no confundir con nuevosDias(), que solo se usa para la plantilla fija
+  // de 4 días al crear la primera semana / clonar una semana nueva). El
+  // label autogenerado es editable después vía renameDia.
+  const addDia = () => {
+    if (!semana) return;
+    const nextDias: DiaPlan[] = [
+      ...semana.dias,
+      { id: crypto.randomUUID(), label: `Día ${semana.dias.length + 1}`, foco: "", bloques: blockTemplate() },
+    ];
+    updateSemana({ ...semana, dias: nextDias });
+    setDiaIdx(nextDias.length - 1);
+  };
+  const removeDia = (idx: number) => {
+    if (!semana || semana.dias.length <= 1) return;
+    const target = semana.dias[idx];
+    const ok = window.confirm(
+      `¿Eliminar "${target.label}"? Se van a perder todos sus bloques y ejercicios.`
+    );
+    if (!ok) return;
+    const nextDias = semana.dias.filter((_, i) => i !== idx);
+    updateSemana({ ...semana, dias: nextDias });
+    setDiaIdx((prev) => Math.min(prev, nextDias.length - 1));
+  };
+  const renameDia = (idx: number, label: string) => {
+    if (!semana) return;
+    const nextDias = semana.dias.map((d, i) => (i === idx ? { ...d, label } : d));
+    updateSemana({ ...semana, dias: nextDias });
   };
 
   if (!semana) {
@@ -290,29 +323,58 @@ export function PlanView({
         </>
       ) : (
         <>
-          <div className="flex gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             {semana.dias.map((d, i) => (
-              <button
+              <div
                 key={d.id}
-                type="button"
-                onClick={() => setDiaIdx(i)}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                  i === diaIdx ? "dp-bg-ink text-white" : "dp-bg-faint dp-body"
-                }`}
+                className={`flex items-center gap-0.5 rounded-lg ${i === diaIdx ? "dp-bg-ink" : "dp-bg-faint"}`}
               >
-                {d.label}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setDiaIdx(i)}
+                  className={`rounded-lg py-1.5 pl-3 text-sm font-medium transition-colors ${
+                    i === diaIdx ? "text-white" : "dp-body"
+                  } ${semana.dias.length > 1 ? "pr-1" : "pr-3"}`}
+                >
+                  {d.label}
+                </button>
+                {semana.dias.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeDia(i)}
+                    title="Eliminar día"
+                    className={`pr-2 text-xs ${i === diaIdx ? "text-white/70 hover:text-white" : "dp-muted hover:dp-alert"}`}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             ))}
+            <button
+              type="button"
+              onClick={addDia}
+              className="dp-text-brand rounded-lg border border-dashed border-black/15 px-2.5 py-1 text-xs font-medium"
+            >
+              + Agregar día
+            </button>
           </div>
 
           {dia && (
             <div className="dp-surface rounded-2xl p-5 shadow-sm">
+              <input
+                value={dia.label}
+                onChange={(e) => renameDia(diaIdx, e.target.value)}
+                placeholder="Nombre del día (ej. Día 1)"
+                className="dp-ink mb-2 w-full rounded-lg border border-black/10 px-3 py-1.5 text-sm font-semibold outline-none focus:dp-border-brand"
+              />
               <input
                 value={dia.foco}
                 onChange={(e) => updateDia({ ...dia, foco: e.target.value })}
                 placeholder="Foco del día (ej. Empuje superior / Tracción inferior)"
                 className="mb-4 w-full rounded-lg border border-black/10 px-3 py-1.5 text-sm outline-none focus:dp-border-brand"
               />
+
+              <SesionesPorDia sesiones={sesiones} diaLabel={dia.label} />
 
               <div className="flex flex-col gap-5">
                 {dia.bloques.map((b, bIdx) => {
