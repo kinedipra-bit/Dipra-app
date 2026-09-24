@@ -1,6 +1,23 @@
 @import "tailwindcss";
 
 /*
+ * Las casillas numéricas angostas (series/reps/kg en el plan y en
+ * "Nueva sesión") mostraban valores de 2-3 dígitos recortados: las
+ * flechitas nativas de <input type="number"> les comen espacio al
+ * valor dentro de un ancho fijo chico. Se ocultan globalmente y todo
+ * el ancho de la casilla queda para el número.
+ */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/*
  * Paleta e identidad visual de DIPRA, migrada 1:1 desde useDipraStyles()
  * en dipra-app.jsx (el prototipo la inyectaba como <style> a mano porque
  * el sandbox de artefactos no compilaba clases arbitrarias de Tailwind;

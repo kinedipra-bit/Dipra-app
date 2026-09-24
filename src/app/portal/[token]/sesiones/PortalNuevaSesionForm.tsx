@@ -272,7 +272,7 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
                             type="number"
                             value={ex.pesosSeriesReal?.[i] ?? ex.kgReal ?? 0}
                             onChange={(e) => cambiarPesoReal(i, e.target.value)}
-                            style={{ width: 40 }}
+                            style={{ width: 48 }}
                             className={inputClass}
                           />
                         ))
@@ -281,7 +281,7 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
                           type="number"
                           value={ex.kgReal}
                           onChange={(e) => actualizarEjercicio(idx, { kgReal: Number(e.target.value) })}
-                          style={{ width: 48 }}
+                          style={{ width: 56 }}
                           className={inputClass}
                         />
                       )}
