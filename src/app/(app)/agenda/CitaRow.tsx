@@ -45,7 +45,7 @@ export function CitaRow({ cita }: { cita: Cita }) {
       <div className="min-w-0 flex-1">
         {cita.client_id ? (
           <Link
-            href={`/clientes/${cita.client_id}`}
+            href={`/clientes/${cita.client_id}/ficha`}
             className="dp-text-heading truncate text-sm font-medium hover:dp-text-brand"
           >
             {cita.cliente_nombre}

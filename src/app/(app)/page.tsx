@@ -50,7 +50,7 @@ export default async function InicioPage() {
                 <span className="dp-body">
                   <span className="dp-text-heading font-mono font-medium">{c.hora}</span> —{" "}
                   {c.client_id ? (
-                    <Link href={`/clientes/${c.client_id}`} className="dp-text-brand hover:underline">
+                    <Link href={`/clientes/${c.client_id}/ficha`} className="dp-text-brand hover:underline">
                       {c.cliente_nombre}
                     </Link>
                   ) : (

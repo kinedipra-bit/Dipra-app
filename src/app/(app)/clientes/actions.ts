@@ -48,5 +48,7 @@ export async function updateClienteFicha(clienteId: string, patch: Record<string
   const supabase = await createClient();
   const { error } = await supabase.from("clients").update(patch).eq("id", clienteId);
   if (error) throw new Error(error.message);
-  revalidatePath(`/clientes/${clienteId}`);
+  // 'layout' revalida el header (nombre/categoría, visibles en todas las
+  // sub-páginas) además de /ficha — no hay página en /clientes/[id] a secas.
+  revalidatePath(`/clientes/${clienteId}`, "layout");
 }
