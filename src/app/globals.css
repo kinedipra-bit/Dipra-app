@@ -81,3 +81,25 @@ body {
 .dp-gradient-access {
   background: linear-gradient(135deg, var(--dp-brand), var(--dp-lime));
 }
+
+/*
+ * Scope oscuro para tarjetas de alto contraste (ej. el bloque de
+ * ejercicios del portal del atleta) — redefine las variables de texto/
+ * fondo "claras" a sus equivalentes legibles sobre fondo oscuro, así los
+ * componentes compartidos (ExerciseRow en modo solo-lectura, SesionesPorDia)
+ * se ven bien ahí adentro sin tener que tocar su código para cada tema.
+ */
+.dp-scope-dark {
+  --dp-ink: #ffffff;
+  --dp-text-heading: #ffffff;
+  --dp-body: #d6ded8;
+  --dp-muted: #9db3a5;
+  --dp-text-faint: #7c9284;
+  --dp-bg-faint: rgba(255, 255, 255, 0.08);
+  background-color: var(--dp-sidebar-bg);
+  color: #ffffff;
+}
+.dp-scope-dark input::placeholder,
+.dp-scope-dark textarea::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}

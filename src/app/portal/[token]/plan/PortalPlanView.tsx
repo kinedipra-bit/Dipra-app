@@ -49,8 +49,8 @@ export function PortalPlanView({
       </p>
 
       {dias.map((dia) => (
-        <section key={dia.id} className="dp-surface rounded-2xl p-5 shadow-sm">
-          <h2 className="font-medium dp-text-heading">{dia.label}</h2>
+        <section key={dia.id} className="dp-scope-dark rounded-2xl p-5 shadow-sm">
+          <h2 className="dp-text-brand font-[family-name:var(--font-display)] font-semibold">{dia.label}</h2>
           {dia.foco && <p className="dp-muted mb-3 text-sm">{dia.foco}</p>}
 
           <SesionesPorDia sesiones={sesiones} diaLabel={dia.label} />
@@ -78,7 +78,7 @@ export function PortalPlanView({
                 </div>
               )}
 
-              <div className="divide-y divide-black/5">
+              <div className="divide-y divide-white/10">
                 {bloque.exercises.map((ex) => (
                   <div key={ex.id} onBlur={() => guardarComentario(dia.id, bloque.id, ex.id, ex.comentarioCliente)}>
                     <ExerciseRow
