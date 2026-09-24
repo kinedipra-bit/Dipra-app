@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { volumenEjercicio } from "@/lib/dipra/calc";
+import { youtubeEmbedUrl } from "@/lib/youtube";
 import type { EjercicioPlan, EjercicioBiblioteca } from "@/lib/dipra/types";
 
 const CAMPOS: { key: "rpe" | "rir" | "tut" | "descanso"; label: string; width?: number }[] = [
@@ -51,6 +52,8 @@ export function ExerciseRow({
   // El toggle "peso por serie" arranca abierto si el ejercicio ya trae
   // valores cargados en pesosSeries (ej. al reabrir un plan guardado).
   const [pesoPorSerieAbierto, setPesoPorSerieAbierto] = useState(pesosSeriesActivo);
+  const [videoAbierto, setVideoAbierto] = useState(false);
+  const embedUrl = youtubeEmbedUrl(ex.link);
 
   // Autocompletado contra la biblioteca: si el nombre tipeado matchea
   // (case-insensitive) un ejercicio de la biblioteca y el ejercicio del plan
@@ -103,14 +106,26 @@ export function ExerciseRow({
     <div className="py-1.5">
       <div className="grid items-center gap-2" style={{ gridTemplateColumns: "1.5fr 0.5fr 0.75fr 0.6fr 0.7fr auto" }}>
         {readOnly ? (
-          <a
-            href={ex.link || undefined}
-            target="_blank"
-            rel="noreferrer"
-            className={`truncate text-sm ${ex.link ? "dp-text-brand underline" : "dp-ink"}`}
-          >
-            {ex.nombre}
-          </a>
+          embedUrl ? (
+            <button
+              type="button"
+              onClick={() => setVideoAbierto((v) => !v)}
+              className="dp-text-brand flex items-center gap-1 truncate text-left text-sm underline decoration-dotted"
+            >
+              <span aria-hidden>▶</span> {ex.nombre}
+            </button>
+          ) : ex.link ? (
+            <a
+              href={ex.link}
+              target="_blank"
+              rel="noreferrer"
+              className="dp-text-brand truncate text-sm underline"
+            >
+              {ex.nombre}
+            </a>
+          ) : (
+            <span className="dp-ink truncate text-sm">{ex.nombre}</span>
+          )
         ) : (
           <input
             value={ex.nombre}
@@ -178,6 +193,18 @@ export function ExerciseRow({
           </button>
         )}
       </div>
+
+      {videoAbierto && embedUrl && (
+        <div className="mt-2 aspect-video w-full max-w-md overflow-hidden rounded-lg">
+          <iframe
+            src={embedUrl}
+            title={`Video de ${ex.nombre}`}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="h-full w-full border-0"
+          />
+        </div>
+      )}
 
       {/* Carga extendida: tipo de carga no numérica, tiempo, unilateral y toggle de peso por serie */}
       {!readOnly && (
@@ -302,6 +329,15 @@ export function ExerciseRow({
           >
             Buscar en YouTube
           </button>
+          {embedUrl && (
+            <button
+              type="button"
+              onClick={() => setVideoAbierto((v) => !v)}
+              className="dp-text-amber shrink-0 whitespace-nowrap text-[11px] font-medium hover:underline"
+            >
+              {videoAbierto ? "Ocultar vista previa" : "▶ Vista previa"}
+            </button>
+          )}
           {puedeGuardar && onSaveToBiblioteca && (
             <button
               type="button"

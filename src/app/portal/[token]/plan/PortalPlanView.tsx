@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { ExerciseRow } from "@/app/(app)/clientes/[id]/plan/ExerciseRow";
 import { SesionesPorDia } from "@/components/SesionesPorDia";
+import { calcVolumenBloque } from "@/lib/dipra/calc";
 import type { PlanSemana, EjercicioPlan, Sesion } from "@/lib/dipra/types";
 import { updateComentarioCliente } from "./actions";
 
@@ -56,7 +57,27 @@ export function PortalPlanView({
 
           {dia.bloques.map((bloque) => (
             <div key={bloque.id} className="mt-3 first:mt-0">
-              <h3 className="dp-muted mb-1 text-xs font-semibold tracking-wide uppercase">{bloque.title}</h3>
+              <div className="mb-1 flex items-center justify-between">
+                <h3 className="dp-muted text-xs font-semibold tracking-wide uppercase">{bloque.title}</h3>
+                <span className="dp-muted font-mono text-xs">
+                  {calcVolumenBloque(bloque).toLocaleString("es-CL")} kg vol.
+                </span>
+              </div>
+
+              {bloque.exercises.length > 0 && (
+                <div
+                  className="dp-muted grid gap-2 pb-1 text-[10px] font-medium tracking-wide uppercase"
+                  style={{ gridTemplateColumns: "1.5fr 0.5fr 0.75fr 0.6fr 0.7fr auto" }}
+                >
+                  <span>Ejercicio</span>
+                  <span className="text-center">Ser.</span>
+                  <span className="text-center">Rep.</span>
+                  <span className="text-center">Kg</span>
+                  <span className="text-right">Vol.</span>
+                  <span />
+                </div>
+              )}
+
               <div className="divide-y divide-black/5">
                 {bloque.exercises.map((ex) => (
                   <div key={ex.id} onBlur={() => guardarComentario(dia.id, bloque.id, ex.id, ex.comentarioCliente)}>
