@@ -67,9 +67,15 @@ function ejerciciosDelDia(dia: DiaPlan | undefined): EjercicioSesion[] {
         seriesPlan: e.series,
         repsPlan: e.reps,
         kgPlan: e.kg,
+        pesosSeriesPlan: e.pesosSeries,
         seriesReal: e.series,
         repsReal: e.reps,
         kgReal: e.kg,
+        pesosSeriesReal: e.pesosSeries,
+        unilateral: e.unilateral,
+        pesoCadaUno: e.pesoCadaUno,
+        tipoCarga: e.tipoCarga,
+        tiempoSerie: e.tiempoSerie,
         rpe: "",
         comentario: "",
       });
@@ -219,59 +225,87 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
             <p className="dp-muted text-xs">Este día no tiene ejercicios cargados todavía.</p>
           ) : (
             <div className="flex flex-col divide-y divide-white/10">
-              {draft.ejercicios.map((ex, idx) => (
-                <div key={ex.id} className="py-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="dp-text-heading text-sm font-medium">{ex.nombre}</span>
-                    <span className="dp-muted font-mono text-[11px]">
-                      plan {ex.seriesPlan}×{ex.repsPlan}×{ex.kgPlan}kg
-                    </span>
+              {draft.ejercicios.map((ex, idx) => {
+                const pesosPlan = (ex.pesosSeriesPlan ?? []).filter((p) => Number(p) > 0);
+                const kgPlanTexto = pesosPlan.length > 0 ? pesosPlan.map((p) => Number(p) || 0).join("/") : String(ex.kgPlan);
+                const pesosRealActivo = (ex.pesosSeriesReal ?? []).some((p) => Number(p) > 0);
+                const cambiarPesoReal = (i: number, value: string) => {
+                  const largo = Math.max(ex.seriesReal, pesosPlan.length, 1);
+                  const current = Array.from({ length: largo }, (_, idx2) => ex.pesosSeriesReal?.[idx2] ?? ex.kgReal ?? 0);
+                  current[i] = value === "" ? "" : Number(value);
+                  actualizarEjercicio(idx, { pesosSeriesReal: current });
+                };
+                return (
+                  <div key={ex.id} className="py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="dp-text-heading text-sm font-medium">{ex.nombre}</span>
+                      <span className="dp-muted font-mono text-[11px]">
+                        plan {ex.seriesPlan}×{ex.repsPlan}
+                        {ex.unilateral ? " c/u" : ""}×{kgPlanTexto}kg{ex.pesoCadaUno ? " c/u" : ""}
+                      </span>
+                    </div>
+                    {(ex.tipoCarga || ex.tiempoSerie) && (
+                      <p className="dp-muted text-[10px]">{[ex.tipoCarga, ex.tiempoSerie].filter(Boolean).join(" · ")}</p>
+                    )}
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <span className="dp-muted text-[10px]">Series</span>
+                      <input
+                        type="number"
+                        value={ex.seriesReal}
+                        onChange={(e) => actualizarEjercicio(idx, { seriesReal: Number(e.target.value) })}
+                        style={{ width: 40 }}
+                        className={inputClass}
+                      />
+                      <span className="dp-muted text-[10px]">Reps</span>
+                      <input
+                        type="number"
+                        value={ex.repsReal}
+                        onChange={(e) => actualizarEjercicio(idx, { repsReal: Number(e.target.value) })}
+                        style={{ width: 40 }}
+                        className={inputClass}
+                      />
+                      <span className="dp-muted text-[10px]">Kg</span>
+                      {pesosRealActivo ? (
+                        Array.from({ length: Math.max(ex.seriesReal, pesosPlan.length, 1) }).map((_, i) => (
+                          <input
+                            key={i}
+                            type="number"
+                            value={ex.pesosSeriesReal?.[i] ?? ex.kgReal ?? 0}
+                            onChange={(e) => cambiarPesoReal(i, e.target.value)}
+                            style={{ width: 40 }}
+                            className={inputClass}
+                          />
+                        ))
+                      ) : (
+                        <input
+                          type="number"
+                          value={ex.kgReal}
+                          onChange={(e) => actualizarEjercicio(idx, { kgReal: Number(e.target.value) })}
+                          style={{ width: 48 }}
+                          className={inputClass}
+                        />
+                      )}
+                      <span className="dp-muted text-[10px]">RPE</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={10}
+                        value={ex.rpe}
+                        onChange={(e) => actualizarEjercicio(idx, { rpe: e.target.value })}
+                        placeholder="—"
+                        style={{ width: 40 }}
+                        className={inputClass}
+                      />
+                    </div>
+                    <input
+                      value={ex.comentario ?? ""}
+                      onChange={(e) => actualizarEjercicio(idx, { comentario: e.target.value })}
+                      placeholder="Comentario de este ejercicio hoy — ej: no pude con el peso, dolió el hombro…"
+                      className="mt-1 w-full rounded-md border border-white/20 bg-white/5 px-2 py-1 text-xs text-white outline-none focus:dp-border-brand"
+                    />
                   </div>
-                  <div className="mt-1 flex items-center gap-2">
-                    <span className="dp-muted text-[10px]">Series</span>
-                    <input
-                      type="number"
-                      value={ex.seriesReal}
-                      onChange={(e) => actualizarEjercicio(idx, { seriesReal: Number(e.target.value) })}
-                      style={{ width: 40 }}
-                      className={inputClass}
-                    />
-                    <span className="dp-muted text-[10px]">Reps</span>
-                    <input
-                      type="number"
-                      value={ex.repsReal}
-                      onChange={(e) => actualizarEjercicio(idx, { repsReal: Number(e.target.value) })}
-                      style={{ width: 40 }}
-                      className={inputClass}
-                    />
-                    <span className="dp-muted text-[10px]">Kg</span>
-                    <input
-                      type="number"
-                      value={ex.kgReal}
-                      onChange={(e) => actualizarEjercicio(idx, { kgReal: Number(e.target.value) })}
-                      style={{ width: 48 }}
-                      className={inputClass}
-                    />
-                    <span className="dp-muted text-[10px]">RPE</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={10}
-                      value={ex.rpe}
-                      onChange={(e) => actualizarEjercicio(idx, { rpe: e.target.value })}
-                      placeholder="—"
-                      style={{ width: 40 }}
-                      className={inputClass}
-                    />
-                  </div>
-                  <input
-                    value={ex.comentario ?? ""}
-                    onChange={(e) => actualizarEjercicio(idx, { comentario: e.target.value })}
-                    placeholder="Comentario de este ejercicio hoy — ej: no pude con el peso, dolió el hombro…"
-                    className="mt-1 w-full rounded-md border border-white/20 bg-white/5 px-2 py-1 text-xs text-white outline-none focus:dp-border-brand"
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

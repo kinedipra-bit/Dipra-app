@@ -142,9 +142,24 @@ export interface EjercicioSesion {
   seriesPlan: number;
   repsPlan: number;
   kgPlan: number;
+  // Snapshot del peso por serie planificado (ver EjercicioPlan.pesosSeries).
+  // Si el ejercicio del plan tenía carga distinta por serie, esto lleva esos
+  // valores tal cual estaban al momento de elegir el día — es de referencia,
+  // no se edita.
+  pesosSeriesPlan?: (number | string)[];
   seriesReal: number;
   repsReal: number;
   kgReal: number;
+  // Peso real por serie, editable — arranca con los mismos valores que
+  // pesosSeriesPlan y el atleta/profesional ajusta según lo que hizo.
+  pesosSeriesReal?: (number | string)[];
+  // Copiados del ejercicio del plan para que la sesión muestre exactamente
+  // lo mismo que ve el profesional/atleta en la rutina (unilateral, peso
+  // c/u, tipo de carga, tiempo bajo tensión).
+  unilateral?: boolean;
+  pesoCadaUno?: boolean;
+  tipoCarga?: string;
+  tiempoSerie?: string;
   rpe: string;
   // Comentario del atleta sobre ESTE ejercicio en ESTA sesión puntual —
   // distinto de EjercicioPlan.comentarioCliente, que es un único campo

@@ -63,15 +63,23 @@ export default async function PortalSesionesPage({ params }: { params: Promise<{
 
           {s.ejercicios.length > 0 && (
             <div className="mt-2 divide-y divide-black/5">
-              {s.ejercicios.map((ex) => (
-                <div key={ex.id} className="py-1.5 text-sm">
-                  <p className="dp-text-heading">{ex.nombre}</p>
-                  <p className="dp-muted font-mono text-xs">
-                    {ex.seriesReal}×{ex.repsReal}×{ex.kgReal}kg{ex.rpe ? ` · RPE ${ex.rpe}` : ""}
-                  </p>
-                  {ex.comentario && <p className="dp-body text-xs">{ex.comentario}</p>}
-                </div>
-              ))}
+              {s.ejercicios.map((ex) => {
+                const kgRealTexto =
+                  ex.pesosSeriesReal && ex.pesosSeriesReal.filter((p) => Number(p) > 0).length > 0
+                    ? ex.pesosSeriesReal.map((p) => Number(p) || 0).join("/")
+                    : String(ex.kgReal);
+                return (
+                  <div key={ex.id} className="py-1.5 text-sm">
+                    <p className="dp-text-heading">{ex.nombre}</p>
+                    <p className="dp-muted font-mono text-xs">
+                      {ex.seriesReal}×{ex.repsReal}
+                      {ex.unilateral ? " c/u" : ""}×{kgRealTexto}kg{ex.pesoCadaUno ? " c/u" : ""}
+                      {ex.rpe ? ` · RPE ${ex.rpe}` : ""}
+                    </p>
+                    {ex.comentario && <p className="dp-body text-xs">{ex.comentario}</p>}
+                  </div>
+                );
+              })}
             </div>
           )}
 
