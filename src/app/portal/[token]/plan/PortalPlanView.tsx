@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { ExerciseRow } from "@/app/(app)/clientes/[id]/plan/ExerciseRow";
+import { BarraDeCarga } from "@/app/(app)/clientes/[id]/plan/BarraDeCarga";
 import { SesionesPorDia } from "@/components/SesionesPorDia";
 import { calcVolumenBloque } from "@/lib/dipra/calc";
 import type { PlanSemana, EjercicioPlan, Sesion } from "@/lib/dipra/types";
@@ -47,6 +48,14 @@ export function PortalPlanView({
       <p className="dp-muted -mt-1 text-xs">
         {semana.mesociclo || `Semana ${semana.numero}`} {semana.objetivo && `— ${semana.objetivo}`}
       </p>
+
+      <div className="dp-scope-dark rounded-2xl p-5 shadow-sm">
+        <h2 className="dp-text-brand mb-1 font-[family-name:var(--font-display)] font-semibold">
+          Resumen semanal de tu rendimiento
+        </h2>
+        <p className="dp-muted mb-3 text-xs">Volumen entrenado por día esta semana.</p>
+        <BarraDeCarga dias={dias} />
+      </div>
 
       {dias.map((dia) => (
         <section key={dia.id} className="dp-scope-dark rounded-2xl p-5 shadow-sm">

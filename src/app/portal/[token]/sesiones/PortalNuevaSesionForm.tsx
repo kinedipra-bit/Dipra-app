@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { PILARES_KEYS, emptySesionPilares } from "@/lib/dipra/constants";
 import { EscalaUnoADiez } from "@/app/(app)/clientes/[id]/sesiones/EscalaUnoADiez";
+import type { DiaPlan, EjercicioSesion } from "@/lib/dipra/types";
 import { crearSesionPortal } from "./actions";
 
 function pilarInvertido(p: (typeof PILARES_KEYS)[number]): boolean {
@@ -13,6 +14,7 @@ type Draft = {
   diaPlanLabel: string;
   pilares: ReturnType<typeof emptySesionPilares>;
   comentarios: string;
+  ejercicios: EjercicioSesion[];
 };
 
 function draftKey(token: string) {
@@ -49,11 +51,46 @@ function borrarDraft(token: string) {
   }
 }
 
-export function PortalNuevaSesionForm({ token, diasLabels }: { token: string; diasLabels: string[] }) {
+// Arma la lista de ejercicios de un día a partir de la planificación, igual
+// que elegirDia en la vista del profesional (SesionesClient.tsx) — el
+// atleta ve su rutina de ESE día puntual y comenta/ajusta ahí mismo, en vez
+// de comentar en "Mi rutina" (donde el comentario queda pisado en el
+// ejercicio y no se sabe de qué sesión/fecha era).
+function ejerciciosDelDia(dia: DiaPlan | undefined): EjercicioSesion[] {
+  if (!dia) return [];
+  const ejercicios: EjercicioSesion[] = [];
+  dia.bloques.forEach((b) =>
+    b.exercises.forEach((e) => {
+      ejercicios.push({
+        id: crypto.randomUUID(),
+        nombre: e.nombre,
+        seriesPlan: e.series,
+        repsPlan: e.reps,
+        kgPlan: e.kg,
+        seriesReal: e.series,
+        repsReal: e.reps,
+        kgReal: e.kg,
+        rpe: "",
+        comentario: "",
+      });
+    })
+  );
+  return ejercicios;
+}
+
+function nuevoDraft(dias: DiaPlan[]): Draft {
+  const primerDia = dias[0];
+  return {
+    diaPlanLabel: primerDia?.label ?? "",
+    pilares: emptySesionPilares(),
+    comentarios: "",
+    ejercicios: ejerciciosDelDia(primerDia),
+  };
+}
+
+export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: DiaPlan[] }) {
   const [abierto, setAbierto] = useState(false);
-  const [diaPlanLabel, setDiaPlanLabel] = useState(diasLabels[0] ?? "");
-  const [pilares, setPilares] = useState(emptySesionPilares());
-  const [comentarios, setComentarios] = useState("");
+  const [draft, setDraft] = useState<Draft>(() => nuevoDraft(dias));
   const [pending, startTransition] = useTransition();
   const [enviado, setEnviado] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,22 +102,32 @@ export function PortalNuevaSesionForm({ token, diasLabels }: { token: string; di
   // desincronizaría el HTML del servidor del primer render del cliente.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    const draft = leerDraft(token);
-    if (draft) {
-      setDiaPlanLabel(draft.diaPlanLabel || diasLabels[0] || "");
-      setPilares(draft.pilares);
-      setComentarios(draft.comentarios);
+    const guardado = leerDraft(token);
+    if (guardado) {
+      setDraft(guardado);
       setAbierto(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Respalda cada cambio mientras el formulario está abierto.
   useEffect(() => {
     if (!abierto) return;
-    guardarDraft(token, { diaPlanLabel, pilares, comentarios });
-  }, [token, abierto, diaPlanLabel, pilares, comentarios]);
+    guardarDraft(token, draft);
+  }, [token, abierto, draft]);
+
+  const elegirDia = (label: string) => {
+    const dia = dias.find((d) => d.label === label);
+    setDraft((prev) => ({ ...prev, diaPlanLabel: label, ejercicios: ejerciciosDelDia(dia) }));
+  };
+
+  const actualizarEjercicio = (idx: number, patch: Partial<EjercicioSesion>) => {
+    setDraft((prev) => {
+      const ejercicios = [...prev.ejercicios];
+      ejercicios[idx] = { ...ejercicios[idx], ...patch };
+      return { ...prev, ejercicios };
+    });
+  };
 
   const enviar = () => {
     setError(null);
@@ -88,13 +135,13 @@ export function PortalNuevaSesionForm({ token, diasLabels }: { token: string; di
       try {
         await crearSesionPortal(token, {
           fecha: new Date().toISOString().slice(0, 10),
-          dia_plan_label: diaPlanLabel,
-          pilares,
-          comentarios,
+          dia_plan_label: draft.diaPlanLabel,
+          pilares: draft.pilares,
+          comentarios: draft.comentarios,
+          ejercicios: draft.ejercicios,
         });
         borrarDraft(token);
-        setPilares(emptySesionPilares());
-        setComentarios("");
+        setDraft(nuevoDraft(dias));
         setEnviado(true);
         setAbierto(false);
       } catch {
@@ -106,12 +153,16 @@ export function PortalNuevaSesionForm({ token, diasLabels }: { token: string; di
     });
   };
 
+  const inputClass =
+    "rounded-md border border-black/10 px-1.5 py-0.5 text-center font-mono text-xs outline-none focus:dp-border-brand";
+
   if (!abierto) {
     return (
       <div className="flex justify-end">
         <button
           type="button"
           onClick={() => {
+            setDraft((prev) => (prev.diaPlanLabel ? prev : nuevoDraft(dias)));
             setAbierto(true);
             setEnviado(false);
           }}
@@ -128,17 +179,18 @@ export function PortalNuevaSesionForm({ token, diasLabels }: { token: string; di
     <div className="dp-surface flex flex-col gap-4 rounded-2xl p-5 shadow-sm">
       <h2 className="font-medium dp-text-heading">¿Cómo estuvo tu entrenamiento de hoy?</h2>
 
-      {diasLabels.length > 0 && (
+      {dias.length > 0 && (
         <label className="flex flex-col gap-1 text-sm">
           <span className="dp-body font-medium">¿Qué día hiciste?</span>
           <select
-            value={diaPlanLabel}
-            onChange={(e) => setDiaPlanLabel(e.target.value)}
+            value={draft.diaPlanLabel}
+            onChange={(e) => elegirDia(e.target.value)}
             className="rounded-lg border border-black/10 px-3 py-2 text-sm outline-none focus:dp-border-brand"
           >
-            {diasLabels.map((label) => (
-              <option key={label} value={label}>
-                {label}
+            {dias.map((d) => (
+              <option key={d.id} value={d.label}>
+                {d.label}
+                {d.foco ? ` — ${d.foco}` : ""}
               </option>
             ))}
           </select>
@@ -150,19 +202,86 @@ export function PortalNuevaSesionForm({ token, diasLabels }: { token: string; di
           <div key={p.key} className="flex flex-col gap-1">
             <span className="dp-muted text-[10px] font-medium">{p.label}</span>
             <EscalaUnoADiez
-              value={pilares[p.key]}
-              onChange={(v) => setPilares((prev) => ({ ...prev, [p.key]: v }))}
+              value={draft.pilares[p.key]}
+              onChange={(v) => setDraft((prev) => ({ ...prev, pilares: { ...prev.pilares, [p.key]: v } }))}
               invertido={pilarInvertido(p)}
             />
           </div>
         ))}
       </div>
 
+      {draft.diaPlanLabel && (
+        <div>
+          <p className="dp-text-heading mb-2 text-xs font-semibold uppercase tracking-wide">
+            Tu rutina de {draft.diaPlanLabel} — anotá lo que hiciste realmente
+          </p>
+          {draft.ejercicios.length === 0 ? (
+            <p className="dp-muted text-xs">Este día no tiene ejercicios cargados todavía.</p>
+          ) : (
+            <div className="flex flex-col divide-y divide-black/5">
+              {draft.ejercicios.map((ex, idx) => (
+                <div key={ex.id} className="py-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="dp-text-heading text-sm font-medium">{ex.nombre}</span>
+                    <span className="dp-muted font-mono text-[11px]">
+                      plan {ex.seriesPlan}×{ex.repsPlan}×{ex.kgPlan}kg
+                    </span>
+                  </div>
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className="dp-muted text-[10px]">Series</span>
+                    <input
+                      type="number"
+                      value={ex.seriesReal}
+                      onChange={(e) => actualizarEjercicio(idx, { seriesReal: Number(e.target.value) })}
+                      style={{ width: 40 }}
+                      className={inputClass}
+                    />
+                    <span className="dp-muted text-[10px]">Reps</span>
+                    <input
+                      type="number"
+                      value={ex.repsReal}
+                      onChange={(e) => actualizarEjercicio(idx, { repsReal: Number(e.target.value) })}
+                      style={{ width: 40 }}
+                      className={inputClass}
+                    />
+                    <span className="dp-muted text-[10px]">Kg</span>
+                    <input
+                      type="number"
+                      value={ex.kgReal}
+                      onChange={(e) => actualizarEjercicio(idx, { kgReal: Number(e.target.value) })}
+                      style={{ width: 48 }}
+                      className={inputClass}
+                    />
+                    <span className="dp-muted text-[10px]">RPE</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={10}
+                      value={ex.rpe}
+                      onChange={(e) => actualizarEjercicio(idx, { rpe: e.target.value })}
+                      placeholder="—"
+                      style={{ width: 40 }}
+                      className={inputClass}
+                    />
+                  </div>
+                  <input
+                    value={ex.comentario ?? ""}
+                    onChange={(e) => actualizarEjercicio(idx, { comentario: e.target.value })}
+                    placeholder="Comentario de este ejercicio hoy — ej: no pude con el peso, dolió el hombro…"
+                    className="dp-muted mt-1 w-full rounded-md border border-black/10 px-2 py-1 text-xs outline-none focus:dp-border-brand"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <label className="flex flex-col gap-1 text-sm">
-        <span className="dp-body font-medium">Observaciones (opcional)</span>
+        <span className="dp-body font-medium">Observaciones generales (opcional)</span>
         <textarea
-          value={comentarios}
-          onChange={(e) => setComentarios(e.target.value)}
+          value={draft.comentarios}
+          onChange={(e) => setDraft((prev) => ({ ...prev, comentarios: e.target.value }))}
           rows={3}
           placeholder="¿Cómo te sentiste? ¿Algo que quieras contarle a tu profesional?"
           className="rounded-lg border border-black/10 px-3 py-2 text-sm outline-none focus:dp-border-brand"

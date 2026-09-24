@@ -2,12 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { EjercicioSesion } from "@/lib/dipra/types";
 
 export interface NuevaSesionPortalInput {
   fecha: string;
   dia_plan_label: string;
   pilares: { sueno: string; nutricion: string; hidratacion: string; movimiento: string; estres: string };
   comentarios: string;
+  ejercicios: EjercicioSesion[];
 }
 
 // El atleta no tiene sesión de Supabase Auth — solo el link con su
@@ -29,7 +31,7 @@ export async function crearSesionPortal(token: string, input: NuevaSesionPortalI
     comentarios_pre: "",
     pilares: input.pilares,
     comentarios: input.comentarios,
-    ejercicios: [],
+    ejercicios: input.ejercicios,
   });
   if (error) throw new Error(error.message);
 

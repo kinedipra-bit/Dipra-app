@@ -28,11 +28,9 @@ export default async function PortalSesionesPage({ params }: { params: Promise<{
       : Promise.resolve({ data: null }),
   ]);
 
-  const diasLabels = semana?.dias.map((d) => d.label) ?? [];
-
   return (
     <div className="flex flex-col gap-4">
-      <PortalNuevaSesionForm token={token} diasLabels={diasLabels} />
+      <PortalNuevaSesionForm token={token} dias={semana?.dias ?? []} />
 
       {(!sesiones || sesiones.length === 0) && (
         <p className="dp-muted text-sm">Todavía no hay sesiones registradas.</p>
@@ -60,6 +58,22 @@ export default async function PortalSesionesPage({ params }: { params: Promise<{
               </div>
             ))}
           </div>
+
+          {s.dia_plan_label && <p className="dp-muted mt-3 text-xs">Día: {s.dia_plan_label}</p>}
+
+          {s.ejercicios.length > 0 && (
+            <div className="mt-2 divide-y divide-black/5">
+              {s.ejercicios.map((ex) => (
+                <div key={ex.id} className="py-1.5 text-sm">
+                  <p className="dp-text-heading">{ex.nombre}</p>
+                  <p className="dp-muted font-mono text-xs">
+                    {ex.seriesReal}×{ex.repsReal}×{ex.kgReal}kg{ex.rpe ? ` · RPE ${ex.rpe}` : ""}
+                  </p>
+                  {ex.comentario && <p className="dp-body text-xs">{ex.comentario}</p>}
+                </div>
+              ))}
+            </div>
+          )}
 
           {s.comentarios && <p className="dp-body mt-3 text-sm">{s.comentarios}</p>}
         </div>

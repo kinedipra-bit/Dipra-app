@@ -142,6 +142,12 @@ export interface EjercicioSesion {
   repsReal: number;
   kgReal: number;
   rpe: string;
+  // Comentario del atleta sobre ESTE ejercicio en ESTA sesión puntual —
+  // distinto de EjercicioPlan.comentarioCliente, que es un único campo
+  // persistente en la rutina (no queda registro de en qué sesión se
+  // escribió). Opcional porque las sesiones cargadas por el profesional no
+  // lo usan.
+  comentario?: string;
 }
 
 export interface Sesion {
