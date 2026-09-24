@@ -2,8 +2,8 @@
 // las fórmulas — ver informe de migración para el detalle de cada una.
 
 export function tonoEscala(n: number): "dp-bg-alert" | "dp-bg-amber" | "dp-bg-brand" {
-  if (n <= 3) return "dp-bg-alert";
-  if (n <= 5) return "dp-bg-amber";
+  if (n < 4) return "dp-bg-alert";
+  if (n <= 6) return "dp-bg-amber";
   return "dp-bg-brand";
 }
 
@@ -30,20 +30,17 @@ export function calcVolumenDia(dia: Dia) {
 
 // FMS ---------------------------------------------------------------------
 
-export function sideVal(raw: string | number | null | undefined, cleared?: boolean): number | null {
-  if (cleared) return 0;
+export function sideVal(raw: string | number | null | undefined): number | null {
   if (raw === "" || raw === undefined || raw === null) return null;
   return Number(raw);
 }
 
 export function finalScore(
   dRaw: string | number | null | undefined,
-  iRaw: string | number | null | undefined,
-  dCleared?: boolean,
-  iCleared?: boolean
+  iRaw: string | number | null | undefined
 ): number | null {
-  const d = sideVal(dRaw, dCleared);
-  const i = sideVal(iRaw, iCleared);
+  const d = sideVal(dRaw);
+  const i = sideVal(iRaw);
   if (d === null && i === null) return null;
   if (d === null) return i;
   if (i === null) return d;
@@ -68,17 +65,20 @@ export interface FmsData {
   seguimientoPropio?: Record<string, string>;
 }
 
+// Los clearing tests (tobillo, hombro, extensión, flexión, muñeca) se
+// registran como dato clínico propio, pero NO fuerzan el puntaje a 0: un
+// clearing positivo no implica necesariamente que el movimiento evaluado
+// (push up, estabilidad rotacional, etc.) haya dolido — el profesional
+// carga el puntaje real que corresponda.
 export function calcularFinalesFms(fms: FmsData) {
   return {
     sentadilla: sideVal(fms.sentadilla),
     pasoValla: finalScore(fms.pasoValla.d, fms.pasoValla.i),
     estocada: finalScore(fms.estocada.d, fms.estocada.i),
-    hombro: finalScore(fms.hombro.d, fms.hombro.i, fms.clearingHombro?.d, fms.clearingHombro?.i),
+    hombro: finalScore(fms.hombro.d, fms.hombro.i),
     aslr: finalScore(fms.aslr.d, fms.aslr.i),
-    pushUp: sideVal(fms.pushUp, fms.clearingExtension),
-    // mismo flag de clearing aplicado a ambos lados a propósito (asimetría
-    // intencional respecto de hombro, que sí es por lado)
-    rotacion: finalScore(fms.rotacion.d, fms.rotacion.i, fms.clearingFlexion, fms.clearingFlexion),
+    pushUp: sideVal(fms.pushUp),
+    rotacion: finalScore(fms.rotacion.d, fms.rotacion.i),
   };
 }
 

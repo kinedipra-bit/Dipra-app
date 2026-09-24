@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { updateFms } from "./actions";
-import { FMS_SUGERENCIAS } from "@/lib/dipra/constants";
+import { FMS_SUGERENCIAS, TOE_TOUCH_SUGERENCIA } from "@/lib/dipra/constants";
 import { calcularFinalesFms, totalFms, type FmsData } from "@/lib/dipra/calc";
 
 type LadoKey = "d" | "i" | "der" | "izq";
@@ -137,6 +137,8 @@ export function FmsSection({ clienteId, initialFms }: { clienteId: string; initi
     .sort((a, b) => a[1] - b[1])
     .map(([key, score]) => ({ key, score, ...FMS_SUGERENCIAS[key] }));
 
+  const toeTouchPositivo = Number(fms.toeTouch) > 0;
+
   const guardar = () => {
     startTransition(async () => {
       await updateFms(clienteId, fms);
@@ -206,6 +208,20 @@ export function FmsSection({ clienteId, initialFms }: { clienteId: string; initi
           </div>
         </div>
 
+        <div className="flex items-center justify-between border-b border-black/5 py-1.5">
+          <span className="dp-muted text-xs">Clearing tobillo · movilidad</span>
+          <div className="flex gap-2">
+            <ClearingToggle
+              value={fms.clearingTobMob?.d ?? false}
+              onChange={(v) => setClearingPar("clearingTobMob", "d", v)}
+            />
+            <ClearingToggle
+              value={fms.clearingTobMob?.i ?? false}
+              onChange={(v) => setClearingPar("clearingTobMob", "i", v)}
+            />
+          </div>
+        </div>
+
         <FmsRow
           label="Movilidad de hombro"
           dValue={fms.hombro.d}
@@ -215,7 +231,7 @@ export function FmsSection({ clienteId, initialFms }: { clienteId: string; initi
           final={finales.hombro}
         />
         <div className="flex items-center justify-between border-b border-black/5 py-1.5">
-          <span className="dp-muted text-xs">Clearing hombro</span>
+          <span className="dp-muted text-xs">Clearing hombro (no fuerza el puntaje)</span>
           <div className="flex gap-2">
             <ClearingToggle
               value={fms.clearingHombro?.d ?? false}
@@ -244,7 +260,7 @@ export function FmsSection({ clienteId, initialFms }: { clienteId: string; initi
           final={finales.pushUp}
         />
         <div className="flex items-center justify-between border-b border-black/5 py-1.5">
-          <span className="dp-muted text-xs">Clearing extensión</span>
+          <span className="dp-muted text-xs">Clearing extensión (no fuerza el puntaje)</span>
           <ClearingToggle
             value={fms.clearingExtension}
             onChange={(v) => setFms((prev) => ({ ...prev, clearingExtension: v }))}
@@ -260,7 +276,7 @@ export function FmsSection({ clienteId, initialFms }: { clienteId: string; initi
           final={finales.rotacion}
         />
         <div className="flex items-center justify-between border-b border-black/5 py-1.5">
-          <span className="dp-muted text-xs">Clearing flexión</span>
+          <span className="dp-muted text-xs">Clearing flexión (no fuerza el puntaje)</span>
           <ClearingToggle
             value={fms.clearingFlexion}
             onChange={(v) => setFms((prev) => ({ ...prev, clearingFlexion: v }))}
@@ -308,13 +324,24 @@ export function FmsSection({ clienteId, initialFms }: { clienteId: string; initi
           Se actualizan solas con puntajes 0, 1 o 2 — el 0 significa dolor y es lo más urgente, luego 1 y
           luego 2.
         </p>
-        {sugerencias.length === 0 ? (
+        {sugerencias.length === 0 && !toeTouchPositivo ? (
           <p className="dp-muted py-6 text-center text-sm">
             Sin puntajes de 0, 1 o 2 todavía. A medida que llenes el screening, aquí aparecerán los tests de
             seguimiento recomendados.
           </p>
         ) : (
           <div className="flex flex-col gap-3">
+            {toeTouchPositivo && (
+              <div className="dp-bg-faint rounded-xl p-3">
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="dp-bg-amber flex h-5 w-5 items-center justify-center rounded-full font-mono text-xs font-semibold text-white">
+                    !
+                  </span>
+                  <span className="text-sm font-medium dp-text-heading">Toe touch</span>
+                </div>
+                <p className="dp-body text-xs leading-relaxed">{TOE_TOUCH_SUGERENCIA}</p>
+              </div>
+            )}
             {sugerencias.map((s) => (
               <div key={s.key} className="dp-bg-faint rounded-xl p-3">
                 <div className="mb-1 flex items-center gap-2">

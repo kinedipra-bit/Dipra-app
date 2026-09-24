@@ -7,7 +7,7 @@ export const PILARES_KEYS = [
   { key: "nutricion", label: "Nutrición" },
   { key: "hidratacion", label: "Hidratación" },
   { key: "movimiento", label: "Movimiento" },
-  { key: "estres", label: "Estrés", invertido: true },
+  { key: "estres", label: "Mindset", invertido: true },
 ] as const;
 
 export const TIPOS_SESION = [
@@ -111,6 +111,12 @@ export const FMS_SUGERENCIAS: Record<
     2: "Repetir con apoyo en rodillas para aislar si el déficit es de fuerza o de coordinación.",
   },
 };
+
+// Toe touch no puntúa junto a los otros 7 movimientos (no es 0-3), pero un
+// resultado positivo (dedos no llegan al piso, queda a X cm) es indicador
+// de restricción de cadena posterior — se muestra como sugerencia aparte.
+export const TOE_TOUCH_SUGERENCIA =
+  "Restricción de cadena posterior (isquiotibiales / gastrocnemios / fascia posterior). Sumar trabajo de movilidad de cadena posterior antes de re-testear (ej. stretching activo de isquiotibiales, movilidad de tobillo en carga).";
 
 export function emptyFms() {
   return {
