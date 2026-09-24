@@ -21,34 +21,44 @@ export function ResumenDia({ dia }: { dia: DiaPlan }) {
               <p className="dp-muted text-xs">Sin ejercicios.</p>
             ) : (
               <div className="divide-y divide-black/5">
-                {b.exercises.map((e) => (
-                  <div key={e.id} className="flex items-center justify-between gap-3 py-1.5">
-                    <div className="min-w-0">
-                      {e.link ? (
-                        <a
-                          href={e.link}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="dp-text-brand block truncate text-sm underline"
-                        >
-                          {e.nombre}
-                        </a>
-                      ) : (
-                        <span className="dp-ink block truncate text-sm">{e.nombre}</span>
-                      )}
-                      {e.comentarioCliente && (
-                        <p className="dp-text-amber mt-0.5 text-[11px]">&ldquo;{e.comentarioCliente}&rdquo;</p>
-                      )}
+                {b.exercises.map((e) => {
+                  const pesosSeries = (e.pesosSeries ?? []).filter((p) => Number(p) > 0);
+                  const kgTexto =
+                    pesosSeries.length > 0
+                      ? pesosSeries.map((p) => Number(p) || 0).join("/")
+                      : String(e.kg ?? 0);
+                  return (
+                    <div key={e.id} className="flex items-center justify-between gap-3 py-1.5">
+                      <div className="min-w-0">
+                        {e.link ? (
+                          <a
+                            href={e.link}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="dp-text-brand block truncate text-sm underline"
+                          >
+                            {e.nombre}
+                          </a>
+                        ) : (
+                          <span className="dp-ink block truncate text-sm">{e.nombre}</span>
+                        )}
+                        {e.comentarioCliente && (
+                          <p className="dp-text-amber mt-0.5 text-[11px]">&ldquo;{e.comentarioCliente}&rdquo;</p>
+                        )}
+                      </div>
+                      <span className="dp-muted shrink-0 text-right font-mono text-xs">
+                        {e.series}×{e.reps}
+                        {e.unilateral ? " c/u" : ""}×{kgTexto}kg{e.pesoCadaUno ? " c/u" : ""}
+                        {e.tipoCarga ? ` (${e.tipoCarga})` : ""}
+                        {e.tiempoSerie ? ` · ${e.tiempoSerie}` : ""}
+                        {e.rpe ? ` · RPE ${e.rpe}` : ""}
+                        {e.rir ? ` · RIR ${e.rir}` : ""}
+                        {e.tut ? ` · TUT ${e.tut}` : ""}
+                        {e.descanso ? ` · Desc. ${e.descanso}` : ""}
+                      </span>
                     </div>
-                    <span className="dp-muted shrink-0 text-right font-mono text-xs">
-                      {e.series}×{e.reps}×{e.kg}kg
-                      {e.rpe ? ` · RPE ${e.rpe}` : ""}
-                      {e.rir ? ` · RIR ${e.rir}` : ""}
-                      {e.tut ? ` · TUT ${e.tut}` : ""}
-                      {e.descanso ? ` · Desc. ${e.descanso}` : ""}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
