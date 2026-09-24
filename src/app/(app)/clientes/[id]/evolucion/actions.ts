@@ -26,16 +26,23 @@ export interface NuevaMedicionInput {
   pararse_del_suelo: number;
 }
 
+// El formulario de carga (NuevaMedicionForm) se reusa desde Evaluación
+// además de Evolución — se revalidan las dos rutas.
+function revalidar(clienteId: string) {
+  revalidatePath(`/clientes/${clienteId}/evolucion`);
+  revalidatePath(`/clientes/${clienteId}/evaluacion`);
+}
+
 export async function crearPrHistorial(clienteId: string, input: NuevaMedicionInput) {
   const supabase = await createClient();
   const { error } = await supabase.from("client_pr_historial").insert({ client_id: clienteId, ...input });
   if (error) throw new Error(error.message);
-  revalidatePath(`/clientes/${clienteId}/evolucion`);
+  revalidar(clienteId);
 }
 
 export async function eliminarPrHistorial(clienteId: string, id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("client_pr_historial").delete().eq("id", id);
   if (error) throw new Error(error.message);
-  revalidatePath(`/clientes/${clienteId}/evolucion`);
+  revalidar(clienteId);
 }

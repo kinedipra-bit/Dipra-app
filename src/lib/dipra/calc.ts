@@ -19,15 +19,19 @@ type Ejercicio = {
   reps?: number | string;
   kg?: number | string;
   pesosSeries?: (number | string)[];
+  unilateral?: boolean;
 };
 type Bloque = { exercises: Ejercicio[] };
 type Dia = { bloques: Bloque[] };
 
 // Si `pesosSeries` tiene valores cargados, el volumen se calcula sumando
 // reps × cada peso de serie individual (una serie por entrada del array).
-// Si no, se usa la fórmula uniforme series × reps × kg.
+// Si no, se usa la fórmula uniforme series × reps × kg. Un ejercicio
+// unilateral ("10 reps por lado") hace el doble de repeticiones reales
+// (una tanda por lado), así que se duplican las reps para el cálculo.
 export function volumenEjercicio(e: Ejercicio): number {
-  const reps = Number(e.reps) || 0;
+  const repsBase = Number(e.reps) || 0;
+  const reps = e.unilateral ? repsBase * 2 : repsBase;
   const pesos = (e.pesosSeries ?? []).map((p) => Number(p) || 0).filter((p) => p > 0);
   if (pesos.length > 0) {
     return pesos.reduce((sum, p) => sum + reps * p, 0);

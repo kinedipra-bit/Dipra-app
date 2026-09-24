@@ -101,7 +101,7 @@ export function ExerciseRow({
 
   return (
     <div className="py-1.5">
-      <div className="grid items-center gap-2" style={{ gridTemplateColumns: "1.6fr 0.55fr 0.55fr 0.6fr 0.7fr auto" }}>
+      <div className="grid items-center gap-2" style={{ gridTemplateColumns: "1.5fr 0.5fr 0.75fr 0.6fr 0.7fr auto" }}>
         {readOnly ? (
           <a
             href={ex.link || undefined}
@@ -140,12 +140,13 @@ export function ExerciseRow({
             {ex.unilateral && <span className="dp-text-brand text-[10px] font-semibold">c/u</span>}
           </span>
         ) : (
-          <div className="flex items-center justify-center gap-1">
+          <div className="flex items-center gap-1">
             <input
               type="number"
               value={ex.reps}
               onChange={(e) => onChange({ ...ex, reps: Number(e.target.value) })}
-              className="w-full min-w-0 rounded-lg border border-black/10 px-2 py-1 text-center font-mono text-sm outline-none focus:dp-border-brand"
+              style={{ minWidth: 40 }}
+              className="flex-1 rounded-lg border border-black/10 px-2 py-1 text-center font-mono text-sm outline-none focus:dp-border-brand"
             />
             {ex.unilateral && <span className="dp-text-brand shrink-0 text-[10px] font-semibold">c/u</span>}
           </div>
@@ -186,10 +187,22 @@ export function ExerciseRow({
             <input
               value={ex.tipoCarga || ""}
               onChange={(e) => onChange({ ...ex, tipoCarga: e.target.value })}
-              placeholder="Banda / peso corporal…"
-              style={{ width: 120 }}
+              placeholder="Ej. peso corporal…"
+              style={{ width: 110 }}
               className={campoInputClass}
             />
+            {["Banda", "Peso corporal"].map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => onChange({ ...ex, tipoCarga: ex.tipoCarga === preset ? "" : preset })}
+                className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                  ex.tipoCarga === preset ? "dp-bg-brand text-white" : "dp-bg-faint dp-body"
+                }`}
+              >
+                {preset}
+              </button>
+            ))}
           </div>
           <div className="flex items-center gap-1">
             <span className="dp-muted text-[10px] font-medium">Tiempo</span>

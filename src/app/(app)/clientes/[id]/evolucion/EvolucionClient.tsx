@@ -3,88 +3,11 @@
 import { useState, useTransition } from "react";
 import { deficitExplosivo, isPR, maxDe } from "@/lib/dipra/calc";
 import type { PrHistorialEntry } from "@/lib/dipra/types";
-import { crearPrHistorial, eliminarPrHistorial, type NuevaMedicionInput } from "./actions";
-
-type MetricKey =
-  | "sentadilla"
-  | "peso_muerto"
-  | "press_banca"
-  | "press_militar"
-  | "broad_jump"
-  | "abalakov_jump"
-  | "cmj"
-  | "squat_jump"
-  | "agarre_der"
-  | "agarre_izq"
-  | "dead_hang"
-  | "pull_ups"
-  | "push_up"
-  | "plancha_frontal"
-  | "plancha_lateral_der"
-  | "plancha_lateral_izq"
-  | "pararse_del_suelo";
-
-interface MetricDef {
-  key: MetricKey;
-  label: string;
-}
-
-interface GrupoDef {
-  titulo: string;
-  metrics: MetricDef[];
-}
-
-const GRUPOS: GrupoDef[] = [
-  {
-    titulo: "Fuerza",
-    metrics: [
-      { key: "sentadilla", label: "Sentadilla" },
-      { key: "peso_muerto", label: "Peso muerto" },
-      { key: "press_banca", label: "Press banca" },
-      { key: "press_militar", label: "Press militar" },
-    ],
-  },
-  {
-    titulo: "Saltos",
-    metrics: [
-      { key: "broad_jump", label: "Broad jump" },
-      { key: "abalakov_jump", label: "Abalakov" },
-      { key: "cmj", label: "CMJ" },
-      { key: "squat_jump", label: "Squat jump (SJ)" },
-    ],
-  },
-  {
-    titulo: "Fuerza funcional",
-    metrics: [
-      { key: "agarre_der", label: "Fuerza de agarre der. (kg)" },
-      { key: "agarre_izq", label: "Fuerza de agarre izq. (kg)" },
-      { key: "dead_hang", label: "Dead hang (seg)" },
-      { key: "pull_ups", label: "Pull ups (reps)" },
-      { key: "push_up", label: "Push up (reps)" },
-      { key: "plancha_frontal", label: "Plancha frontal (seg)" },
-      { key: "plancha_lateral_der", label: "Plancha lateral der. (seg)" },
-      { key: "plancha_lateral_izq", label: "Plancha lateral izq. (seg)" },
-      { key: "pararse_del_suelo", label: "Pararse del suelo (puntaje, 10=sin apoyos)" },
-    ],
-  },
-];
+import { eliminarPrHistorial } from "./actions";
+import { NuevaMedicionForm } from "./NuevaMedicionForm";
+import { GRUPOS, type MetricKey } from "./metricas";
 
 type NumericHist = Pick<PrHistorialEntry, MetricKey>;
-
-const METRICS: MetricDef[] = GRUPOS.flatMap((g) => g.metrics);
-
-function camposVacios(): Record<MetricKey, string> {
-  return Object.fromEntries(METRICS.map((m) => [m.key, ""])) as Record<MetricKey, string>;
-}
-
-function nuevoDraft() {
-  return {
-    fecha: new Date().toISOString().slice(0, 10),
-    mesociclo: "",
-    objetivo: "",
-    ...camposVacios(),
-  };
-}
 
 function fmtFecha(f: string) {
   const d = new Date(f + "T00:00:00");
@@ -102,44 +25,8 @@ export function EvolucionClient({
 }) {
   const hist = [...historialInicial].sort((a, b) => a.fecha.localeCompare(b.fecha));
 
-  const [showAdd, setShowAdd] = useState(false);
-  const [draft, setDraft] = useState(nuevoDraft());
   const [pending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  const agregar = () => {
-    if (!draft.mesociclo.trim()) return;
-    const entrada: NuevaMedicionInput = {
-      fecha: draft.fecha,
-      mesociclo: draft.mesociclo.trim(),
-      objetivo: draft.objetivo.trim(),
-      sentadilla: 0,
-      peso_muerto: 0,
-      press_banca: 0,
-      press_militar: 0,
-      broad_jump: 0,
-      abalakov_jump: 0,
-      cmj: 0,
-      squat_jump: 0,
-      agarre_der: 0,
-      agarre_izq: 0,
-      dead_hang: 0,
-      pull_ups: 0,
-      push_up: 0,
-      plancha_frontal: 0,
-      plancha_lateral_der: 0,
-      plancha_lateral_izq: 0,
-      pararse_del_suelo: 0,
-    };
-    METRICS.forEach((m) => {
-      entrada[m.key] = Number(draft[m.key]) || 0;
-    });
-    startTransition(async () => {
-      await crearPrHistorial(clienteId, entrada);
-      setDraft(nuevoDraft());
-      setShowAdd(false);
-    });
-  };
 
   const borrar = (id: string) => {
     if (!confirm("¿Eliminar este registro de mesociclo? Esta acción no se puede deshacer.")) return;
@@ -150,79 +37,9 @@ export function EvolucionClient({
     });
   };
 
-  const inputClass = "rounded-lg border border-black/10 px-3 py-1.5 text-sm outline-none focus:dp-border-brand";
-
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => setShowAdd((v) => !v)}
-          className="dp-bg-brand rounded-xl px-3.5 py-2 text-sm font-medium text-white"
-        >
-          + Nuevo registro de mesociclo
-        </button>
-      </div>
-
-      {showAdd && (
-        <div className="dp-surface flex flex-col gap-3 rounded-2xl p-4 shadow-sm">
-          <div className="grid grid-cols-3 gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="dp-body font-medium">Fecha</span>
-              <input
-                type="date"
-                value={draft.fecha}
-                onChange={(e) => setDraft({ ...draft, fecha: e.target.value })}
-                className={`${inputClass} font-mono`}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="dp-body font-medium">Mesociclo</span>
-              <input
-                value={draft.mesociclo}
-                onChange={(e) => setDraft({ ...draft, mesociclo: e.target.value })}
-                placeholder="Ej. Mesociclo 5"
-                className={inputClass}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="dp-body font-medium">Objetivo de la fase</span>
-              <input
-                value={draft.objetivo}
-                onChange={(e) => setDraft({ ...draft, objetivo: e.target.value })}
-                placeholder="Ej. Fuerza máxima / Fuerza explosiva / Pliometría"
-                className={inputClass}
-              />
-            </label>
-          </div>
-          {GRUPOS.map((g) => (
-            <div key={g.titulo}>
-              <p className="dp-text-brand mb-1.5 text-xs font-semibold uppercase tracking-wide">{g.titulo}</p>
-              <div className="grid grid-cols-4 gap-3">
-                {g.metrics.map((m) => (
-                  <label key={m.key} className="flex flex-col gap-1 text-[11px]">
-                    <span className="dp-body font-medium">{m.label}</span>
-                    <input
-                      type="number"
-                      value={draft[m.key]}
-                      onChange={(e) => setDraft({ ...draft, [m.key]: e.target.value })}
-                      className={`${inputClass} font-mono`}
-                    />
-                  </label>
-                ))}
-              </div>
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={agregar}
-            disabled={!draft.mesociclo.trim() || pending}
-            className="dp-bg-brand w-fit rounded-xl px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
-          >
-            {pending ? "Guardando…" : "Guardar registro"}
-          </button>
-        </div>
-      )}
+      <NuevaMedicionForm clienteId={clienteId} />
 
       {hist.length === 0 ? (
         <p className="dp-muted dp-surface rounded-2xl p-8 text-center text-sm shadow-sm">
