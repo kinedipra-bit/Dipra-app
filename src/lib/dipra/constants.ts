@@ -7,7 +7,7 @@ export const PILARES_KEYS = [
   { key: "nutricion", label: "Nutrición" },
   { key: "hidratacion", label: "Hidratación" },
   { key: "movimiento", label: "Movimiento" },
-  { key: "estres", label: "Mindset", invertido: true },
+  { key: "estres", label: "Estrés mental general", invertido: true },
 ] as const;
 
 export const TIPOS_SESION = [
