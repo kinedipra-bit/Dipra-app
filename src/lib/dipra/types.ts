@@ -211,6 +211,12 @@ export interface Sesion {
   pilares: { sueno: string; nutricion: string; hidratacion: string; movimiento: string; estres: string };
   comentarios: string;
   ejercicios: EjercicioSesion[];
+  // La registró el cliente desde su portal (vs. el profesional en una
+  // atención presencial) — determina si el profesional "todavía no la vio".
+  registrada_por_cliente: boolean;
+  // Solo relevante cuando registrada_por_cliente=true: el profesional ya la
+  // revisó. Las que carga el profesional mismo arrancan revisadas.
+  revisada: boolean;
   created_at: string;
 }
 

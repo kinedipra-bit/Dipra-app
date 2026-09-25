@@ -32,11 +32,18 @@ export async function crearSesionPortal(token: string, input: NuevaSesionPortalI
     pilares: input.pilares,
     comentarios: input.comentarios,
     ejercicios: input.ejercicios,
+    registrada_por_cliente: true,
+    revisada: false,
   });
   if (error) throw new Error(error.message);
 
   revalidatePath(`/portal/${token}/sesiones`);
   revalidatePath(`/clientes/${cliente.id}/sesiones`);
+  // Inicio y la lista de clientes muestran las alertas de programación
+  // (semana completa / sesión sin revisar), que cambian con cada sesión
+  // nueva del portal.
+  revalidatePath("/");
+  revalidatePath("/clientes");
 }
 
 // El atleta puede borrar una sesión que él mismo registró (ej. si eligió el

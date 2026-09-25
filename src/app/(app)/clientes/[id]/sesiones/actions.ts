@@ -17,13 +17,17 @@ export interface NuevaSesionInput {
 
 function revalidar(clienteId: string) {
   revalidatePath(`/clientes/${clienteId}/sesiones`);
-  // Inicio también muestra un conteo de sesiones del día.
+  // Inicio y la lista de clientes muestran las alertas de programación
+  // (semana completa / sesión sin revisar).
   revalidatePath("/");
+  revalidatePath("/clientes");
 }
 
 export async function crearSesion(clienteId: string, input: NuevaSesionInput) {
   const supabase = await createClient();
-  const { error } = await supabase.from("sesiones").insert({ client_id: clienteId, ...input });
+  const { error } = await supabase
+    .from("sesiones")
+    .insert({ client_id: clienteId, ...input, registrada_por_cliente: false, revisada: true });
   if (error) throw new Error(error.message);
   revalidar(clienteId);
 }
@@ -31,6 +35,13 @@ export async function crearSesion(clienteId: string, input: NuevaSesionInput) {
 export async function eliminarSesion(clienteId: string, sesionId: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("sesiones").delete().eq("id", sesionId);
+  if (error) throw new Error(error.message);
+  revalidar(clienteId);
+}
+
+export async function marcarSesionRevisada(clienteId: string, sesionId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("sesiones").update({ revisada: true }).eq("id", sesionId);
   if (error) throw new Error(error.message);
   revalidar(clienteId);
 }

@@ -5,7 +5,7 @@ import { tonoEscalaPilar } from "@/lib/dipra/calc";
 import { agruparPorBloque } from "@/lib/dipra/agruparEjercicios";
 import { PILARES_KEYS, TIPOS_SESION, emptySesionPilares } from "@/lib/dipra/constants";
 import type { DiaPlan, EjercicioSesion, Sesion } from "@/lib/dipra/types";
-import { crearSesion, eliminarSesion, type NuevaSesionInput } from "./actions";
+import { crearSesion, eliminarSesion, marcarSesionRevisada, type NuevaSesionInput } from "./actions";
 import { EscalaUnoADiez } from "./EscalaUnoADiez";
 
 const inputClass = "rounded-lg border border-black/10 px-3 py-2 text-sm outline-none focus:dp-border-brand";
@@ -122,6 +122,12 @@ export function SesionesClient({
     startTransition(async () => {
       await eliminarSesion(clienteId, id);
       setDeletingId(null);
+    });
+  };
+
+  const revisarSesion = (id: string) => {
+    startTransition(async () => {
+      await marcarSesionRevisada(clienteId, id);
     });
   };
 
@@ -413,6 +419,9 @@ export function SesionesClient({
                     </p>
                     <p className="dp-muted truncate text-xs">{s.comentarios || "Sin comentarios"}</p>
                   </div>
+                  {s.registrada_por_cliente && !s.revisada && (
+                    <span className="dp-alert shrink-0 text-xs font-medium">⚠ Sin revisar</span>
+                  )}
                   {alerta && <span className="dp-alert shrink-0 text-xs font-medium">⚠ Pilar bajo</span>}
                   <span className={`dp-muted shrink-0 text-xs transition-transform ${expanded ? "rotate-90" : ""}`}>
                     ›
@@ -483,14 +492,26 @@ export function SesionesClient({
                         <p className="dp-text-heading text-sm">{s.comentarios}</p>
                       </div>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => borrarSesion(s.id)}
-                      disabled={pending && deletingId === s.id}
-                      className="dp-alert w-fit text-xs hover:underline disabled:opacity-50"
-                    >
-                      {pending && deletingId === s.id ? "Eliminando…" : "Eliminar sesión"}
-                    </button>
+                    <div className="flex items-center gap-3">
+                      {s.registrada_por_cliente && !s.revisada && (
+                        <button
+                          type="button"
+                          onClick={() => revisarSesion(s.id)}
+                          disabled={pending}
+                          className="dp-text-brand w-fit text-xs hover:underline disabled:opacity-50"
+                        >
+                          ✓ Marcar como revisada
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => borrarSesion(s.id)}
+                        disabled={pending && deletingId === s.id}
+                        className="dp-alert w-fit text-xs hover:underline disabled:opacity-50"
+                      >
+                        {pending && deletingId === s.id ? "Eliminando…" : "Eliminar sesión"}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
