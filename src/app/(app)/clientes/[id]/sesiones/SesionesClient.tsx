@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { tonoEscalaPilar } from "@/lib/dipra/calc";
+import { agruparPorBloque } from "@/lib/dipra/agruparEjercicios";
 import { PILARES_KEYS, TIPOS_SESION, emptySesionPilares } from "@/lib/dipra/constants";
 import type { DiaPlan, EjercicioSesion, Sesion } from "@/lib/dipra/types";
 import { crearSesion, eliminarSesion, type NuevaSesionInput } from "./actions";
@@ -90,6 +91,7 @@ export function SesionesClient({
             pesoCadaUno: e.pesoCadaUno,
             tipoCarga: e.tipoCarga,
             tiempoSerie: e.tiempoSerie,
+            bloqueTitle: b.title,
             rpe: "",
           });
         })
@@ -252,80 +254,95 @@ export function SesionesClient({
               <span className="text-center">Kg real</span>
               <span className="text-center">RPE</span>
             </div>
-            <div className="divide-y divide-black/5">
-              {draft.ejercicios.map((ex, idx) => {
-                const pesosPlan = (ex.pesosSeriesPlan ?? []).filter((p) => Number(p) > 0);
-                const kgPlanTexto = pesosPlan.length > 0 ? pesosPlan.map((p) => Number(p) || 0).join("/") : String(ex.kgPlan);
-                const pesosRealActivo = (ex.pesosSeriesReal ?? []).some((p) => Number(p) > 0);
-                const cambiarPesoReal = (i: number, value: string) => {
-                  const largo = Math.max(ex.seriesReal, pesosPlan.length, 1);
-                  const current = Array.from({ length: largo }, (_, idx2) => ex.pesosSeriesReal?.[idx2] ?? ex.kgReal ?? 0);
-                  current[i] = value === "" ? "" : Number(value);
-                  updateEjercicio(idx, { pesosSeriesReal: current });
-                };
-                return (
-                  <div
-                    key={ex.id}
-                    className="grid items-center gap-2 py-1.5"
-                    style={{ gridTemplateColumns: "1.4fr 0.9fr 0.5fr 0.5fr 0.9fr 0.4fr" }}
-                  >
-                    <div className="min-w-0">
-                      <span className="dp-text-heading block truncate text-sm">{ex.nombre}</span>
-                      {(ex.tipoCarga || ex.tiempoSerie) && (
-                        <span className="dp-muted text-[10px]">
-                          {[ex.tipoCarga, ex.tiempoSerie].filter(Boolean).join(" · ")}
-                        </span>
-                      )}
-                    </div>
-                    <span className="dp-muted font-mono text-xs">
-                      {ex.seriesPlan}×{ex.repsPlan}
-                      {ex.unilateral ? " c/u" : ""}×{kgPlanTexto}kg{ex.pesoCadaUno ? " c/u" : ""}
-                    </span>
-                    <input
-                      type="number"
-                      value={ex.seriesReal}
-                      onChange={(e) => updateEjercicio(idx, { seriesReal: Number(e.target.value) })}
-                      className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-sm outline-none focus:dp-border-brand"
-                    />
-                    <input
-                      type="number"
-                      value={ex.repsReal}
-                      onChange={(e) => updateEjercicio(idx, { repsReal: Number(e.target.value) })}
-                      className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-sm outline-none focus:dp-border-brand"
-                    />
-                    {pesosRealActivo ? (
-                      <div className="flex flex-wrap items-center gap-1">
-                        {Array.from({ length: Math.max(ex.seriesReal, pesosPlan.length, 1) }).map((_, i) => (
+            <div className="flex flex-col gap-3">
+              {agruparPorBloque(draft.ejercicios).map((grupo, gIdx) => (
+                <div key={gIdx}>
+                  {grupo.bloqueTitle && (
+                    <p className="dp-text-brand mb-1 text-xs font-semibold tracking-wide uppercase">
+                      {grupo.bloqueTitle}
+                    </p>
+                  )}
+                  <div className="divide-y divide-black/5">
+                    {grupo.items.map(({ ejercicio: ex, idx }) => {
+                      const pesosPlan = (ex.pesosSeriesPlan ?? []).filter((p) => Number(p) > 0);
+                      const kgPlanTexto =
+                        pesosPlan.length > 0 ? pesosPlan.map((p) => Number(p) || 0).join("/") : String(ex.kgPlan);
+                      const pesosRealActivo = (ex.pesosSeriesReal ?? []).some((p) => Number(p) > 0);
+                      const cambiarPesoReal = (i: number, value: string) => {
+                        const largo = Math.max(ex.seriesReal, pesosPlan.length, 1);
+                        const current = Array.from(
+                          { length: largo },
+                          (_, idx2) => ex.pesosSeriesReal?.[idx2] ?? ex.kgReal ?? 0
+                        );
+                        current[i] = value === "" ? "" : Number(value);
+                        updateEjercicio(idx, { pesosSeriesReal: current });
+                      };
+                      return (
+                        <div
+                          key={ex.id}
+                          className="grid items-center gap-2 py-1.5"
+                          style={{ gridTemplateColumns: "1.4fr 0.9fr 0.5fr 0.5fr 0.9fr 0.4fr" }}
+                        >
+                          <div className="min-w-0">
+                            <span className="dp-text-heading block truncate text-sm">{ex.nombre}</span>
+                            {(ex.tipoCarga || ex.tiempoSerie) && (
+                              <span className="dp-muted text-[10px]">
+                                {[ex.tipoCarga, ex.tiempoSerie].filter(Boolean).join(" · ")}
+                              </span>
+                            )}
+                          </div>
+                          <span className="dp-muted font-mono text-xs">
+                            {ex.seriesPlan}×{ex.repsPlan}
+                            {ex.unilateral ? " c/u" : ""}×{kgPlanTexto}kg{ex.pesoCadaUno ? " c/u" : ""}
+                          </span>
                           <input
-                            key={i}
                             type="number"
-                            value={ex.pesosSeriesReal?.[i] ?? ex.kgReal ?? 0}
-                            onChange={(e) => cambiarPesoReal(i, e.target.value)}
-                            style={{ width: 36 }}
-                            className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-xs outline-none focus:dp-border-brand"
+                            value={ex.seriesReal}
+                            onChange={(e) => updateEjercicio(idx, { seriesReal: Number(e.target.value) })}
+                            className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-sm outline-none focus:dp-border-brand"
                           />
-                        ))}
-                      </div>
-                    ) : (
-                      <input
-                        type="number"
-                        value={ex.kgReal}
-                        onChange={(e) => updateEjercicio(idx, { kgReal: Number(e.target.value) })}
-                        className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-sm outline-none focus:dp-border-brand"
-                      />
-                    )}
-                    <input
-                      type="number"
-                      min={0}
-                      max={10}
-                      value={ex.rpe}
-                      onChange={(e) => updateEjercicio(idx, { rpe: e.target.value })}
-                      placeholder="—"
-                      className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-sm outline-none focus:dp-border-brand"
-                    />
+                          <input
+                            type="number"
+                            value={ex.repsReal}
+                            onChange={(e) => updateEjercicio(idx, { repsReal: Number(e.target.value) })}
+                            className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-sm outline-none focus:dp-border-brand"
+                          />
+                          {pesosRealActivo ? (
+                            <div className="flex flex-wrap items-center gap-1">
+                              {Array.from({ length: Math.max(ex.seriesReal, pesosPlan.length, 1) }).map((_, i) => (
+                                <input
+                                  key={i}
+                                  type="number"
+                                  value={ex.pesosSeriesReal?.[i] ?? ex.kgReal ?? 0}
+                                  onChange={(e) => cambiarPesoReal(i, e.target.value)}
+                                  style={{ width: 36 }}
+                                  className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-xs outline-none focus:dp-border-brand"
+                                />
+                              ))}
+                            </div>
+                          ) : (
+                            <input
+                              type="number"
+                              value={ex.kgReal}
+                              onChange={(e) => updateEjercicio(idx, { kgReal: Number(e.target.value) })}
+                              className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-sm outline-none focus:dp-border-brand"
+                            />
+                          )}
+                          <input
+                            type="number"
+                            min={0}
+                            max={10}
+                            value={ex.rpe}
+                            onChange={(e) => updateEjercicio(idx, { rpe: e.target.value })}
+                            placeholder="—"
+                            className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-sm outline-none focus:dp-border-brand"
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              ))}
               {draft.ejercicios.length === 0 && (
                 <p className="dp-muted py-2 text-xs">Este día no tiene ejercicios cargados en la planificación todavía.</p>
               )}
@@ -427,26 +444,37 @@ export function SesionesClient({
                       </div>
                     )}
                     {s.ejercicios.length > 0 && (
-                      <div className="divide-y divide-black/5">
-                        {s.ejercicios.map((ex) => {
-                          const kgPlanTexto =
-                            ex.pesosSeriesPlan && ex.pesosSeriesPlan.filter((p) => Number(p) > 0).length > 0
-                              ? ex.pesosSeriesPlan.map((p) => Number(p) || 0).join("/")
-                              : String(ex.kgPlan);
-                          const kgRealTexto =
-                            ex.pesosSeriesReal && ex.pesosSeriesReal.filter((p) => Number(p) > 0).length > 0
-                              ? ex.pesosSeriesReal.map((p) => Number(p) || 0).join("/")
-                              : String(ex.kgReal);
-                          return (
-                            <div key={ex.id} className="flex items-center justify-between py-1.5 text-sm">
-                              <span className="dp-text-heading">{ex.nombre}</span>
-                              <span className="dp-muted font-mono text-xs">
-                                plan {ex.seriesPlan}×{ex.repsPlan}×{kgPlanTexto}kg → real {ex.seriesReal}×
-                                {ex.repsReal}×{kgRealTexto}kg{ex.rpe ? ` · RPE ${ex.rpe}` : ""}
-                              </span>
+                      <div className="flex flex-col gap-2">
+                        {agruparPorBloque(s.ejercicios).map((grupo, gIdx) => (
+                          <div key={gIdx}>
+                            {grupo.bloqueTitle && (
+                              <p className="dp-text-brand mb-0.5 text-[10px] font-semibold tracking-wide uppercase">
+                                {grupo.bloqueTitle}
+                              </p>
+                            )}
+                            <div className="divide-y divide-black/5">
+                              {grupo.items.map(({ ejercicio: ex }) => {
+                                const kgPlanTexto =
+                                  ex.pesosSeriesPlan && ex.pesosSeriesPlan.filter((p) => Number(p) > 0).length > 0
+                                    ? ex.pesosSeriesPlan.map((p) => Number(p) || 0).join("/")
+                                    : String(ex.kgPlan);
+                                const kgRealTexto =
+                                  ex.pesosSeriesReal && ex.pesosSeriesReal.filter((p) => Number(p) > 0).length > 0
+                                    ? ex.pesosSeriesReal.map((p) => Number(p) || 0).join("/")
+                                    : String(ex.kgReal);
+                                return (
+                                  <div key={ex.id} className="flex items-center justify-between py-1.5 text-sm">
+                                    <span className="dp-text-heading">{ex.nombre}</span>
+                                    <span className="dp-muted font-mono text-xs">
+                                      plan {ex.seriesPlan}×{ex.repsPlan}×{kgPlanTexto}kg → real {ex.seriesReal}×
+                                      {ex.repsReal}×{kgRealTexto}kg{ex.rpe ? ` · RPE ${ex.rpe}` : ""}
+                                    </span>
+                                  </div>
+                                );
+                              })}
                             </div>
-                          );
-                        })}
+                          </div>
+                        ))}
                       </div>
                     )}
                     {s.comentarios && (

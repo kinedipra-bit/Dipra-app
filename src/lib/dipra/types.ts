@@ -175,6 +175,11 @@ export interface EjercicioSesion {
   pesoCadaUno?: boolean;
   tipoCarga?: string;
   tiempoSerie?: string;
+  // Título del bloque de origen (ver BloquePlan.title) al momento de elegir
+  // el día — permite mostrar la sesión agrupada por bloque igual que en la
+  // rutina, en vez de una lista plana de ejercicios. Sesiones guardadas
+  // antes de este campo simplemente no lo traen.
+  bloqueTitle?: string;
   rpe: string;
   // Comentario del atleta sobre ESTE ejercicio en ESTA sesión puntual —
   // distinto de EjercicioPlan.comentarioCliente, que es un único campo

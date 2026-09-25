@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/login/actions";
+import { InstalarApp } from "@/components/InstalarApp";
 
 const NAV = [
   { href: "/", label: "Inicio" },
@@ -57,18 +58,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </nav>
         </div>
 
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <div className="dp-bg-brand flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold text-white">
-              {initials || "?"}
+        <div className="flex flex-col gap-3">
+          <InstalarApp className="px-3" />
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="dp-bg-brand flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold text-white">
+                {initials || "?"}
+              </div>
+              <span className="dp-text-sidebar-muted truncate text-xs">{displayName}</span>
             </div>
-            <span className="dp-text-sidebar-muted truncate text-xs">{displayName}</span>
+            <form action={signOut}>
+              <button type="submit" className="dp-text-sidebar-muted text-xs hover:text-white">
+                Salir
+              </button>
+            </form>
           </div>
-          <form action={signOut}>
-            <button type="submit" className="dp-text-sidebar-muted text-xs hover:text-white">
-              Salir
-            </button>
-          </form>
         </div>
       </aside>
 

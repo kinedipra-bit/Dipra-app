@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { InstalarApp } from "@/components/InstalarApp";
 import { obtenerClientePortal, sesionValidaPara } from "./acceso";
 import { cerrarSesionPin } from "./acciones-acceso";
 import { PortalTabs } from "./PortalTabs";
@@ -33,13 +34,16 @@ export default async function PortalLayout({
               <h1 className="dp-muted text-sm">Portal de {cliente.nombre}</h1>
             </div>
           </div>
-          {autenticado && (
-            <form action={cerrarSesionPin.bind(null, token)}>
-              <button type="submit" className="dp-muted text-xs hover:dp-text-brand">
-                Cerrar sesión
-              </button>
-            </form>
-          )}
+          <div className="flex items-center gap-3">
+            <InstalarApp />
+            {autenticado && (
+              <form action={cerrarSesionPin.bind(null, token)}>
+                <button type="submit" className="dp-muted text-xs hover:dp-text-brand">
+                  Cerrar sesión
+                </button>
+              </form>
+            )}
+          </div>
         </div>
 
         {autenticado && <PortalTabs token={token} />}

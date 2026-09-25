@@ -354,9 +354,11 @@ export function PlanView({
       </div>
 
       {vista === "resumen-semana" ? (
-        <div className="flex flex-col gap-4">
+        <div className="flex gap-4 overflow-x-auto pb-2">
           {semana.dias.map((d) => (
-            <ResumenDia key={d.id} dia={d} />
+            <div key={d.id} className="w-72 shrink-0">
+              <ResumenDia dia={d} />
+            </div>
           ))}
         </div>
       ) : vista === "resumen-dia" ? (
