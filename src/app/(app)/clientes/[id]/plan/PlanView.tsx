@@ -26,6 +26,8 @@ import {
   GRUPOS_MUSCULARES,
   TABLA_INTENSIDAD,
   aplicarTutSugerido,
+  detectarCualidadDesdeTexto,
+  detectarGrupoMuscularDesdeTexto,
 } from "@/lib/dipra/tablaIntensidad";
 
 type Vista = "editar" | "resumen-dia" | "resumen-semana";
@@ -187,7 +189,20 @@ export function PlanView({
   const renameBloque = (bIdx: number, title: string) => {
     if (!dia) return;
     const nextDia = structuredClone(dia);
-    nextDia.bloques[bIdx].title = title;
+    const bloque = nextDia.bloques[bIdx];
+    bloque.title = title;
+    // Si todavía no se eligió a mano el grupo/cualidad, intenta reconocerlos
+    // del título (ej. escribir "Potencia tren inferior" ya deja aplicada la
+    // tabla de intensidad sin tener que tocar además los selectores de al
+    // lado). No pisa una elección manual ya hecha.
+    if (!bloque.cualidad) {
+      const cualidadDetectada = detectarCualidadDesdeTexto(title);
+      if (cualidadDetectada) bloque.cualidad = cualidadDetectada;
+    }
+    if (!bloque.grupoMuscular) {
+      const grupoDetectado = detectarGrupoMuscularDesdeTexto(title);
+      if (grupoDetectado) bloque.grupoMuscular = grupoDetectado;
+    }
     updateDia(nextDia);
   };
   const removeBloque = (bIdx: number) => {

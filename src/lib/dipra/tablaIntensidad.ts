@@ -156,3 +156,46 @@ export function aplicarTutSugerido(bloque: BloquePlan): BloquePlan {
   const tut = TABLA_INTENSIDAD[bloque.cualidad].tut;
   return { ...bloque, exercises: bloque.exercises.map((e) => ({ ...e, tiempoSerie: tut })) };
 }
+
+function normalizar(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+}
+
+// Reconoce la cualidad de fuerza a partir del título que escribe el
+// profesional (ej. "Potencia tren inferior") — así no hace falta acordarse
+// de tocar además el selector de "Cualidad de fuerza…" para que la tabla de
+// intensidad quede aplicada. En orden de prioridad: las frases compuestas
+// van primero para que "resistencia a la potencia" no caiga en la regla
+// genérica de "potencia".
+const REGLAS_CUALIDAD: { cualidad: CualidadFuerza; test: (t: string) => boolean }[] = [
+  { cualidad: "Resistencia a la Potencia", test: (t) => t.includes("resistencia") && t.includes("potencia") },
+  { cualidad: "Resistencia a la Fuerza", test: (t) => t.includes("resistencia") && t.includes("fuerza") },
+  {
+    cualidad: "Fuerza General (Hipertrofia Funcional)",
+    test: (t) => t.includes("fuerza general") || t.includes("hipertrofia funcional"),
+  },
+  { cualidad: "Hipertrofia", test: (t) => t.includes("hipertrofia") },
+  { cualidad: "Potencia Máxima Relativa", test: (t) => t.includes("potencia") },
+  { cualidad: "Fuerza Máxima Relativa", test: (t) => t.includes("fuerza") },
+  { cualidad: "Resistencia a la Fuerza", test: (t) => t.includes("resistencia") },
+];
+
+export function detectarCualidadDesdeTexto(texto: string): CualidadFuerza | undefined {
+  const t = normalizar(texto);
+  return REGLAS_CUALIDAD.find((r) => r.test(t))?.cualidad;
+}
+
+const REGLAS_GRUPO: { grupo: GrupoMuscular; test: (t: string) => boolean }[] = [
+  { grupo: "Tren superior", test: (t) => t.includes("superior") },
+  { grupo: "Tren inferior", test: (t) => t.includes("inferior") },
+  { grupo: "Full body", test: (t) => t.includes("full body") || t.includes("fullbody") || t.includes("full-body") },
+  { grupo: "Core", test: (t) => t.includes("core") },
+];
+
+export function detectarGrupoMuscularDesdeTexto(texto: string): GrupoMuscular | undefined {
+  const t = normalizar(texto);
+  return REGLAS_GRUPO.find((r) => r.test(t))?.grupo;
+}
