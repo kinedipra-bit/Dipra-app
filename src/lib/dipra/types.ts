@@ -112,7 +112,18 @@ export interface EjercicioPlan {
   comentarioCliente: string;
 }
 
-export type GrupoMuscular = "Tren superior" | "Tren inferior" | "Full body" | "Core";
+// Por patrón de movimiento (empuje/tracción) en vez de solo tren superior/
+// inferior — dos bloques de "tren inferior" pueden estresar grupos muy
+// distintos (ej. búlgaras = dominante rodilla/empuje vs. peso muerto rumano
+// = dominante cadera/tracción), así que agruparlos igual generaba avisos de
+// descanso poco precisos.
+export type GrupoMuscular =
+  | "Empuje superior"
+  | "Tracción superior"
+  | "Empuje inferior"
+  | "Tracción inferior"
+  | "Full body"
+  | "Core";
 
 export type CualidadFuerza =
   | "Fuerza Máxima Relativa"

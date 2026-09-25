@@ -31,7 +31,14 @@ export const CUALIDADES: CualidadFuerza[] = [
   "Resistencia a la Potencia",
 ];
 
-export const GRUPOS_MUSCULARES: GrupoMuscular[] = ["Tren superior", "Tren inferior", "Full body", "Core"];
+export const GRUPOS_MUSCULARES: GrupoMuscular[] = [
+  "Empuje superior",
+  "Tracción superior",
+  "Empuje inferior",
+  "Tracción inferior",
+  "Full body",
+  "Core",
+];
 
 // Cualidades de alta demanda de SNC (trabajo cerca del máximo o explosivo) —
 // necesitan más descanso (48-72h) que una sesión de fuerza general/
@@ -188,11 +195,38 @@ export function detectarCualidadDesdeTexto(texto: string): CualidadFuerza | unde
   return REGLAS_CUALIDAD.find((r) => r.test(t))?.cualidad;
 }
 
+// Primero las combinaciones explícitas (empuje/tracción + superior/
+// inferior); después, nombres de ejercicio típicos que ya implican el
+// patrón aunque el título no diga "empuje" o "tracción" (ej. un bloque
+// titulado "Búlgaras" es empuje inferior/dominante rodilla sin que haga
+// falta escribirlo).
 const REGLAS_GRUPO: { grupo: GrupoMuscular; test: (t: string) => boolean }[] = [
-  { grupo: "Tren superior", test: (t) => t.includes("superior") },
-  { grupo: "Tren inferior", test: (t) => t.includes("inferior") },
+  { grupo: "Empuje superior", test: (t) => t.includes("empuje") && t.includes("superior") },
+  { grupo: "Tracción superior", test: (t) => t.includes("traccion") && t.includes("superior") },
+  { grupo: "Empuje inferior", test: (t) => t.includes("empuje") && t.includes("inferior") },
+  { grupo: "Tracción inferior", test: (t) => t.includes("traccion") && t.includes("inferior") },
   { grupo: "Full body", test: (t) => t.includes("full body") || t.includes("fullbody") || t.includes("full-body") },
   { grupo: "Core", test: (t) => t.includes("core") },
+  // Dominante rodilla / empuje (tren inferior)
+  {
+    grupo: "Empuje inferior",
+    test: (t) => /\b(bulgara|sentadilla|squat|zancada|lunge|prensa|cuadricep)\b/.test(t),
+  },
+  // Dominante cadera / tracción (tren inferior)
+  {
+    grupo: "Tracción inferior",
+    test: (t) => /\b(peso muerto|rdl|hip thrust|femoral|puente|isquio)\b/.test(t),
+  },
+  // Empuje superior (pecho/hombro/tríceps)
+  {
+    grupo: "Empuje superior",
+    test: (t) => /\b(press|fondos|flexion|pecho|hombro|triceps)\b/.test(t),
+  },
+  // Tracción superior (espalda/bíceps)
+  {
+    grupo: "Tracción superior",
+    test: (t) => /\b(remo|dominada|jalon|biceps|espalda|pull)\b/.test(t),
+  },
 ];
 
 export function detectarGrupoMuscularDesdeTexto(texto: string): GrupoMuscular | undefined {
