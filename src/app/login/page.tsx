@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { InstalarApp } from "@/components/InstalarApp";
 import { signIn } from "./actions";
 
 export default async function LoginPage({
@@ -65,6 +66,10 @@ export default async function LoginPage({
         <p className="dp-text-faint mt-6 text-center text-xs">
           ¿Sos paciente? Pedile a tu profesional el link de acceso a tu portal.
         </p>
+
+        <div className="mt-3 text-center">
+          <InstalarApp className="inline-block" />
+        </div>
       </div>
     </div>
   );
