@@ -13,6 +13,24 @@ function addDias(fecha: string, delta: number) {
   return toISODate(d);
 }
 
+// Grilla de horarios del día — de 07:00 a 21:00 cada 30 min. Si hay una
+// cita ya agendada en un horario que no cae justo en esa grilla, igual se
+// agrega como slot propio (no se pierde ni se reacomoda).
+function generarSlots(inicio: string, fin: string, pasoMin: number): string[] {
+  const slots: string[] = [];
+  const [hFin, mFin] = fin.split(":").map(Number);
+  let [h, m] = inicio.split(":").map(Number);
+  while (h < hFin || (h === hFin && m <= mFin)) {
+    slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+    m += pasoMin;
+    if (m >= 60) {
+      m -= 60;
+      h += 1;
+    }
+  }
+  return slots;
+}
+
 export default async function AgendaPage({
   searchParams,
 }: {
@@ -34,6 +52,16 @@ export default async function AgendaPage({
     day: "numeric",
     month: "long",
   });
+
+  const citasPorHora = new Map<string, Cita[]>();
+  (citas ?? []).forEach((c) => {
+    const h = c.hora.slice(0, 5);
+    const lista = citasPorHora.get(h) ?? [];
+    lista.push(c);
+    citasPorHora.set(h, lista);
+  });
+
+  const slots = [...new Set([...generarSlots("07:00", "21:00", 30), ...citasPorHora.keys()])].sort();
 
   return (
     <div className="flex flex-col gap-6">
@@ -63,14 +91,33 @@ export default async function AgendaPage({
         </Link>
       </div>
 
-      <div className="dp-surface divide-y divide-black/5 rounded-2xl shadow-sm">
-        {!citas || citas.length === 0 ? (
-          <p className="dp-muted p-10 text-center text-sm">
-            No hay sesiones agendadas este día. Usa &quot;Agendar sesión&quot; para sumar una.
-          </p>
-        ) : (
-          citas.map((c) => <CitaRow key={c.id} cita={c} />)
-        )}
+      <div className="flex flex-col gap-1.5">
+        {slots.map((h) => {
+          const citasHora = citasPorHora.get(h) ?? [];
+          const ocupado = citasHora.length > 0;
+          return (
+            <div key={h} className={ocupado ? "dp-surface overflow-hidden rounded-xl shadow-sm" : "rounded-xl"}>
+              <div className={`flex items-center justify-between px-4 py-2 ${ocupado ? "dp-bg-faint" : ""}`}>
+                <span className={`font-mono text-sm ${ocupado ? "dp-text-heading font-medium" : "dp-muted"}`}>
+                  {h}
+                </span>
+                <Link
+                  href={`/agenda/nueva?fecha=${fecha}&hora=${h}`}
+                  className="dp-text-brand text-xs font-medium hover:underline"
+                >
+                  {ocupado ? "+ Agregar a esta hora" : "+ Agregar"}
+                </Link>
+              </div>
+              {ocupado && (
+                <div className="divide-y divide-black/5">
+                  {citasHora.map((c) => (
+                    <CitaRow key={c.id} cita={c} mostrarHora={false} />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

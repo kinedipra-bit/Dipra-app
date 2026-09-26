@@ -12,7 +12,10 @@ function revalidar() {
 }
 
 export interface NuevaCitaInput {
-  client_id: string;
+  // null cuando se agenda a alguien que todavía no tiene ficha (ej. un
+  // entrenamiento grupal con gente nueva) — cliente_nombre queda como
+  // único registro de quién es hasta que se le cree la ficha.
+  client_id: string | null;
   cliente_nombre: string;
   fecha: string;
   hora: string;
@@ -49,6 +52,20 @@ export async function obtenerDiasPlan(clienteId: string): Promise<{ id: string; 
     .eq("id", cliente.semana_activa_id)
     .single<{ dias: DiaPlan[] }>();
   return (semana?.dias ?? []).map((d) => ({ id: d.id, label: d.label }));
+}
+
+// Para el aviso "sería la sesión N° X de kinesiología" al agendar — cuenta
+// las citas de kinesiología ya agendadas para ese cliente (sin contar las
+// canceladas, que no llegaron a pasar).
+export async function contarSesionesKinesiologia(clienteId: string): Promise<number> {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("citas")
+    .select("id", { count: "exact", head: true })
+    .eq("client_id", clienteId)
+    .eq("tipo", "Kinesiología")
+    .neq("estado", "cancelada");
+  return count ?? 0;
 }
 
 export async function actualizarEstadoCita(citaId: string, estado: Cita["estado"]) {

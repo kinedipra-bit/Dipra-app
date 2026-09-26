@@ -20,7 +20,7 @@ function labelEstado(estado: (typeof ESTADOS_CITA)[number]) {
   return estado === "alerta" ? "Alerta leve" : estado.charAt(0).toUpperCase() + estado.slice(1);
 }
 
-export function CitaRow({ cita }: { cita: Cita }) {
+export function CitaRow({ cita, mostrarHora = true }: { cita: Cita; mostrarHora?: boolean }) {
   const [estado, setEstado] = useState(cita.estado);
   const [pending, startTransition] = useTransition();
 
@@ -40,7 +40,7 @@ export function CitaRow({ cita }: { cita: Cita }) {
 
   return (
     <div className="flex items-center gap-3 p-4">
-      <span className="dp-body w-16 shrink-0 font-mono text-sm">{cita.hora.slice(0, 5)}</span>
+      {mostrarHora && <span className="dp-body w-16 shrink-0 font-mono text-sm">{cita.hora.slice(0, 5)}</span>}
       <Avatar iniciales={iniciales(cita.cliente_nombre)} size={34} />
       <div className="min-w-0 flex-1">
         {cita.client_id ? (

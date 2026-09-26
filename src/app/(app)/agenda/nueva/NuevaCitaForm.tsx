@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { ESTADOS_CITA, TIPOS_CITA } from "@/lib/dipra/constants";
 import type { Cita } from "@/lib/dipra/types";
-import { crearCita, obtenerDiasPlan } from "../actions";
+import { contarSesionesKinesiologia, crearCita, obtenerDiasPlan } from "../actions";
 
 function labelEstado(estado: (typeof ESTADOS_CITA)[number]) {
   return estado === "alerta" ? "Alerta leve" : estado.charAt(0).toUpperCase() + estado.slice(1);
@@ -15,20 +15,25 @@ export function NuevaCitaForm({
   clienteIdInicial,
   clienteNombreInicial,
   fechaInicial,
+  horaInicial,
 }: {
   clientes: { id: string; nombre: string }[];
   clienteIdInicial: string;
   clienteNombreInicial: string;
   fechaInicial: string;
+  horaInicial: string;
 }) {
   const [busqueda, setBusqueda] = useState(clienteNombreInicial);
   const [clienteId, setClienteId] = useState(clienteIdInicial || clientes[0]?.id || "");
+  const [sinFicha, setSinFicha] = useState(false);
+  const [nombreLibre, setNombreLibre] = useState("");
   const [fecha, setFecha] = useState(fechaInicial);
-  const [hora, setHora] = useState("09:00");
+  const [hora, setHora] = useState(horaInicial);
   const [tipo, setTipo] = useState<string>(TIPOS_CITA[0]);
   const [estado, setEstado] = useState<Cita["estado"]>("pendiente");
   const [diasPlan, setDiasPlan] = useState<{ id: string; label: string }[]>([]);
   const [diaPlanLabel, setDiaPlanLabel] = useState("");
+  const [sesionesKine, setSesionesKine] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
 
   const filtrados = useMemo(() => {
@@ -41,11 +46,14 @@ export function NuevaCitaForm({
   // de los resultados filtrados para que el <select> y el envío coincidan.
   const clienteIdEfectivo = filtrados.some((c) => c.id === clienteId) ? clienteId : filtrados[0]?.id ?? "";
 
+  const mostrarDiaPlan = tipo === "Rendimiento" && !sinFicha;
+  const mostrarContadorKine = tipo === "Kinesiología" && !sinFicha;
+
   // Al cambiar de cliente, trae los días de su semana activa para el
-  // selector "Día del plan" — permite cruzar la agenda real con el
-  // recordatorio de descanso por grupo muscular (ver ResumenProgramacion).
+  // selector "Día del plan" — solo tiene sentido para "Rendimiento" (los
+  // demás tipos no siguen un día puntual del plan).
   useEffect(() => {
-    if (!clienteIdEfectivo) return;
+    if (!clienteIdEfectivo || tipo !== "Rendimiento" || sinFicha) return;
     let cancelado = false;
     obtenerDiasPlan(clienteIdEfectivo).then((dias) => {
       if (cancelado) return;
@@ -55,11 +63,41 @@ export function NuevaCitaForm({
     return () => {
       cancelado = true;
     };
-  }, [clienteIdEfectivo]);
+  }, [clienteIdEfectivo, tipo, sinFicha]);
+
+  // Cuántas sesiones de kinesiología lleva ya agendadas este cliente, para
+  // mostrar "sería la sesión N° X" sin tener que contarlas a mano.
+  useEffect(() => {
+    if (!clienteIdEfectivo || tipo !== "Kinesiología" || sinFicha) return;
+    let cancelado = false;
+    contarSesionesKinesiologia(clienteIdEfectivo).then((n) => {
+      if (!cancelado) setSesionesKine(n);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [clienteIdEfectivo, tipo, sinFicha]);
 
   const inputClass = "rounded-lg border border-black/10 px-3 py-2 text-sm outline-none focus:dp-border-brand";
 
   const submit = () => {
+    if (sinFicha) {
+      const nombre = nombreLibre.trim();
+      if (!nombre) return;
+      startTransition(() => {
+        crearCita({
+          client_id: null,
+          cliente_nombre: nombre,
+          fecha,
+          hora,
+          tipo,
+          estado,
+          dia_plan_label: null,
+        });
+      });
+      return;
+    }
+
     const cliente = clientes.find((c) => c.id === clienteIdEfectivo);
     if (!cliente) return;
     startTransition(() => {
@@ -70,10 +108,12 @@ export function NuevaCitaForm({
         hora,
         tipo,
         estado,
-        dia_plan_label: diaPlanLabel || null,
+        dia_plan_label: mostrarDiaPlan ? diaPlanLabel || null : null,
       });
     });
   };
+
+  const puedeAgendar = sinFicha ? !!nombreLibre.trim() : !!clienteIdEfectivo;
 
   return (
     <div className="flex flex-col gap-6">
@@ -88,35 +128,58 @@ export function NuevaCitaForm({
           Agendar sesión
         </h1>
 
-        {clientes.length === 0 ? (
+        {clientes.length === 0 && !sinFicha ? (
           <p className="dp-muted text-sm">Todavía no hay clientes cargados para agendar.</p>
         ) : (
           <>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="dp-body font-medium">Buscar cliente</span>
-              <input
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                placeholder="Nombre del cliente…"
-                className={inputClass}
-              />
-            </label>
+            {sinFicha ? (
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="dp-body font-medium">Nombre</span>
+                <input
+                  value={nombreLibre}
+                  onChange={(e) => setNombreLibre(e.target.value)}
+                  placeholder="Nombre completo…"
+                  className={inputClass}
+                  autoFocus
+                />
+              </label>
+            ) : (
+              <>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="dp-body font-medium">Buscar cliente</span>
+                  <input
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
+                    placeholder="Nombre del cliente…"
+                    className={inputClass}
+                  />
+                </label>
 
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="dp-body font-medium">Cliente</span>
-              <select
-                value={clienteIdEfectivo}
-                onChange={(e) => setClienteId(e.target.value)}
-                className={inputClass}
-              >
-                {filtrados.length === 0 && <option value="">Sin resultados</option>}
-                {filtrados.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nombre}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="dp-body font-medium">Cliente</span>
+                  <select
+                    value={clienteIdEfectivo}
+                    onChange={(e) => setClienteId(e.target.value)}
+                    className={inputClass}
+                  >
+                    {filtrados.length === 0 && <option value="">Sin resultados</option>}
+                    {filtrados.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setSinFicha((v) => !v)}
+              className="dp-text-brand w-fit text-xs hover:underline"
+            >
+              {sinFicha ? "← Elegir un cliente con ficha" : "¿Todavía no tiene ficha? Agendar solo con el nombre"}
+            </button>
 
             <div className="grid grid-cols-2 gap-3">
               <label className="flex flex-col gap-1 text-sm">
@@ -150,7 +213,15 @@ export function NuevaCitaForm({
               </select>
             </label>
 
-            {diasPlan.length > 0 && (
+            {mostrarContadorKine && sesionesKine !== null && (
+              <p className="dp-muted text-xs">
+                {sesionesKine === 0
+                  ? "Sería su primera sesión de kinesiología."
+                  : `Sería la sesión N° ${sesionesKine + 1} de kinesiología.`}
+              </p>
+            )}
+
+            {mostrarDiaPlan && diasPlan.length > 0 && (
               <label className="flex flex-col gap-1 text-sm">
                 <span className="dp-body font-medium">Día del plan (opcional)</span>
                 <select
@@ -186,7 +257,7 @@ export function NuevaCitaForm({
             <button
               type="button"
               onClick={submit}
-              disabled={!clienteIdEfectivo || pending}
+              disabled={!puedeAgendar || pending}
               className="dp-bg-brand mt-2 rounded-xl py-2.5 text-sm font-medium text-white disabled:opacity-40"
             >
               {pending ? "Agendando…" : "Agendar"}
