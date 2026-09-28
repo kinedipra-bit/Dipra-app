@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { tonoEscalaPilar } from "@/lib/dipra/calc";
 import { agruparPorBloque } from "@/lib/dipra/agruparEjercicios";
 import { PILARES_KEYS, TIPOS_SESION, emptySesionPilares } from "@/lib/dipra/constants";
+import { youtubeEmbedUrl } from "@/lib/youtube";
 import type { DiaPlan, EjercicioSesion, Sesion } from "@/lib/dipra/types";
 import { crearSesion, eliminarSesion, marcarSesionRevisada, type NuevaSesionInput } from "./actions";
 import { EscalaUnoADiez } from "./EscalaUnoADiez";
@@ -56,6 +57,7 @@ export function SesionesClient({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [videoAbiertoId, setVideoAbiertoId] = useState<string | null>(null);
 
   const sesiones = [...sesionesIniciales].sort((a, b) => b.fecha.localeCompare(a.fecha));
 
@@ -91,6 +93,7 @@ export function SesionesClient({
             pesoCadaUno: e.pesoCadaUno,
             tipoCarga: e.tipoCarga,
             tiempoSerie: e.tiempoSerie,
+            link: e.link,
             bloqueTitle: b.title,
             rpe: "",
           });
@@ -283,14 +286,35 @@ export function SesionesClient({
                         current[i] = value === "" ? "" : Number(value);
                         updateEjercicio(idx, { pesosSeriesReal: current });
                       };
+                      const embedUrl = youtubeEmbedUrl(ex.link ?? "");
+                      const videoAbierto = videoAbiertoId === ex.id;
                       return (
+                        <div key={ex.id} className="py-1.5">
                         <div
-                          key={ex.id}
-                          className="grid items-center gap-2 py-1.5"
+                          className="grid items-center gap-2"
                           style={{ gridTemplateColumns: "1.4fr 0.9fr 0.5fr 0.5fr 0.9fr 0.4fr" }}
                         >
                           <div className="min-w-0">
-                            <span className="dp-text-heading block truncate text-sm">{ex.nombre}</span>
+                            {embedUrl ? (
+                              <button
+                                type="button"
+                                onClick={() => setVideoAbiertoId(videoAbierto ? null : ex.id)}
+                                className="dp-text-brand flex items-center gap-1 truncate text-left text-sm underline decoration-dotted"
+                              >
+                                <span aria-hidden>▶</span> {ex.nombre}
+                              </button>
+                            ) : ex.link ? (
+                              <a
+                                href={ex.link}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="dp-text-brand block truncate text-sm underline"
+                              >
+                                {ex.nombre}
+                              </a>
+                            ) : (
+                              <span className="dp-text-heading block truncate text-sm">{ex.nombre}</span>
+                            )}
                             {(ex.tipoCarga || ex.tiempoSerie) && (
                               <span className="dp-muted text-[10px]">
                                 {[ex.tipoCarga, ex.tiempoSerie].filter(Boolean).join(" · ")}
@@ -343,6 +367,18 @@ export function SesionesClient({
                             placeholder="—"
                             className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-sm outline-none focus:dp-border-brand"
                           />
+                        </div>
+                        {videoAbierto && embedUrl && (
+                          <div className="mt-2 aspect-video w-full max-w-md overflow-hidden rounded-lg">
+                            <iframe
+                              src={embedUrl}
+                              title={`Video de ${ex.nombre}`}
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                              className="h-full w-full border-0"
+                            />
+                          </div>
+                        )}
                         </div>
                       );
                     })}

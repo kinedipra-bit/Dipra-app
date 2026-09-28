@@ -186,6 +186,10 @@ export interface EjercicioSesion {
   pesoCadaUno?: boolean;
   tipoCarga?: string;
   tiempoSerie?: string;
+  // Link del video del ejercicio en el plan — copiado al armar la sesión
+  // del día para poder previsualizarlo igual que en "Mi rutina" (antes no
+  // se copiaba y la sesión de hoy nunca mostraba el video).
+  link?: string;
   // Título del bloque de origen (ver BloquePlan.title) al momento de elegir
   // el día — permite mostrar la sesión agrupada por bloque igual que en la
   // rutina, en vez de una lista plana de ejercicios. Sesiones guardadas

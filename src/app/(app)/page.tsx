@@ -62,7 +62,7 @@ export default async function InicioPage() {
         <p className="dp-body mt-1">Resumen del día</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="dp-surface rounded-2xl p-5 shadow-sm">
           <p className="dp-muted text-sm">Clientes</p>
           <p className="mt-1 text-3xl font-semibold dp-text-heading">{totalClientes ?? 0}</p>

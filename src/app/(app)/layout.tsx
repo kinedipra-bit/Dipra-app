@@ -35,22 +35,25 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .join("");
 
   return (
-    <div className="flex min-h-screen">
-      <aside className="dp-bg-ink flex w-60 shrink-0 flex-col justify-between p-5" style={{ backgroundColor: "var(--dp-sidebar-bg)" }}>
+    <div className="flex min-h-screen flex-col sm:flex-row">
+      <aside
+        className="dp-bg-ink flex shrink-0 flex-col gap-4 p-4 sm:w-60 sm:justify-between sm:gap-0 sm:p-5"
+        style={{ backgroundColor: "var(--dp-sidebar-bg)" }}
+      >
         <div>
-          <div className="mb-8 flex items-center gap-3">
-            <div className="dp-bg-white-10 flex h-10 w-10 items-center justify-center rounded-xl p-1.5">
+          <div className="mb-3 flex items-center gap-3 sm:mb-8">
+            <div className="dp-bg-white-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl p-1.5">
               <Image src="/logo.png" alt="DIPRA" width={32} height={32} className="h-auto w-full" />
             </div>
             <span className="font-[family-name:var(--font-display)] font-semibold text-white">DIPRA</span>
           </div>
 
-          <nav className="flex flex-col gap-1">
+          <nav className="flex gap-1 overflow-x-auto sm:flex-col">
             {NAV.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="dp-text-nav rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:dp-bg-white-5"
+                className="dp-text-nav shrink-0 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors hover:dp-bg-white-5"
               >
                 {item.label}
               </Link>
@@ -61,14 +64,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="flex flex-col gap-3">
           <InstalarApp className="px-3" />
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="dp-bg-brand flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold text-white">
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="dp-bg-brand flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white">
                 {initials || "?"}
               </div>
               <span className="dp-text-sidebar-muted truncate text-xs">{displayName}</span>
             </div>
             <form action={signOut}>
-              <button type="submit" className="dp-text-sidebar-muted text-xs hover:text-white">
+              <button type="submit" className="dp-text-sidebar-muted shrink-0 text-xs hover:text-white">
                 Salir
               </button>
             </form>
@@ -76,7 +79,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
 
-      <main className="flex-1 p-8">{children}</main>
+      <main className="min-w-0 flex-1 p-4 sm:p-8">{children}</main>
     </div>
   );
 }

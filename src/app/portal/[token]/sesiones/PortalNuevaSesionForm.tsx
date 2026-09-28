@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { PILARES_KEYS, emptySesionPilares } from "@/lib/dipra/constants";
 import { agruparPorBloque } from "@/lib/dipra/agruparEjercicios";
 import { EscalaUnoADiez } from "@/app/(app)/clientes/[id]/sesiones/EscalaUnoADiez";
+import { youtubeEmbedUrl } from "@/lib/youtube";
 import type { DiaPlan, EjercicioSesion } from "@/lib/dipra/types";
 import { crearSesionPortal } from "./actions";
 
@@ -77,6 +78,7 @@ function ejerciciosDelDia(dia: DiaPlan | undefined): EjercicioSesion[] {
         pesoCadaUno: e.pesoCadaUno,
         tipoCarga: e.tipoCarga,
         tiempoSerie: e.tiempoSerie,
+        link: e.link,
         bloqueTitle: b.title,
         rpe: "",
         comentario: "",
@@ -102,6 +104,7 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
   const [pending, startTransition] = useTransition();
   const [enviado, setEnviado] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [videoAbiertoId, setVideoAbiertoId] = useState<string | null>(null);
 
   // Al montar, si había un borrador guardado (de una sesión anterior que no
   // se llegó a enviar), lo recupera y abre el formulario directamente.
@@ -249,15 +252,47 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
                         current[i] = value === "" ? "" : Number(value);
                         actualizarEjercicio(idx, { pesosSeriesReal: current });
                       };
+                      const embedUrl = youtubeEmbedUrl(ex.link ?? "");
+                      const videoAbierto = videoAbiertoId === ex.id;
                       return (
                         <div key={ex.id} className="py-2">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="dp-text-heading text-sm font-medium">{ex.nombre}</span>
+                            {embedUrl ? (
+                              <button
+                                type="button"
+                                onClick={() => setVideoAbiertoId(videoAbierto ? null : ex.id)}
+                                className="dp-text-brand flex items-center gap-1 truncate text-left text-sm font-medium underline decoration-dotted"
+                              >
+                                <span aria-hidden>▶</span> {ex.nombre}
+                              </button>
+                            ) : ex.link ? (
+                              <a
+                                href={ex.link}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="dp-text-brand truncate text-sm font-medium underline"
+                              >
+                                {ex.nombre}
+                              </a>
+                            ) : (
+                              <span className="dp-text-heading text-sm font-medium">{ex.nombre}</span>
+                            )}
                             <span className="dp-muted font-mono text-[11px]">
                               plan {ex.seriesPlan}×{ex.repsPlan}
                               {ex.unilateral ? " c/u" : ""}×{kgPlanTexto}kg{ex.pesoCadaUno ? " c/u" : ""}
                             </span>
                           </div>
+                          {videoAbierto && embedUrl && (
+                            <div className="mt-2 aspect-video w-full max-w-md overflow-hidden rounded-lg">
+                              <iframe
+                                src={embedUrl}
+                                title={`Video de ${ex.nombre}`}
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                className="h-full w-full border-0"
+                              />
+                            </div>
+                          )}
                           {(ex.tipoCarga || ex.tiempoSerie) && (
                             <p className="dp-muted text-[10px]">
                               {[ex.tipoCarga, ex.tiempoSerie].filter(Boolean).join(" · ")}
