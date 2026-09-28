@@ -7,6 +7,7 @@ import type { Cita, DiaPlan } from "@/lib/dipra/types";
 
 function revalidar() {
   revalidatePath("/agenda");
+  revalidatePath("/agenda/dia");
   // Inicio también muestra las citas de hoy.
   revalidatePath("/");
 }
@@ -32,7 +33,7 @@ export async function crearCita(input: NuevaCitaInput) {
   const { error } = await supabase.from("citas").insert(input);
   if (error) throw new Error(error.message);
   revalidar();
-  redirect(`/agenda?fecha=${input.fecha}`);
+  redirect(`/agenda/dia?fecha=${input.fecha}`);
 }
 
 // Para el selector "Día del plan" al agendar: trae los días de la semana

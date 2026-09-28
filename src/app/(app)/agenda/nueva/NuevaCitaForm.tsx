@@ -118,7 +118,7 @@ export function NuevaCitaForm({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4">
-        <Link href="/agenda" className="dp-muted text-sm hover:dp-text-brand">
+        <Link href={`/agenda/dia?fecha=${fecha}`} className="dp-muted text-sm hover:dp-text-brand">
           ← Agenda
         </Link>
       </div>

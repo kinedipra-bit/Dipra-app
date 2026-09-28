@@ -83,6 +83,11 @@ body {
 
 .dp-border-lime { border-color: var(--dp-lime); }
 
+/* Fondos suaves para distinguir tipo de cita en la grilla semanal de Agenda. */
+.dp-bg-brand-soft { background-color: rgba(30, 132, 73, 0.12); }
+.dp-bg-amber-soft { background-color: rgba(201, 135, 29, 0.14); }
+.dp-bg-lime-soft { background-color: rgba(168, 204, 60, 0.22); }
+
 .dp-muted { color: var(--dp-muted); }
 .dp-body { color: var(--dp-body); }
 .dp-text-faint { color: var(--dp-text-faint); }
