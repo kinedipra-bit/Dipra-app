@@ -25,8 +25,9 @@ export function NuevaCitaForm({
   fechaInicial: string;
   horaInicial: string;
 }) {
-  const [busqueda, setBusqueda] = useState(clienteNombreInicial);
-  const [clienteId, setClienteId] = useState(clienteIdInicial || clientes[0]?.id || "");
+  const nombreInicial =
+    clienteNombreInicial || clientes.find((c) => c.id === clienteIdInicial)?.nombre || "";
+  const [nombreCliente, setNombreCliente] = useState(nombreInicial);
   const [sinFicha, setSinFicha] = useState(false);
   const [nombreLibre, setNombreLibre] = useState("");
   const [fecha, setFecha] = useState(fechaInicial);
@@ -38,15 +39,16 @@ export function NuevaCitaForm({
   const [sesionesKine, setSesionesKine] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const filtrados = useMemo(() => {
-    const q = busqueda.trim().toLowerCase();
-    if (!q) return clientes;
-    return clientes.filter((c) => c.nombre.toLowerCase().includes(q));
-  }, [busqueda, clientes]);
-
-  // Si la búsqueda deja afuera al cliente seleccionado, se cae al primero
-  // de los resultados filtrados para que el <select> y el envío coincidan.
-  const clienteIdEfectivo = filtrados.some((c) => c.id === clienteId) ? clienteId : filtrados[0]?.id ?? "";
+  // Coincidencia exacta (sin mayúsculas/acentos de más) con lo que se
+  // escribió o se eligió de la lista sugerida — con 100 clientes no tiene
+  // sentido hacerlo elegir de un <select> aparte, tipea y el navegador le
+  // sugiere solo.
+  const clienteElegido = useMemo(() => {
+    const q = nombreCliente.trim().toLowerCase();
+    if (!q) return undefined;
+    return clientes.find((c) => c.nombre.trim().toLowerCase() === q);
+  }, [nombreCliente, clientes]);
+  const clienteIdEfectivo = clienteElegido?.id ?? "";
 
   const mostrarDiaPlan = tipo === "Rendimiento" && !sinFicha;
   const mostrarContadorKine = tipo === "Kinesiología" && !sinFicha;
@@ -100,12 +102,11 @@ export function NuevaCitaForm({
       return;
     }
 
-    const cliente = clientes.find((c) => c.id === clienteIdEfectivo);
-    if (!cliente) return;
+    if (!clienteElegido) return;
     startTransition(() => {
       crearCita({
-        client_id: cliente.id,
-        cliente_nombre: cliente.nombre,
+        client_id: clienteElegido.id,
+        cliente_nombre: clienteElegido.nombre,
         fecha,
         hora,
         tipo,
@@ -146,33 +147,25 @@ export function NuevaCitaForm({
                 />
               </label>
             ) : (
-              <>
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="dp-body font-medium">Buscar cliente</span>
-                  <input
-                    value={busqueda}
-                    onChange={(e) => setBusqueda(e.target.value)}
-                    placeholder="Nombre del cliente…"
-                    className={inputClass}
-                  />
-                </label>
-
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="dp-body font-medium">Cliente</span>
-                  <select
-                    value={clienteIdEfectivo}
-                    onChange={(e) => setClienteId(e.target.value)}
-                    className={inputClass}
-                  >
-                    {filtrados.length === 0 && <option value="">Sin resultados</option>}
-                    {filtrados.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="dp-body font-medium">Cliente</span>
+                <input
+                  value={nombreCliente}
+                  onChange={(e) => setNombreCliente(e.target.value)}
+                  list="clientes-datalist"
+                  placeholder="Empezá a escribir el nombre…"
+                  className={inputClass}
+                  autoFocus
+                />
+                <datalist id="clientes-datalist">
+                  {clientes.map((c) => (
+                    <option key={c.id} value={c.nombre} />
+                  ))}
+                </datalist>
+                {nombreCliente.trim() && !clienteElegido && (
+                  <span className="dp-alert text-xs">No encontramos a nadie con ese nombre exacto.</span>
+                )}
+              </label>
             )}
 
             <button
