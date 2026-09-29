@@ -231,7 +231,7 @@ export interface Cita {
   fecha: string;
   hora: string;
   tipo: string;
-  estado: "pendiente" | "confirmada" | "alerta" | "cancelada";
+  estado: "pendiente" | "confirmada" | "alerta" | "cancelada" | "no_asistio";
   // A qué día del plan corresponde esta cita (ej. "Día 2"), si se asignó —
   // permite calcular descansos reales entre sesiones (ver tablaIntensidad.ts).
   dia_plan_label?: string | null;

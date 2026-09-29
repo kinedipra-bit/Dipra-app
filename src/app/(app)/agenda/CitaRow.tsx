@@ -17,7 +17,9 @@ function iniciales(nombre: string) {
 }
 
 function labelEstado(estado: (typeof ESTADOS_CITA)[number]) {
-  return estado === "alerta" ? "Alerta leve" : estado.charAt(0).toUpperCase() + estado.slice(1);
+  if (estado === "alerta") return "Alerta leve";
+  if (estado === "no_asistio") return "No asistió";
+  return estado.charAt(0).toUpperCase() + estado.slice(1);
 }
 
 export function CitaRow({ cita, mostrarHora = true }: { cita: Cita; mostrarHora?: boolean }) {

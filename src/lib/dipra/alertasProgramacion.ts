@@ -1,4 +1,4 @@
-import type { DiaPlan, Sesion } from "./types";
+import type { Cita, DiaPlan, Sesion } from "./types";
 
 export interface AlertaProgramacion {
   tipo: "semana-completa" | "sin-revisar";
@@ -59,4 +59,50 @@ export function alertasCliente({
 // tienen, lo usen o no).
 export function esClienteRemoto(sesiones: Pick<Sesion, "registrada_por_cliente">[]): boolean {
   return sesiones.some((s) => s.registrada_por_cliente);
+}
+
+export interface CitaSinSeguimiento {
+  citaId: string;
+  clienteId: string;
+  clienteNombre: string;
+  fecha: string;
+  tipo: string;
+}
+
+type CitaParaSeguimiento = Pick<Cita, "id" | "client_id" | "cliente_nombre" | "fecha" | "tipo" | "estado">;
+type SesionParaSeguimiento = Pick<Sesion, "client_id" | "fecha">;
+
+// Solo estos tipos de cita esperan una sesión cargada — "Evaluación" se
+// registra por otro lado (pestaña de evaluación/evolución), no en
+// `sesiones`, así que nunca tendría "seguimiento" aunque se haya hecho.
+const TIPOS_CON_SEGUIMIENTO = ["Kinesiología", "Rendimiento", "Entrenamiento grupal"];
+
+/**
+ * Citas ya pasadas (de kinesiología o entrenamiento) que nadie marcó como
+ * "Cancelada"/"No asistió" y que tampoco tienen una sesión registrada para
+ * ese cliente+fecha — probablemente se hizo la atención pero se olvidaron
+ * de cargar la evolución. Ignora citas sin ficha (client_id null): no hay
+ * con qué cruzarlas contra `sesiones`.
+ */
+export function citasSinSeguimiento(
+  citas: CitaParaSeguimiento[],
+  sesiones: SesionParaSeguimiento[]
+): CitaSinSeguimiento[] {
+  const sesionesClave = new Set(sesiones.map((s) => `${s.client_id}::${s.fecha}`));
+  return citas
+    .filter(
+      (c) =>
+        c.client_id &&
+        TIPOS_CON_SEGUIMIENTO.includes(c.tipo) &&
+        c.estado !== "cancelada" &&
+        c.estado !== "no_asistio" &&
+        !sesionesClave.has(`${c.client_id}::${c.fecha}`)
+    )
+    .map((c) => ({
+      citaId: c.id,
+      clienteId: c.client_id as string,
+      clienteNombre: c.cliente_nombre,
+      fecha: c.fecha,
+      tipo: c.tipo,
+    }));
 }

@@ -1,11 +1,17 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { alertasCliente, esClienteRemoto } from "@/lib/dipra/alertasProgramacion";
-import type { Cliente, PlanSemana, Sesion } from "@/lib/dipra/types";
+import { alertasCliente, citasSinSeguimiento, esClienteRemoto } from "@/lib/dipra/alertasProgramacion";
+import type { Cita, Cliente, PlanSemana, Sesion } from "@/lib/dipra/types";
+
+function labelTipoCita(tipo: string) {
+  return tipo === "Entrenamiento grupal" ? "grupal" : tipo.toLowerCase();
+}
 
 export default async function InicioPage() {
   const supabase = await createClient();
-  const today = new Date().toISOString().slice(0, 10);
+  const hoyDate = new Date();
+  const today = hoyDate.toISOString().slice(0, 10);
+  const hace14Dias = new Date(hoyDate.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
   const [{ count: totalClientes }, { data: citasHoy }, { count: sesionesHoy }, { data: clientes }] =
     await Promise.all([
@@ -52,6 +58,29 @@ export default async function InicioPage() {
     });
     return alertas.length > 0 ? [{ id: c.id, nombre: c.nombre, alertas }] : [];
   });
+
+  // Citas de kine/entrenamiento ya pasadas (últimos 14 días) que nadie
+  // marcó "Cancelada"/"No asistió" y que tampoco tienen una sesión
+  // registrada para ese día — probable atención sin evolución cargada.
+  const { data: citasPasadas } = await supabase
+    .from("citas")
+    .select("id, client_id, cliente_nombre, fecha, tipo, estado")
+    .gte("fecha", hace14Dias)
+    .lt("fecha", today)
+    .returns<Pick<Cita, "id" | "client_id" | "cliente_nombre" | "fecha" | "tipo" | "estado">[]>();
+
+  const clienteIdsPasadas = [...new Set((citasPasadas ?? []).map((c) => c.client_id).filter((id): id is string => !!id))];
+  const { data: sesionesPasadas } =
+    clienteIdsPasadas.length > 0
+      ? await supabase
+          .from("sesiones")
+          .select("client_id, fecha")
+          .in("client_id", clienteIdsPasadas)
+          .gte("fecha", hace14Dias)
+          .returns<Pick<Sesion, "client_id" | "fecha">[]>()
+      : { data: [] as Pick<Sesion, "client_id" | "fecha">[] };
+
+  const sinSeguimiento = citasSinSeguimiento(citasPasadas ?? [], sesionesPasadas ?? []);
 
   return (
     <div className="flex flex-col gap-8">
@@ -122,6 +151,32 @@ export default async function InicioPage() {
                     </span>
                   ))}
                 </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {sinSeguimiento.length > 0 && (
+        <div className="dp-surface rounded-2xl p-5 shadow-sm">
+          <h2 className="mb-1 font-medium dp-text-heading">Citas sin seguimiento</h2>
+          <p className="dp-muted mb-3 text-xs">
+            Ya pasó la fecha, nadie marcó cancelada/no asistió, y no hay una sesión registrada ese día.
+          </p>
+          <ul className="flex flex-col divide-y divide-black/5">
+            {sinSeguimiento.map((c) => (
+              <li key={c.citaId} className="flex items-center justify-between gap-3 py-2 text-sm">
+                <span className="dp-body">
+                  <Link href={`/clientes/${c.clienteId}/ficha`} className="dp-text-brand hover:underline">
+                    {c.clienteNombre}
+                  </Link>{" "}
+                  <span className="dp-text-faint">
+                    — {c.fecha.slice(8, 10)}/{c.fecha.slice(5, 7)} ({labelTipoCita(c.tipo)})
+                  </span>
+                </span>
+                <Link href={`/agenda/dia?fecha=${c.fecha}`} className="dp-muted text-xs hover:dp-text-brand">
+                  Ver cita →
+                </Link>
               </li>
             ))}
           </ul>

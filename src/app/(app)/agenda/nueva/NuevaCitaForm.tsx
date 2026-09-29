@@ -7,7 +7,9 @@ import type { Cita } from "@/lib/dipra/types";
 import { contarSesionesKinesiologia, crearCita, obtenerDiasPlan } from "../actions";
 
 function labelEstado(estado: (typeof ESTADOS_CITA)[number]) {
-  return estado === "alerta" ? "Alerta leve" : estado.charAt(0).toUpperCase() + estado.slice(1);
+  if (estado === "alerta") return "Alerta leve";
+  if (estado === "no_asistio") return "No asistió";
+  return estado.charAt(0).toUpperCase() + estado.slice(1);
 }
 
 export function NuevaCitaForm({
