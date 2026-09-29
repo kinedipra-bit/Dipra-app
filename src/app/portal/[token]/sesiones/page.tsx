@@ -26,12 +26,16 @@ export default async function PortalSesionesPage({ params }: { params: Promise<{
   const admin = createAdminClient();
 
   const { data: semana } = cliente.semana_activa_id
-    ? await admin.from("plan_semanas").select("dias").eq("id", cliente.semana_activa_id).single<Pick<PlanSemana, "dias">>()
+    ? await admin
+        .from("plan_semanas")
+        .select("dias_publicado")
+        .eq("id", cliente.semana_activa_id)
+        .single<Pick<PlanSemana, "dias_publicado">>()
     : { data: null };
 
   return (
     <div className="flex flex-col gap-4">
-      <PortalNuevaSesionForm token={token} dias={semana?.dias ?? []} />
+      <PortalNuevaSesionForm token={token} dias={semana?.dias_publicado ?? []} />
 
       <p className="dp-muted text-center text-xs">
         ¿Querés ver lo que ya entrenaste?{" "}

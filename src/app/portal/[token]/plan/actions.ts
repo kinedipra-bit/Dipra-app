@@ -1,7 +1,33 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { PlanSemana } from "@/lib/dipra/types";
+import type { DiaPlan, PlanSemana } from "@/lib/dipra/types";
+
+function aplicarComentario(
+  dias: DiaPlan[],
+  diaId: string,
+  bloqueId: string,
+  ejercicioId: string,
+  comentario: string
+): DiaPlan[] {
+  return dias.map((dia) =>
+    dia.id !== diaId
+      ? dia
+      : {
+          ...dia,
+          bloques: dia.bloques.map((b) =>
+            b.id !== bloqueId
+              ? b
+              : {
+                  ...b,
+                  exercises: b.exercises.map((e) =>
+                    e.id !== ejercicioId ? e : { ...e, comentarioCliente: comentario }
+                  ),
+                }
+          ),
+        }
+  );
+}
 
 // El atleta accede sin login, autenticado únicamente por poseer el link con
 // su portal_token. Por eso esta acción SIEMPRE revalida que la semana que
@@ -23,30 +49,25 @@ export async function updateComentarioCliente(
 
   const { data: semana } = await admin
     .from("plan_semanas")
-    .select("id, client_id, dias")
+    .select("id, client_id, dias, dias_publicado")
     .eq("id", semanaId)
     .eq("client_id", cliente.id)
-    .single<Pick<PlanSemana, "id" | "client_id" | "dias">>();
+    .single<Pick<PlanSemana, "id" | "client_id" | "dias" | "dias_publicado">>();
   if (!semana) throw new Error("No autorizado");
 
-  const nextDias = semana.dias.map((dia) =>
-    dia.id !== diaId
-      ? dia
-      : {
-          ...dia,
-          bloques: dia.bloques.map((b) =>
-            b.id !== bloqueId
-              ? b
-              : {
-                  ...b,
-                  exercises: b.exercises.map((e) =>
-                    e.id !== ejercicioId ? e : { ...e, comentarioCliente: comentario }
-                  ),
-                }
-          ),
-        }
-  );
+  // Se aplica en las dos copias: en `dias` (el borrador, para que el
+  // profesional lo vea la próxima vez que edite) y en `dias_publicado` (lo
+  // que el propio atleta está viendo ahora mismo) — es su propio comentario,
+  // no tiene sentido que quede escondido detrás de un "compartir" del
+  // profesional.
+  const nextDias = aplicarComentario(semana.dias, diaId, bloqueId, ejercicioId, comentario);
+  const nextDiasPublicado = semana.dias_publicado
+    ? aplicarComentario(semana.dias_publicado, diaId, bloqueId, ejercicioId, comentario)
+    : null;
 
-  const { error } = await admin.from("plan_semanas").update({ dias: nextDias }).eq("id", semanaId);
+  const { error } = await admin
+    .from("plan_semanas")
+    .update({ dias: nextDias, ...(nextDiasPublicado ? { dias_publicado: nextDiasPublicado } : {}) })
+    .eq("id", semanaId);
   if (error) throw new Error(error.message);
 }

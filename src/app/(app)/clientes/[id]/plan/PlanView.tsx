@@ -14,7 +14,13 @@ import type {
   GrupoMuscular,
   Cita,
 } from "@/lib/dipra/types";
-import { crearSemana, guardarSemana, setSemanaActiva as marcarSemanaActiva, guardarEnBiblioteca } from "./actions";
+import {
+  compartirSemana,
+  crearSemana,
+  guardarSemana,
+  setSemanaActiva as marcarSemanaActiva,
+  guardarEnBiblioteca,
+} from "./actions";
 import { ExerciseRow } from "./ExerciseRow";
 import { ResumenDia } from "./ResumenDia";
 import { BarraDeCarga } from "./BarraDeCarga";
@@ -89,6 +95,8 @@ export function PlanView({
 
   const [creando, startCrear] = useTransition();
   const [guardando, startGuardar] = useTransition();
+  const [compartiendo, startCompartir] = useTransition();
+  const [sharedAt, setSharedAt] = useState<number | null>(null);
 
   const semanaIdx = Math.max(
     0,
@@ -142,7 +150,19 @@ export function PlanView({
         objetivo: semana.objetivo,
         dias: semana.dias,
       });
+      updateSemana({ ...semana, cambios_sin_compartir: true });
       setSavedAt(Date.now());
+    });
+  };
+
+  // "Compartir rutina": recién acá el cliente pasa a ver esto en su portal
+  // (hasta entonces, sigue viendo la última versión compartida).
+  const compartirRutina = () => {
+    if (!semana) return;
+    startCompartir(async () => {
+      await compartirSemana(clienteId, semana.id);
+      updateSemana({ ...semana, dias_publicado: semana.dias, cambios_sin_compartir: false });
+      setSharedAt(Date.now());
     });
   };
 
@@ -562,7 +582,7 @@ export function PlanView({
 
           <ResumenProgramacion dias={semana.dias} citas={citas} />
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={guardarCambios}
@@ -572,6 +592,23 @@ export function PlanView({
               {guardando ? "Guardando…" : "Guardar cambios"}
             </button>
             {savedAt && !guardando && <span className="dp-muted text-xs">Guardado.</span>}
+
+            <button
+              type="button"
+              onClick={compartirRutina}
+              disabled={compartiendo || !semana.cambios_sin_compartir}
+              className="dp-bg-ink rounded-lg px-5 py-2 text-sm font-medium text-white disabled:opacity-40"
+              title="El cliente solo ve cambios cuando compartís la rutina"
+            >
+              {compartiendo ? "Compartiendo…" : "Compartir rutina"}
+            </button>
+            {sharedAt && !compartiendo ? (
+              <span className="dp-text-brand text-xs">✓ Compartida — el cliente ya la ve.</span>
+            ) : semana.cambios_sin_compartir ? (
+              <span className="dp-alert text-xs">⚠ Cambios sin compartir</span>
+            ) : (
+              <span className="dp-muted text-xs">✓ El cliente ve esta versión</span>
+            )}
           </div>
         </>
       )}

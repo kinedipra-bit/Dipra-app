@@ -7,6 +7,7 @@ const TABS = [
   { segment: "ficha", label: "Ficha" },
   { segment: "evaluacion", label: "Evaluación" },
   { segment: "plan", label: "Plan" },
+  { segment: "tareas", label: "Tareas" },
   { segment: "sesiones", label: "Sesiones" },
   { segment: "evolucion", label: "Evolución" },
 ];

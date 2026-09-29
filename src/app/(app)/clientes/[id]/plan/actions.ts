@@ -23,6 +23,9 @@ export async function crearSemana(
       mesociclo: semana.mesociclo,
       objetivo: semana.objetivo,
       dias: semana.dias,
+      // Nueva semana, todavía nada compartido — el cliente sigue sin ver
+      // esto hasta que el profesional apriete "Compartir rutina".
+      cambios_sin_compartir: true,
     })
     .select("*")
     .single<PlanSemana>();
@@ -61,11 +64,41 @@ export async function guardarSemana(
   const supabase = await createClient();
   const { error } = await supabase
     .from("plan_semanas")
-    .update(patch)
+    // Cualquier guardado es un cambio de borrador — el cliente sigue viendo
+    // la última versión que se le compartió hasta que se comparta de nuevo.
+    .update({ ...patch, cambios_sin_compartir: true })
     .eq("id", semanaId)
     .eq("client_id", clienteId);
 
   if (error) throw new Error(error.message);
+  revalidatePath(`/clientes/${clienteId}/plan`);
+}
+
+// "Compartir rutina": copia el borrador actual (`dias`) a la versión que
+// realmente ve el cliente (`dias_publicado`). Se lee `dias` primero en vez
+// de referenciarlo dentro del mismo update porque el cliente de Supabase
+// no soporta expresiones tipo "columna = otra_columna" en un solo update.
+export async function compartirSemana(clienteId: string, semanaId: string) {
+  const supabase = await createClient();
+  const { data: actual, error: errorLectura } = await supabase
+    .from("plan_semanas")
+    .select("dias")
+    .eq("id", semanaId)
+    .eq("client_id", clienteId)
+    .single<{ dias: DiaPlan[] }>();
+  if (errorLectura || !actual) throw new Error(errorLectura?.message ?? "Semana no encontrada");
+
+  const { error } = await supabase
+    .from("plan_semanas")
+    .update({
+      dias_publicado: actual.dias,
+      publicado_at: new Date().toISOString(),
+      cambios_sin_compartir: false,
+    })
+    .eq("id", semanaId)
+    .eq("client_id", clienteId);
+  if (error) throw new Error(error.message);
+
   revalidatePath(`/clientes/${clienteId}/plan`);
 }
 

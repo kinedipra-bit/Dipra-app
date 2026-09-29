@@ -33,9 +33,13 @@ export default async function PortalPlanPage({ params }: { params: Promise<{ tok
     admin.from("sesiones").select("*").eq("client_id", cliente.id).returns<Sesion[]>(),
   ]);
 
-  if (!semana) {
+  // El atleta ve `dias_publicado` (lo último que el profesional compartió),
+  // nunca `dias` directo (que puede tener cambios a medio hacer).
+  if (!semana || !semana.dias_publicado || semana.dias_publicado.length === 0) {
     return <p className="dp-muted text-sm">Todavía no tenés una rutina asignada.</p>;
   }
 
-  return <PortalPlanView token={token} semana={semana} sesiones={sesiones ?? []} />;
+  return (
+    <PortalPlanView token={token} semana={{ ...semana, dias: semana.dias_publicado }} sesiones={sesiones ?? []} />
+  );
 }

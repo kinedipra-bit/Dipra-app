@@ -158,6 +158,26 @@ export interface PlanSemana {
   mesociclo: string;
   objetivo: string;
   dias: DiaPlan[];
+  // "Compartir rutina": `dias` es el borrador que edita el profesional;
+  // `dias_publicado` es lo último que el profesional compartió, y es lo
+  // que realmente ve el cliente en su portal (nunca `dias` directo).
+  dias_publicado: DiaPlan[] | null;
+  publicado_at: string | null;
+  cambios_sin_compartir: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Plan de kinesiología/rehabilitación — independiente del de fuerza y sin
+// el concepto de semanas (un solo set de días en curso por cliente). Mismo
+// mecanismo de "compartir" que PlanSemana.
+export interface PlanKine {
+  id: string;
+  client_id: string;
+  dias: DiaPlan[];
+  dias_publicado: DiaPlan[] | null;
+  publicado_at: string | null;
+  cambios_sin_compartir: boolean;
   created_at: string;
   updated_at: string;
 }
