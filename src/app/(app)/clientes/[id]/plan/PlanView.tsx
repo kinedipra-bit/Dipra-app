@@ -444,7 +444,7 @@ export function PlanView({
                           <input
                             value={b.title}
                             onChange={(e) => renameBloque(bIdx, e.target.value)}
-                            className="dp-ink border-none bg-transparent text-sm font-semibold tracking-wide uppercase outline-none focus:underline"
+                            className="dp-ink border-none bg-transparent text-lg font-semibold tracking-wide uppercase outline-none focus:underline"
                             style={{ minWidth: 120 }}
                           />
                           <div className="flex items-center gap-2">

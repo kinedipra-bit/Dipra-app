@@ -233,7 +233,7 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
               {agruparPorBloque(draft.ejercicios).map((grupo, gIdx) => (
                 <div key={gIdx}>
                   {grupo.bloqueTitle && (
-                    <p className="dp-text-brand mb-1 text-[11px] font-semibold tracking-wide uppercase">
+                    <p className="dp-text-brand mb-1 text-sm font-semibold tracking-wide uppercase">
                       {grupo.bloqueTitle}
                     </p>
                   )}

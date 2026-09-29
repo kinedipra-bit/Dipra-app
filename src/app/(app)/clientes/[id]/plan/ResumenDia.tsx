@@ -16,7 +16,7 @@ export function ResumenDia({ dia }: { dia: DiaPlan }) {
       <div className="space-y-4">
         {dia.bloques.map((b) => (
           <div key={b.id}>
-            <p className="dp-text-brand mb-1 text-xs font-semibold tracking-wide uppercase">{b.title}</p>
+            <p className="dp-text-brand mb-1 text-base font-semibold tracking-wide uppercase">{b.title}</p>
             {b.exercises.length === 0 ? (
               <p className="dp-muted text-xs">Sin ejercicios.</p>
             ) : (

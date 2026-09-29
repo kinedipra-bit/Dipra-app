@@ -267,7 +267,7 @@ export function SesionesClient({
               {agruparPorBloque(draft.ejercicios).map((grupo, gIdx) => (
                 <div key={gIdx}>
                   {grupo.bloqueTitle && (
-                    <p className="dp-text-brand mb-1 text-xs font-semibold tracking-wide uppercase">
+                    <p className="dp-text-brand mb-1 text-base font-semibold tracking-wide uppercase">
                       {grupo.bloqueTitle}
                     </p>
                   )}
@@ -493,7 +493,7 @@ export function SesionesClient({
                         {agruparPorBloque(s.ejercicios).map((grupo, gIdx) => (
                           <div key={gIdx}>
                             {grupo.bloqueTitle && (
-                              <p className="dp-text-brand mb-0.5 text-[10px] font-semibold tracking-wide uppercase">
+                              <p className="dp-text-brand mb-0.5 text-sm font-semibold tracking-wide uppercase">
                                 {grupo.bloqueTitle}
                               </p>
                             )}
