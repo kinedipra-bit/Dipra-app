@@ -10,6 +10,9 @@ export interface Cliente {
   categoria: string;
   ocupacion: string;
   objetivo: string;
+  // Objetivo/motivo de consulta/anamnesis — texto libre de Evaluación,
+  // distinto de `objetivo` (más corto, orientado a la meta de entrenamiento).
+  motivo_consulta: string;
   inicio: string; // date
   pilares: {
     movimiento: string;

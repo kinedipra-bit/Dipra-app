@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Cliente, ComposicionCorporalEntry, EvaluacionCustomEntry, MovilidadEsferaEntry } from "@/lib/dipra/types";
+import { MotivoConsultaSection } from "./MotivoConsultaSection";
 import { ComposicionCorporalSection } from "./ComposicionCorporalSection";
 import { FmsSection } from "./FmsSection";
 import { DolorAliciaSection } from "./DolorAliciaSection";
@@ -40,6 +41,8 @@ export default async function EvaluacionPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="flex flex-col gap-6">
+      <MotivoConsultaSection clienteId={cliente.id} initialMotivoConsulta={cliente.motivo_consulta} />
+
       <ComposicionCorporalSection clienteId={cliente.id} initialItems={composicion ?? []} />
 
       <section className="dp-surface rounded-2xl p-5 shadow-sm">

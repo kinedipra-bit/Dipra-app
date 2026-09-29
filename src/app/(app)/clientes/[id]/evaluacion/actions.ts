@@ -33,6 +33,16 @@ export async function updateDolorAlicia(clienteId: string, dolorAlicia: Record<s
   revalidar(clienteId);
 }
 
+export async function updateMotivoConsulta(clienteId: string, motivoConsulta: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("clients")
+    .update({ motivo_consulta: motivoConsulta })
+    .eq("id", clienteId);
+  if (error) throw new Error(error.message);
+  revalidar(clienteId);
+}
+
 // Composición corporal --------------------------------------------------------
 // Histórico por fecha: solo alta y eliminación, no se editan mediciones pasadas.
 
