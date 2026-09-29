@@ -1,8 +1,25 @@
 "use client";
 
 import { useState } from "react";
+import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { createCliente } from "../actions";
+
+// Tiene que ser un componente aparte: useFormStatus solo lee el estado del
+// <form> que lo contiene si se llama DESDE un hijo de ese form, no desde el
+// componente que lo declara.
+function BotonCrear() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="dp-bg-brand mt-2 rounded-xl py-2.5 font-medium text-white transition-colors disabled:opacity-50"
+    >
+      {pending ? "Creando…" : "Crear ficha"}
+    </button>
+  );
+}
 
 export default function NuevoClientePage() {
   const [categoria, setCategoria] = useState("Entrenamiento");
@@ -83,9 +100,7 @@ export default function NuevoClientePage() {
           />
         </label>
 
-        <button type="submit" className="dp-bg-brand mt-2 rounded-xl py-2.5 font-medium text-white transition-colors">
-          Crear ficha
-        </button>
+        <BotonCrear />
       </form>
     </div>
   );
