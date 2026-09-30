@@ -62,11 +62,23 @@ export function ExerciseRow({
   const embedUrl = youtubeEmbedUrl(ex.link);
 
   // Autocompletado contra la biblioteca: si el nombre tipeado matchea
-  // (case-insensitive) un ejercicio de la biblioteca y el ejercicio del plan
-  // todavía no tiene link propio, se copia el link de la biblioteca.
+  // (case-insensitive) un ejercicio de la biblioteca, se copia su link —
+  // salvo que el link actual sea uno propio, distinto al de la biblioteca
+  // (pegado a mano), en cuyo caso no se pisa. Si el link actual es el mismo
+  // que el de la biblioteca para el nombre ANTERIOR (quedó autocompletado
+  // por este mismo mecanismo), sí se actualiza al cambiar de ejercicio —
+  // si no, cambiar de "Rocking back lumbar" a otro ejercicio dejaba pegado
+  // el link del anterior.
   const handleNombreChange = (nombre: string) => {
     const match = biblioteca.find((b) => b.nombre.toLowerCase() === nombre.toLowerCase());
-    if (match && !ex.link) {
+    if (!match) {
+      onChange({ ...ex, nombre });
+      return;
+    }
+    const linkEraAutocompletado = biblioteca.some(
+      (b) => b.nombre.toLowerCase() === ex.nombre.toLowerCase() && b.link === ex.link
+    );
+    if (!ex.link || linkEraAutocompletado) {
       onChange({ ...ex, nombre, link: match.link });
     } else {
       onChange({ ...ex, nombre });
