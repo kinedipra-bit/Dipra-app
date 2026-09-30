@@ -24,6 +24,26 @@ export async function obtenerOCrearPlanKine(clienteId: string): Promise<PlanKine
   return creado;
 }
 
+// Para "Copiar desde el plan de fuerza": trae los días del borrador actual
+// de la semana activa de fuerza (no hace falta que esté compartida — el
+// profesional está copiando su propio trabajo, no lo que ve el cliente).
+export async function obtenerDiasFuerza(clienteId: string): Promise<DiaPlan[]> {
+  const supabase = await createClient();
+  const { data: cliente } = await supabase
+    .from("clients")
+    .select("semana_activa_id")
+    .eq("id", clienteId)
+    .single<{ semana_activa_id: string | null }>();
+  if (!cliente?.semana_activa_id) return [];
+
+  const { data: semana } = await supabase
+    .from("plan_semanas")
+    .select("dias")
+    .eq("id", cliente.semana_activa_id)
+    .single<{ dias: DiaPlan[] }>();
+  return semana?.dias ?? [];
+}
+
 export async function guardarPlanKine(clienteId: string, dias: DiaPlan[]) {
   const supabase = await createClient();
   const { error } = await supabase

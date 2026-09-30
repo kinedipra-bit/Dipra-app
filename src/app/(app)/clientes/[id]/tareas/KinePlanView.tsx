@@ -1,12 +1,26 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { blockTemplate } from "@/lib/dipra/constants";
 import type { BloquePlan, DiaPlan, EjercicioBiblioteca, EjercicioPlan, PlanKine } from "@/lib/dipra/types";
-import { compartirPlanKine, guardarPlanKine } from "./actions";
+import { compartirPlanKine, guardarPlanKine, obtenerDiasFuerza } from "./actions";
 import { ExerciseRow } from "../plan/ExerciseRow";
 import { ResumenDia } from "../plan/ResumenDia";
 import { guardarEnBiblioteca } from "../plan/actions";
+
+// Nuevos ids en todo el árbol — evita que copiar el mismo día dos veces (o
+// tenerlo abierto en dos pestañas) choque por id repetido.
+function clonarDia(dia: DiaPlan): DiaPlan {
+  return {
+    ...dia,
+    id: crypto.randomUUID(),
+    bloques: dia.bloques.map((b) => ({
+      ...b,
+      id: crypto.randomUUID(),
+      exercises: b.exercises.map((e) => ({ ...e, id: crypto.randomUUID() })),
+    })),
+  };
+}
 
 type Vista = "editar" | "resumen";
 
@@ -53,11 +67,27 @@ export function KinePlanView({
   const [biblioteca, setBiblioteca] = useState<EjercicioBiblioteca[]>(bibliotecaInicial);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [sharedAt, setSharedAt] = useState<number | null>(null);
+  const [diasFuerza, setDiasFuerza] = useState<DiaPlan[]>([]);
+  const [diaFuerzaElegido, setDiaFuerzaElegido] = useState("");
 
   const [guardando, startGuardar] = useTransition();
   const [compartiendo, startCompartir] = useTransition();
 
   const dia = dias[diaIdx];
+
+  // Para "Copiar desde el plan de fuerza" — trae los días de la semana de
+  // fuerza activa, si tiene una.
+  useEffect(() => {
+    obtenerDiasFuerza(clienteId).then(setDiasFuerza);
+  }, [clienteId]);
+
+  const copiarDesdeFuerza = () => {
+    const origen = diasFuerza.find((d) => d.id === diaFuerzaElegido);
+    if (!origen) return;
+    const nextDias = [...dias, clonarDia(origen)];
+    setDias(nextDias);
+    setDiaIdx(nextDias.length - 1);
+  };
 
   const updateDia = (nextDia: DiaPlan) => {
     setDias((prev) => prev.map((d, i) => (i === diaIdx ? nextDia : d)));
@@ -150,6 +180,33 @@ export function KinePlanView({
         >
           + Agregar primera sesión
         </button>
+        {diasFuerza.length > 0 && (
+          <>
+            <p className="dp-muted text-xs">o empezá de un día de su plan de fuerza</p>
+            <div className="flex items-center gap-2">
+              <select
+                value={diaFuerzaElegido}
+                onChange={(e) => setDiaFuerzaElegido(e.target.value)}
+                className="rounded-lg border border-black/10 px-2 py-1.5 text-sm outline-none focus:dp-border-brand"
+              >
+                <option value="">Elegí un día…</option>
+                {diasFuerza.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={copiarDesdeFuerza}
+                disabled={!diaFuerzaElegido}
+                className="dp-text-brand rounded-lg border border-dashed border-black/15 px-2.5 py-1.5 text-xs font-medium disabled:opacity-40"
+              >
+                Copiar
+              </button>
+            </div>
+          </>
+        )}
       </div>
     );
   }
@@ -228,6 +285,31 @@ export function KinePlanView({
             >
               + Agregar sesión
             </button>
+
+            {diasFuerza.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={diaFuerzaElegido}
+                  onChange={(e) => setDiaFuerzaElegido(e.target.value)}
+                  className="rounded-lg border border-black/10 px-1.5 py-1 text-xs outline-none focus:dp-border-brand"
+                >
+                  <option value="">Copiar día de fuerza…</option>
+                  {diasFuerza.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={copiarDesdeFuerza}
+                  disabled={!diaFuerzaElegido}
+                  className="dp-text-brand rounded-lg border border-dashed border-black/15 px-2.5 py-1 text-xs font-medium disabled:opacity-40"
+                >
+                  Copiar
+                </button>
+              </div>
+            )}
           </div>
 
           {dia && (
