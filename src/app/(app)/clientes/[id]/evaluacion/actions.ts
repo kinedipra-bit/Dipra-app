@@ -33,6 +33,13 @@ export async function updateDolorAlicia(clienteId: string, dolorAlicia: Record<s
   revalidar(clienteId);
 }
 
+export async function updatePilaresDescriptivos(clienteId: string, pilares: Record<string, string>) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("clients").update({ pilares }).eq("id", clienteId);
+  if (error) throw new Error(error.message);
+  revalidar(clienteId);
+}
+
 export async function updateMotivoConsulta(clienteId: string, motivoConsulta: string) {
   const supabase = await createClient();
   const { error } = await supabase

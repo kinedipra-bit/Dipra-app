@@ -46,7 +46,7 @@ export const PILARES_DESCRIPTIVOS_CAMPOS = [
   { key: "movimiento", label: "Movimiento" },
   { key: "sueno", label: "Sueño" },
   { key: "nutricion", label: "Nutrición" },
-  { key: "mindset", label: "Mindset" },
+  { key: "mindset", label: "Estrés mental general" },
   { key: "regeneracion", label: "Regeneración" },
 ] as const;
 
