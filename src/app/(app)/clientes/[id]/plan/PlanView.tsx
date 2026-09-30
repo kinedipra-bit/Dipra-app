@@ -21,7 +21,7 @@ import {
   setSemanaActiva as marcarSemanaActiva,
   guardarEnBiblioteca,
 } from "./actions";
-import { ExerciseRow } from "./ExerciseRow";
+import { ExerciseRow, EXERCISE_ROW_GRID_EDITABLE } from "./ExerciseRow";
 import { ResumenDia } from "./ResumenDia";
 import { BarraDeCarga } from "./BarraDeCarga";
 import { FmsResumenPlan } from "./FmsResumenPlan";
@@ -508,7 +508,7 @@ export function PlanView({
                         {b.exercises.length > 0 && (
                           <div
                             className="dp-muted grid gap-2 pb-1 text-[10px] font-medium tracking-wide uppercase"
-                            style={{ gridTemplateColumns: "1.6fr 0.55fr 0.55fr 0.6fr 0.7fr auto" }}
+                            style={{ gridTemplateColumns: EXERCISE_ROW_GRID_EDITABLE }}
                           >
                             <span>Ejercicio</span>
                             <span className="text-center">Ser.</span>

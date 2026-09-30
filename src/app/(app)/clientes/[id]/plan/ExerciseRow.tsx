@@ -5,6 +5,12 @@ import { volumenEjercicio } from "@/lib/dipra/calc";
 import { youtubeEmbedUrl } from "@/lib/youtube";
 import type { EjercicioPlan, EjercicioBiblioteca } from "@/lib/dipra/types";
 
+// Columnas de la fila editable (Ejercicio/Ser./Rep./Kg/Vol./eliminar) — el
+// encabezado de la lista (PlanView/KinePlanView) importa esta misma
+// constante para que los títulos queden alineados con los inputs de abajo.
+export const EXERCISE_ROW_GRID_EDITABLE = "1.5fr 0.5fr 0.75fr 0.6fr 0.7fr auto";
+export const EXERCISE_ROW_GRID_READONLY = "1.3fr 0.5fr 0.8fr 1fr 0.9fr";
+
 const CAMPOS: { key: "rpe" | "rir" | "tut" | "descanso"; label: string; width?: number }[] = [
   { key: "rpe", label: "RPE" },
   { key: "rir", label: "RIR" },
@@ -105,7 +111,7 @@ export function ExerciseRow({
   // En modo solo-lectura (portal del cliente) no hay botón de eliminar, así
   // que se usa una grilla propia sin esa columna y con más espacio para Kg
   // (puede mostrar varios valores tipo "12/14/16/18") y Vol.
-  const gridTemplateColumns = readOnly ? "1.3fr 0.5fr 0.8fr 1fr 0.9fr" : "1.5fr 0.5fr 0.75fr 0.6fr 0.7fr auto";
+  const gridTemplateColumns = readOnly ? EXERCISE_ROW_GRID_READONLY : EXERCISE_ROW_GRID_EDITABLE;
 
   return (
     <div className="py-1.5">

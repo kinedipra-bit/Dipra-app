@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { blockTemplate } from "@/lib/dipra/constants";
 import type { BloquePlan, DiaPlan, EjercicioBiblioteca, EjercicioPlan, PlanKine } from "@/lib/dipra/types";
 import { compartirPlanKine, guardarPlanKine, obtenerDiasFuerza } from "./actions";
-import { ExerciseRow } from "../plan/ExerciseRow";
+import { ExerciseRow, EXERCISE_ROW_GRID_EDITABLE } from "../plan/ExerciseRow";
 import { ResumenDia } from "../plan/ResumenDia";
 import { guardarEnBiblioteca } from "../plan/actions";
 
@@ -351,7 +351,7 @@ export function KinePlanView({
                       {b.exercises.length > 0 && (
                         <div
                           className="dp-muted grid gap-2 pb-1 text-[10px] font-medium tracking-wide uppercase"
-                          style={{ gridTemplateColumns: "1.6fr 0.55fr 0.55fr 0.6fr 0.7fr auto" }}
+                          style={{ gridTemplateColumns: EXERCISE_ROW_GRID_EDITABLE }}
                         >
                           <span>Ejercicio</span>
                           <span className="text-center">Ser.</span>
