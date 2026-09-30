@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { updateClienteFicha } from "../../actions";
 import { ANTECEDENTES_CAMPOS, PILARES_DESCRIPTIVOS_CAMPOS } from "@/lib/dipra/constants";
+import { calcularEdad } from "@/lib/dipra/cumpleanos";
 import type { Cliente } from "@/lib/dipra/types";
 
 type CampoExtra = { id: string; etiqueta: string; valor: string };
@@ -15,6 +16,7 @@ export function FichaForm({ cliente }: { cliente: Cliente }) {
     categoria: cliente.categoria,
     ocupacion: cliente.ocupacion,
     objetivo: cliente.objetivo,
+    fecha_nacimiento: cliente.fecha_nacimiento ?? "",
   });
   const [pilares, setPilares] = useState(cliente.pilares);
   const [antecedentes, setAntecedentes] = useState(cliente.antecedentes);
@@ -32,6 +34,9 @@ export function FichaForm({ cliente }: { cliente: Cliente }) {
     startTransition(async () => {
       await updateClienteFicha(cliente.id, {
         ...datos,
+        // La columna es `date` — una string vacía rompe el insert, tiene
+        // que ir null si no se cargó.
+        fecha_nacimiento: datos.fecha_nacimiento || null,
         pilares,
         antecedentes,
         campos_extra: camposExtra.filter((c) => c.etiqueta.trim()),
@@ -86,6 +91,20 @@ export function FichaForm({ cliente }: { cliente: Cliente }) {
               value={datos.ocupacion}
               onChange={(e) => setDatos({ ...datos, ocupacion: e.target.value })}
             />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="dp-body font-medium">Fecha de nacimiento</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                className={`${inputClass} font-mono`}
+                value={datos.fecha_nacimiento}
+                onChange={(e) => setDatos({ ...datos, fecha_nacimiento: e.target.value })}
+              />
+              {datos.fecha_nacimiento && (
+                <span className="dp-muted shrink-0 text-xs">{calcularEdad(datos.fecha_nacimiento)} años</span>
+              )}
+            </div>
           </label>
           <label className="col-span-2 flex flex-col gap-1 text-sm">
             <span className="dp-body font-medium">Objetivo principal</span>

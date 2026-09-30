@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { alertasCliente, citasSinSeguimiento, esClienteRemoto } from "@/lib/dipra/alertasProgramacion";
+import { diasHastaCumpleanos } from "@/lib/dipra/cumpleanos";
 import type { Cita, Cliente, PlanSemana, Sesion } from "@/lib/dipra/types";
 
 function labelTipoCita(tipo: string) {
@@ -81,6 +82,20 @@ export default async function InicioPage() {
       : { data: [] as Pick<Sesion, "client_id" | "fecha">[] };
 
   const sinSeguimiento = citasSinSeguimiento(citasPasadas ?? [], sesionesPasadas ?? []);
+
+  // Cumpleaños en los próximos 7 días (hoy incluido).
+  const { data: clientesConFecha } = await supabase
+    .from("clients")
+    .select("id, nombre, fecha_nacimiento")
+    .not("fecha_nacimiento", "is", null)
+    .returns<Pick<Cliente, "id" | "nombre" | "fecha_nacimiento">[]>();
+
+  const proximosCumpleanos = (clientesConFecha ?? [])
+    .flatMap((c) => {
+      const dias = diasHastaCumpleanos(c.fecha_nacimiento as string, hoyDate);
+      return dias !== null && dias <= 7 ? [{ id: c.id, nombre: c.nombre, dias }] : [];
+    })
+    .sort((a, b) => a.dias - b.dias);
 
   return (
     <div className="flex flex-col gap-8">
@@ -177,6 +192,24 @@ export default async function InicioPage() {
                 <Link href={`/agenda/dia?fecha=${c.fecha}`} className="dp-muted text-xs hover:dp-text-brand">
                   Ver cita →
                 </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {proximosCumpleanos.length > 0 && (
+        <div className="dp-surface rounded-2xl p-5 shadow-sm">
+          <h2 className="mb-3 font-medium dp-text-heading">🎂 Cumpleaños</h2>
+          <ul className="flex flex-col divide-y divide-black/5">
+            {proximosCumpleanos.map((c) => (
+              <li key={c.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                <Link href={`/clientes/${c.id}/ficha`} className="dp-text-brand hover:underline">
+                  {c.nombre}
+                </Link>
+                <span className="dp-muted text-xs">
+                  {c.dias === 0 ? "¡Hoy!" : c.dias === 1 ? "Mañana" : `En ${c.dias} días`}
+                </span>
               </li>
             ))}
           </ul>

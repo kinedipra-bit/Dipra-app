@@ -13,6 +13,9 @@ export interface Cliente {
   // Objetivo/motivo de consulta/anamnesis — texto libre de Evaluación,
   // distinto de `objetivo` (más corto, orientado a la meta de entrenamiento).
   motivo_consulta: string;
+  // Para calcular edad automática y avisar cumpleaños próximos — nullable
+  // porque los clientes cargados antes de este campo no la tienen.
+  fecha_nacimiento: string | null;
   inicio: string; // date
   pilares: {
     movimiento: string;

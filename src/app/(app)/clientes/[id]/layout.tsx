@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/Avatar";
+import { calcularEdad, diasHastaCumpleanos } from "@/lib/dipra/cumpleanos";
 import type { Cliente } from "@/lib/dipra/types";
 import { DeleteClienteButton } from "./DeleteClienteButton";
 import { ClienteTabs } from "./ClienteTabs";
@@ -20,6 +21,10 @@ export default async function ClienteLayout({
 
   if (!cliente) notFound();
 
+  const edad = calcularEdad(cliente.fecha_nacimiento);
+  const esCumpleanosHoy =
+    !!cliente.fecha_nacimiento && diasHastaCumpleanos(cliente.fecha_nacimiento) === 0;
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -35,9 +40,12 @@ export default async function ClienteLayout({
           <Avatar iniciales={cliente.iniciales} size={48} />
           <div>
             <h1 className="font-[family-name:var(--font-display)] text-xl font-semibold dp-text-heading">
-              {cliente.nombre}
+              {cliente.nombre} {esCumpleanosHoy && <span title="¡Cumpleaños hoy!">🎂</span>}
             </h1>
-            <p className="dp-muted text-sm">{cliente.categoria || "Sin categoría"}</p>
+            <p className="dp-muted text-sm">
+              {cliente.categoria || "Sin categoría"}
+              {edad !== null && ` · ${edad} años`}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
