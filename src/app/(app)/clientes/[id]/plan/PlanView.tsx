@@ -27,14 +27,7 @@ import { BarraDeCarga } from "./BarraDeCarga";
 import { FmsResumenPlan } from "./FmsResumenPlan";
 import { SesionesPorDia } from "@/components/SesionesPorDia";
 import { ResumenProgramacion } from "./ResumenProgramacion";
-import {
-  CUALIDADES,
-  GRUPOS_MUSCULARES,
-  TABLA_INTENSIDAD,
-  aplicarTutSugerido,
-  detectarCualidadDesdeTexto,
-  detectarGrupoMuscularDesdeTexto,
-} from "@/lib/dipra/tablaIntensidad";
+import { CUALIDADES, GRUPOS_MUSCULARES, TABLA_INTENSIDAD, aplicarTutSugerido } from "@/lib/dipra/tablaIntensidad";
 
 type Vista = "editar" | "resumen-dia" | "resumen-semana";
 
@@ -209,20 +202,10 @@ export function PlanView({
   const renameBloque = (bIdx: number, title: string) => {
     if (!dia) return;
     const nextDia = structuredClone(dia);
-    const bloque = nextDia.bloques[bIdx];
-    bloque.title = title;
-    // Si todavía no se eligió a mano el grupo/cualidad, intenta reconocerlos
-    // del título (ej. escribir "Potencia tren inferior" ya deja aplicada la
-    // tabla de intensidad sin tener que tocar además los selectores de al
-    // lado). No pisa una elección manual ya hecha.
-    if (!bloque.cualidad) {
-      const cualidadDetectada = detectarCualidadDesdeTexto(title);
-      if (cualidadDetectada) bloque.cualidad = cualidadDetectada;
-    }
-    if (!bloque.grupoMuscular) {
-      const grupoDetectado = detectarGrupoMuscularDesdeTexto(title);
-      if (grupoDetectado) bloque.grupoMuscular = grupoDetectado;
-    }
+    // Grupo muscular y cualidad se asignan solo a mano (selectores de al
+    // lado) — no se adivinan del título, para que la sugerencia semanal de
+    // sets solo cuente bloques que el profesional describió explícitamente.
+    nextDia.bloques[bIdx].title = title;
     updateDia(nextDia);
   };
   const removeBloque = (bIdx: number) => {

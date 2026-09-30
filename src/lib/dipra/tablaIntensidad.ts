@@ -53,13 +53,14 @@ export interface ResumenCualidad {
 }
 
 // Suma los sets (campo `series` de cada ejercicio) de todos los bloques de
-// la semana que tengan una `cualidad` asignada, agrupados por cualidad —
-// esto es lo que se compara contra el rango semanal de la tabla.
+// la semana que tengan TANTO grupo muscular COMO cualidad asignados
+// (ambos, elegidos a mano desde los selectores) — un bloque a medio
+// describir no debe sumar a la sugerencia.
 export function resumenSetsPorCualidad(dias: DiaPlan[]): ResumenCualidad[] {
   const totales = new Map<CualidadFuerza, number>();
   dias.forEach((dia) => {
     dia.bloques.forEach((b) => {
-      if (!b.cualidad) return;
+      if (!b.cualidad || !b.grupoMuscular) return;
       const sets = b.exercises.reduce((sum, e) => sum + (Number(e.series) || 0), 0);
       totales.set(b.cualidad, (totales.get(b.cualidad) ?? 0) + sets);
     });
@@ -164,72 +165,3 @@ export function aplicarTutSugerido(bloque: BloquePlan): BloquePlan {
   return { ...bloque, exercises: bloque.exercises.map((e) => ({ ...e, tiempoSerie: tut })) };
 }
 
-function normalizar(texto: string): string {
-  return texto
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase();
-}
-
-// Reconoce la cualidad de fuerza a partir del título que escribe el
-// profesional (ej. "Potencia tren inferior") — así no hace falta acordarse
-// de tocar además el selector de "Cualidad de fuerza…" para que la tabla de
-// intensidad quede aplicada. En orden de prioridad: las frases compuestas
-// van primero para que "resistencia a la potencia" no caiga en la regla
-// genérica de "potencia".
-const REGLAS_CUALIDAD: { cualidad: CualidadFuerza; test: (t: string) => boolean }[] = [
-  { cualidad: "Resistencia a la Potencia", test: (t) => t.includes("resistencia") && t.includes("potencia") },
-  { cualidad: "Resistencia a la Fuerza", test: (t) => t.includes("resistencia") && t.includes("fuerza") },
-  {
-    cualidad: "Fuerza General (Hipertrofia Funcional)",
-    test: (t) => t.includes("fuerza general") || t.includes("hipertrofia funcional"),
-  },
-  { cualidad: "Hipertrofia", test: (t) => t.includes("hipertrofia") },
-  { cualidad: "Potencia Máxima Relativa", test: (t) => t.includes("potencia") },
-  { cualidad: "Fuerza Máxima Relativa", test: (t) => t.includes("fuerza") },
-  { cualidad: "Resistencia a la Fuerza", test: (t) => t.includes("resistencia") },
-];
-
-export function detectarCualidadDesdeTexto(texto: string): CualidadFuerza | undefined {
-  const t = normalizar(texto);
-  return REGLAS_CUALIDAD.find((r) => r.test(t))?.cualidad;
-}
-
-// Primero las combinaciones explícitas (empuje/tracción + superior/
-// inferior); después, nombres de ejercicio típicos que ya implican el
-// patrón aunque el título no diga "empuje" o "tracción" (ej. un bloque
-// titulado "Búlgaras" es empuje inferior/dominante rodilla sin que haga
-// falta escribirlo).
-const REGLAS_GRUPO: { grupo: GrupoMuscular; test: (t: string) => boolean }[] = [
-  { grupo: "Empuje superior", test: (t) => t.includes("empuje") && t.includes("superior") },
-  { grupo: "Tracción superior", test: (t) => t.includes("traccion") && t.includes("superior") },
-  { grupo: "Empuje inferior", test: (t) => t.includes("empuje") && t.includes("inferior") },
-  { grupo: "Tracción inferior", test: (t) => t.includes("traccion") && t.includes("inferior") },
-  { grupo: "Full body", test: (t) => t.includes("full body") || t.includes("fullbody") || t.includes("full-body") },
-  { grupo: "Core", test: (t) => t.includes("core") },
-  // Dominante rodilla / empuje (tren inferior)
-  {
-    grupo: "Empuje inferior",
-    test: (t) => /\b(bulgara|sentadilla|squat|zancada|lunge|prensa|cuadricep)\b/.test(t),
-  },
-  // Dominante cadera / tracción (tren inferior)
-  {
-    grupo: "Tracción inferior",
-    test: (t) => /\b(peso muerto|rdl|hip thrust|femoral|puente|isquio)\b/.test(t),
-  },
-  // Empuje superior (pecho/hombro/tríceps)
-  {
-    grupo: "Empuje superior",
-    test: (t) => /\b(press|fondos|flexion|pecho|hombro|triceps)\b/.test(t),
-  },
-  // Tracción superior (espalda/bíceps)
-  {
-    grupo: "Tracción superior",
-    test: (t) => /\b(remo|dominada|jalon|biceps|espalda|pull)\b/.test(t),
-  },
-];
-
-export function detectarGrupoMuscularDesdeTexto(texto: string): GrupoMuscular | undefined {
-  const t = normalizar(texto);
-  return REGLAS_GRUPO.find((r) => r.test(t))?.grupo;
-}
