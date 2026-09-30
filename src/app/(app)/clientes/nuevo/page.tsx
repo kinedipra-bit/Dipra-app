@@ -65,6 +65,15 @@ export default function NuevoClientePage() {
         </div>
 
         <label className="flex flex-col gap-1 text-sm">
+          <span className="dp-body font-medium">RUT</span>
+          <input
+            name="rut"
+            placeholder="Ej. 12.345.678-9"
+            className="rounded-lg border border-black/10 px-3 py-2 outline-none focus:dp-border-brand"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
           <span className="dp-body font-medium">Objetivo principal</span>
           <textarea
             name="objetivo"

@@ -5,6 +5,9 @@ export interface Cliente {
   id: string;
   nombre: string;
   iniciales: string;
+  // Para emitir boletas — nullable, los clientes cargados antes de este
+  // campo no lo tienen todavía.
+  rut: string | null;
   telefono: string;
   correo: string;
   categoria: string;

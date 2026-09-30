@@ -21,6 +21,7 @@ export async function createCliente(formData: FormData) {
     .insert({
       nombre,
       iniciales,
+      rut: String(formData.get("rut") ?? "").trim() || null,
       telefono: String(formData.get("telefono") ?? ""),
       correo: String(formData.get("correo") ?? ""),
       categoria: String(formData.get("categoria") ?? ""),

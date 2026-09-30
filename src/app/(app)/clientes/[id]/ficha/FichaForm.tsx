@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { updateClienteFicha } from "../../actions";
 import { ANTECEDENTES_CAMPOS, PILARES_DESCRIPTIVOS_CAMPOS } from "@/lib/dipra/constants";
 import { calcularEdad } from "@/lib/dipra/cumpleanos";
@@ -8,9 +9,10 @@ import type { Cliente } from "@/lib/dipra/types";
 
 type CampoExtra = { id: string; etiqueta: string; valor: string };
 
-export function FichaForm({ cliente }: { cliente: Cliente }) {
+export function FichaForm({ cliente, linkBoletasSii }: { cliente: Cliente; linkBoletasSii: string | null }) {
   const [datos, setDatos] = useState({
     nombre: cliente.nombre,
+    rut: cliente.rut ?? "",
     telefono: cliente.telefono,
     correo: cliente.correo,
     categoria: cliente.categoria,
@@ -34,6 +36,7 @@ export function FichaForm({ cliente }: { cliente: Cliente }) {
     startTransition(async () => {
       await updateClienteFicha(cliente.id, {
         ...datos,
+        rut: datos.rut.trim() || null,
         // La columna es `date` — una string vacía rompe el insert, tiene
         // que ir null si no se cargó.
         fecha_nacimiento: datos.fecha_nacimiento || null,
@@ -58,6 +61,15 @@ export function FichaForm({ cliente }: { cliente: Cliente }) {
               className={inputClass}
               value={datos.nombre}
               onChange={(e) => setDatos({ ...datos, nombre: e.target.value })}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="dp-body font-medium">RUT</span>
+            <input
+              className={inputClass}
+              placeholder="Ej. 12.345.678-9"
+              value={datos.rut}
+              onChange={(e) => setDatos({ ...datos, rut: e.target.value })}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
@@ -116,6 +128,25 @@ export function FichaForm({ cliente }: { cliente: Cliente }) {
             />
           </label>
         </div>
+
+        {linkBoletasSii ? (
+          <a
+            href={linkBoletasSii}
+            target="_blank"
+            rel="noreferrer"
+            className="dp-text-brand mt-4 inline-block text-sm font-medium hover:underline"
+          >
+            📄 Emitir boleta (portal SII) →
+          </a>
+        ) : (
+          <p className="dp-muted mt-4 text-xs">
+            Para tener acá un acceso directo a emitir la boleta, cargá el link de tu portal de boletas SII en{" "}
+            <Link href="/ajustes" className="dp-text-brand hover:underline">
+              Ajustes
+            </Link>
+            .
+          </p>
+        )}
       </section>
 
       <section className="dp-surface rounded-2xl p-5 shadow-sm">
