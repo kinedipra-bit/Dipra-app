@@ -113,6 +113,12 @@ export interface EjercicioPlan {
   // el de CADA implemento (ej. dos mancuernas de 7,5 kg cada una), así que
   // el volumen real por repetición es el doble del número cargado.
   pesoCadaUno?: boolean;
+  // Override opcional del grupo muscular/cualidad del BLOQUE — para bloques
+  // "recíprocos" que alternan ejercicios de distinto grupo (ej. goblet
+  // squat de tren inferior + pull over de tracción superior en el mismo
+  // bloque). Si no se setea, hereda el del bloque (ver tablaIntensidad.ts).
+  grupoMuscular?: GrupoMuscular;
+  cualidad?: CualidadFuerza;
   link: string;
   rpe: string;
   rir: string;

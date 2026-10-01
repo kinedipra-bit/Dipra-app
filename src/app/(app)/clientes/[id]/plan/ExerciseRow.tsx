@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { volumenEjercicio } from "@/lib/dipra/calc";
 import { youtubeEmbedUrl } from "@/lib/youtube";
-import type { EjercicioPlan, EjercicioBiblioteca } from "@/lib/dipra/types";
+import { CUALIDADES, GRUPOS_MUSCULARES } from "@/lib/dipra/tablaIntensidad";
+import type { CualidadFuerza, EjercicioPlan, EjercicioBiblioteca, GrupoMuscular } from "@/lib/dipra/types";
 
 // Columnas de la fila editable (Ejercicio/Ser./Rep./Kg/Vol./eliminar) — el
 // encabezado de la lista (PlanView/KinePlanView) importa esta misma
@@ -41,6 +42,7 @@ export function ExerciseRow({
   readOnly = false,
   allowClientComment = false,
   datalistId = "biblioteca-datalist",
+  etiquetaBloque,
 }: {
   ex: EjercicioPlan;
   onChange: (next: EjercicioPlan) => void;
@@ -50,6 +52,12 @@ export function ExerciseRow({
   readOnly?: boolean;
   allowClientComment?: boolean;
   datalistId?: string;
+  // Si se pasa (solo en el plan de fuerza), habilita que ESTE ejercicio
+  // tenga su propio grupo muscular/cualidad distinto al del bloque — para
+  // bloques "recíprocos" que alternan ejercicios de distinto grupo (ej.
+  // goblet squat de tren inferior + pull over de tracción superior en el
+  // mismo bloque). Si el ejercicio no lo pisa, hereda el del bloque.
+  etiquetaBloque?: { grupoMuscular?: GrupoMuscular; cualidad?: CualidadFuerza };
 }) {
   const volumen = volumenEjercicio(ex);
   const seriesCount = Number(ex.series) || 0;
@@ -227,6 +235,38 @@ export function ExerciseRow({
             allowFullScreen
             className="h-full w-full border-0"
           />
+        </div>
+      )}
+
+      {/* Etiqueta propia de grupo/cualidad — solo en el plan de fuerza, para bloques
+          "recíprocos" donde un ejercicio no comparte el grupo muscular del bloque */}
+      {!readOnly && etiquetaBloque && (
+        <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-0.5">
+          <span className="dp-muted text-[10px] font-medium">Si este ejercicio es de otro grupo:</span>
+          <select
+            value={ex.grupoMuscular ?? ""}
+            onChange={(e) => onChange({ ...ex, grupoMuscular: (e.target.value as GrupoMuscular) || undefined })}
+            className="dp-body rounded-md border border-black/10 bg-white px-1.5 py-0.5 text-[11px] outline-none focus:dp-border-brand"
+          >
+            <option value="">{etiquetaBloque.grupoMuscular ?? "Grupo muscular…"}</option>
+            {GRUPOS_MUSCULARES.map((g) => (
+              <option key={g} value={g}>
+                {g}
+              </option>
+            ))}
+          </select>
+          <select
+            value={ex.cualidad ?? ""}
+            onChange={(e) => onChange({ ...ex, cualidad: (e.target.value as CualidadFuerza) || undefined })}
+            className="dp-body rounded-md border border-black/10 bg-white px-1.5 py-0.5 text-[11px] outline-none focus:dp-border-brand"
+          >
+            <option value="">{etiquetaBloque.cualidad ?? "Cualidad de fuerza…"}</option>
+            {CUALIDADES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 

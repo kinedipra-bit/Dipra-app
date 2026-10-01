@@ -3,7 +3,7 @@
 // prescripciones estrictas — cada atleta puede salirse del rango según su
 // caso. `setsSemana` es SETS POR SEMANA (sumando todos los días de la
 // semana activa que trabajen esa cualidad), no por sesión ni por ejercicio.
-import type { BloquePlan, CualidadFuerza, DiaPlan, GrupoMuscular } from "./types";
+import type { BloquePlan, CualidadFuerza, DiaPlan, EjercicioPlan, GrupoMuscular } from "./types";
 
 export interface FilaIntensidad {
   reps: string;
@@ -45,6 +45,20 @@ export const GRUPOS_MUSCULARES: GrupoMuscular[] = [
 // hipertrofia sobre el mismo grupo muscular (24-48h o menos).
 const ALTA_DEMANDA_SNC: CualidadFuerza[] = ["Fuerza Máxima Relativa", "Potencia Máxima Relativa"];
 
+// Grupo muscular/cualidad "efectivos" de un ejercicio: lo que el ejercicio
+// trae puesto a mano tiene prioridad (bloques "recíprocos" que alternan
+// ejercicios de distinto grupo, ej. goblet squat + pull over en el mismo
+// bloque); si no, hereda lo del bloque.
+export function etiquetaEfectiva(
+  bloque: BloquePlan,
+  ejercicio: EjercicioPlan
+): { grupoMuscular?: GrupoMuscular; cualidad?: CualidadFuerza } {
+  return {
+    grupoMuscular: ejercicio.grupoMuscular ?? bloque.grupoMuscular,
+    cualidad: ejercicio.cualidad ?? bloque.cualidad,
+  };
+}
+
 export interface ResumenCualidad {
   cualidad: CualidadFuerza;
   setsTotales: number;
@@ -52,17 +66,18 @@ export interface ResumenCualidad {
   estado: "bajo" | "dentro" | "sobre";
 }
 
-// Suma los sets (campo `series` de cada ejercicio) de todos los bloques de
-// la semana que tengan TANTO grupo muscular COMO cualidad asignados
-// (ambos, elegidos a mano desde los selectores) — un bloque a medio
-// describir no debe sumar a la sugerencia.
+// Suma los sets (campo `series`) de cada ejercicio de la semana que tenga
+// TANTO grupo muscular COMO cualidad efectivos (propios o heredados del
+// bloque) — un ejercicio a medio describir no debe sumar a la sugerencia.
 export function resumenSetsPorCualidad(dias: DiaPlan[]): ResumenCualidad[] {
   const totales = new Map<CualidadFuerza, number>();
   dias.forEach((dia) => {
     dia.bloques.forEach((b) => {
-      if (!b.cualidad || !b.grupoMuscular) return;
-      const sets = b.exercises.reduce((sum, e) => sum + (Number(e.series) || 0), 0);
-      totales.set(b.cualidad, (totales.get(b.cualidad) ?? 0) + sets);
+      b.exercises.forEach((e) => {
+        const { grupoMuscular, cualidad } = etiquetaEfectiva(b, e);
+        if (!cualidad || !grupoMuscular) return;
+        totales.set(cualidad, (totales.get(cualidad) ?? 0) + (Number(e.series) || 0));
+      });
     });
   });
 
@@ -106,12 +121,14 @@ export function alertasDescanso(dias: DiaPlan[], citas: CitaParaDescanso[] = [])
   const conteo = new Map<string, { grupoMuscular: GrupoMuscular; cualidad: CualidadFuerza; diasLabels: Set<string> }>();
   dias.forEach((dia) => {
     dia.bloques.forEach((b) => {
-      if (!b.grupoMuscular || !b.cualidad || !ALTA_DEMANDA_SNC.includes(b.cualidad)) return;
-      const key = `${b.grupoMuscular}::${b.cualidad}`;
-      const entry =
-        conteo.get(key) ?? { grupoMuscular: b.grupoMuscular, cualidad: b.cualidad, diasLabels: new Set<string>() };
-      entry.diasLabels.add(dia.label);
-      conteo.set(key, entry);
+      b.exercises.forEach((e) => {
+        const { grupoMuscular, cualidad } = etiquetaEfectiva(b, e);
+        if (!grupoMuscular || !cualidad || !ALTA_DEMANDA_SNC.includes(cualidad)) return;
+        const key = `${grupoMuscular}::${cualidad}`;
+        const entry = conteo.get(key) ?? { grupoMuscular, cualidad, diasLabels: new Set<string>() };
+        entry.diasLabels.add(dia.label);
+        conteo.set(key, entry);
+      });
     });
   });
 
@@ -156,12 +173,18 @@ export function alertasDescanso(dias: DiaPlan[], citas: CitaParaDescanso[] = [])
   return resultado;
 }
 
-// Al taggear un bloque con una cualidad, se puede aplicar el TUT sugerido
-// de la tabla a todos sus ejercicios de un toque (el profesional lo puede
-// editar después si su caso es distinto).
+// Al taggear un bloque (o un ejercicio suelto, en un bloque recíproco) con
+// una cualidad, se puede aplicar el TUT sugerido de la tabla de un toque —
+// cada ejercicio usa su propia cualidad efectiva (la suya si la tiene, si
+// no la del bloque), el profesional lo puede editar después si su caso es
+// distinto.
 export function aplicarTutSugerido(bloque: BloquePlan): BloquePlan {
-  if (!bloque.cualidad) return bloque;
-  const tut = TABLA_INTENSIDAD[bloque.cualidad].tut;
-  return { ...bloque, exercises: bloque.exercises.map((e) => ({ ...e, tiempoSerie: tut })) };
+  return {
+    ...bloque,
+    exercises: bloque.exercises.map((e) => {
+      const { cualidad } = etiquetaEfectiva(bloque, e);
+      return cualidad ? { ...e, tiempoSerie: TABLA_INTENSIDAD[cualidad].tut } : e;
+    }),
+  };
 }
 

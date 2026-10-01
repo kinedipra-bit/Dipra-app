@@ -528,6 +528,7 @@ export function PlanView({
                               onRemove={() => removeExercise(bIdx, eIdx)}
                               biblioteca={biblioteca}
                               onSaveToBiblioteca={guardarEjercicioEnBiblioteca}
+                              etiquetaBloque={{ grupoMuscular: b.grupoMuscular, cualidad: b.cualidad }}
                             />
                           ))}
                         </div>
