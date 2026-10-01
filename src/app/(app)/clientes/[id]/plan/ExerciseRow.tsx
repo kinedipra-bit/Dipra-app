@@ -67,6 +67,11 @@ export function ExerciseRow({
   // valores cargados en pesosSeries (ej. al reabrir un plan guardado).
   const [pesoPorSerieAbierto, setPesoPorSerieAbierto] = useState(pesosSeriesActivo);
   const [videoAbierto, setVideoAbierto] = useState(false);
+  // El toggle de grupo/cualidad propios arranca abierto solo si el ejercicio
+  // ya tiene algo cargado ahí — si no, queda oculto para no repetir en cada
+  // fila lo que ya dice el bloque (confuso: parecía que cada ejercicio ya
+  // tenía su propio grupo/cualidad elegido).
+  const [etiquetaPropiaAbierta, setEtiquetaPropiaAbierta] = useState(!!(ex.grupoMuscular || ex.cualidad));
   const embedUrl = youtubeEmbedUrl(ex.link);
 
   // Autocompletado contra la biblioteca: si el nombre tipeado matchea
@@ -239,34 +244,59 @@ export function ExerciseRow({
       )}
 
       {/* Etiqueta propia de grupo/cualidad — solo en el plan de fuerza, para bloques
-          "recíprocos" donde un ejercicio no comparte el grupo muscular del bloque */}
+          "recíprocos" donde un ejercicio no comparte el grupo muscular del bloque.
+          Colapsada por default: repetirla en cada fila confundía (parecía que cada
+          ejercicio ya tenía su propio grupo/cualidad elegido). */}
       {!readOnly && etiquetaBloque && (
-        <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-0.5">
-          <span className="dp-muted text-[10px] font-medium">Si este ejercicio es de otro grupo:</span>
-          <select
-            value={ex.grupoMuscular ?? ""}
-            onChange={(e) => onChange({ ...ex, grupoMuscular: (e.target.value as GrupoMuscular) || undefined })}
-            className="dp-body rounded-md border border-black/10 bg-white px-1.5 py-0.5 text-[11px] outline-none focus:dp-border-brand"
-          >
-            <option value="">{etiquetaBloque.grupoMuscular ?? "Grupo muscular…"}</option>
-            {GRUPOS_MUSCULARES.map((g) => (
-              <option key={g} value={g}>
-                {g}
-              </option>
-            ))}
-          </select>
-          <select
-            value={ex.cualidad ?? ""}
-            onChange={(e) => onChange({ ...ex, cualidad: (e.target.value as CualidadFuerza) || undefined })}
-            className="dp-body rounded-md border border-black/10 bg-white px-1.5 py-0.5 text-[11px] outline-none focus:dp-border-brand"
-          >
-            <option value="">{etiquetaBloque.cualidad ?? "Cualidad de fuerza…"}</option>
-            {CUALIDADES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+        <div className="mt-1 pl-0.5">
+          {etiquetaPropiaAbierta ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="dp-muted text-[10px] font-medium">Este ejercicio es de otro grupo:</span>
+              <select
+                value={ex.grupoMuscular ?? ""}
+                onChange={(e) => onChange({ ...ex, grupoMuscular: (e.target.value as GrupoMuscular) || undefined })}
+                className="dp-body rounded-md border border-black/10 bg-white px-1.5 py-0.5 text-[11px] outline-none focus:dp-border-brand"
+              >
+                <option value="">Grupo muscular…</option>
+                {GRUPOS_MUSCULARES.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={ex.cualidad ?? ""}
+                onChange={(e) => onChange({ ...ex, cualidad: (e.target.value as CualidadFuerza) || undefined })}
+                className="dp-body rounded-md border border-black/10 bg-white px-1.5 py-0.5 text-[11px] outline-none focus:dp-border-brand"
+              >
+                <option value="">Cualidad de fuerza…</option>
+                {CUALIDADES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => {
+                  setEtiquetaPropiaAbierta(false);
+                  onChange({ ...ex, grupoMuscular: undefined, cualidad: undefined });
+                }}
+                className="dp-muted text-[10px] hover:dp-alert"
+              >
+                ✕ quitar
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEtiquetaPropiaAbierta(true)}
+              className="dp-text-brand text-[10px] font-medium hover:underline"
+            >
+              + Este ejercicio es de otro grupo que el bloque ({etiquetaBloque.grupoMuscular ?? "sin grupo"} ·{" "}
+              {etiquetaBloque.cualidad ?? "sin cualidad"})
+            </button>
+          )}
         </div>
       )}
 
