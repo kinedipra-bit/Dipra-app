@@ -366,7 +366,7 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
       )}
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="dp-body font-medium">Observaciones generales (opcional)</span>
+        <span className="dp-body font-medium">Comentarios post rutina (opcional)</span>
         <textarea
           value={draft.comentarios}
           onChange={(e) => setDraft((prev) => ({ ...prev, comentarios: e.target.value }))}
@@ -385,7 +385,7 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
           disabled={pending}
           className="dp-bg-brand rounded-lg px-5 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
-          {pending ? "Guardando…" : error ? "Reintentar" : "Guardar"}
+          {pending ? "Guardando…" : error ? "Reintentar" : "✓ Sesión finalizada"}
         </button>
         <button
           type="button"

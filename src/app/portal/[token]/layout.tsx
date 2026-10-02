@@ -1,9 +1,23 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { InstalarApp } from "@/components/InstalarApp";
 import { obtenerClientePortal, sesionValidaPara } from "./acceso";
 import { cerrarSesionPin } from "./acciones-acceso";
 import { PortalTabs } from "./PortalTabs";
+
+// El manifest global (app/manifest.ts, start_url "/") es para la app del
+// profesional — acá se reemplaza por uno propio del portal (start_url al
+// portal de ESTE cliente), así "Instalar app" desde el portal no termina
+// abriendo el login del profesional.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}): Promise<Metadata> {
+  const { token } = await params;
+  return { manifest: `/portal/${token}/manifest.webmanifest` };
+}
 
 export default async function PortalLayout({
   children,
