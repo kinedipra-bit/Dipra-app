@@ -12,13 +12,15 @@ function formatFechaHora(iso: string) {
 }
 
 /**
- * Resumen de programación semanal: sets totales por cualidad de fuerza
- * (sumados en todos los días de la semana activa) vs. el rango sugerido
- * por la tabla de intensidad, más un recordatorio de descanso cuando un
- * mismo grupo muscular aparece más de una vez a alta intensidad (Fuerza
- * Máxima / Potencia Máxima) en la semana — cruzado con la agenda real
- * (citas con día del plan asignado) cuando hay suficientes citas agendadas.
- * Son sugerencias generales, no una validación — dependen de cada atleta.
+ * Resumen de programación semanal: sets totales por GRUPO MUSCULAR +
+ * cualidad de fuerza (sumados en todos los días de la semana activa) vs.
+ * el rango sugerido por la tabla de intensidad — el rango es por grupo
+ * muscular, así que tracción y empuje con la misma cualidad se cuentan
+ * separado, no sumados — más un recordatorio de descanso cuando un mismo
+ * grupo muscular aparece más de una vez a alta intensidad (Fuerza Máxima /
+ * Potencia Máxima) en la semana — cruzado con la agenda real (citas con
+ * día del plan asignado) cuando hay suficientes citas agendadas. Son
+ * sugerencias generales, no una validación — dependen de cada atleta.
  */
 export function ResumenProgramacion({ dias, citas }: { dias: DiaPlan[]; citas: CitaParaDescanso[] }) {
   const resumen = resumenSetsPorCualidad(dias);
@@ -33,8 +35,10 @@ export function ResumenProgramacion({ dias, citas }: { dias: DiaPlan[]; citas: C
 
       <div className="flex flex-col gap-2">
         {resumen.map((r) => (
-          <div key={r.cualidad} className="flex items-center justify-between gap-3 text-sm">
-            <span className="dp-body">{r.cualidad}</span>
+          <div key={`${r.grupoMuscular}-${r.cualidad}`} className="flex items-center justify-between gap-3 text-sm">
+            <span className="dp-body">
+              {r.grupoMuscular} <span className="dp-muted">· {r.cualidad}</span>
+            </span>
             <span
               className={`rounded-full px-2 py-0.5 font-mono text-xs font-medium text-white ${
                 r.estado === "dentro" ? "dp-bg-brand" : "dp-bg-amber"

@@ -60,6 +60,7 @@ export function etiquetaEfectiva(
 }
 
 export interface ResumenCualidad {
+  grupoMuscular: GrupoMuscular;
   cualidad: CualidadFuerza;
   setsTotales: number;
   fila: FilaIntensidad;
@@ -69,24 +70,33 @@ export interface ResumenCualidad {
 // Suma los sets (campo `series`) de cada ejercicio de la semana que tenga
 // TANTO grupo muscular COMO cualidad efectivos (propios o heredados del
 // bloque) — un ejercicio a medio describir no debe sumar a la sugerencia.
+// El rango de la tabla (ej. 3-6 sets/semana de hipertrofia) es POR GRUPO
+// MUSCULAR, así que se agrupa por grupo+cualidad, no solo por cualidad —
+// 3 sets de tracción + 2 de empuje, ambos hipertrofia, son dos series
+// separadas (3-6 y 3-6), no "5 de hipertrofia" sumados.
 export function resumenSetsPorCualidad(dias: DiaPlan[]): ResumenCualidad[] {
-  const totales = new Map<CualidadFuerza, number>();
+  const totales = new Map<string, { grupoMuscular: GrupoMuscular; cualidad: CualidadFuerza; sets: number }>();
   dias.forEach((dia) => {
     dia.bloques.forEach((b) => {
       b.exercises.forEach((e) => {
         const { grupoMuscular, cualidad } = etiquetaEfectiva(b, e);
         if (!cualidad || !grupoMuscular) return;
-        totales.set(cualidad, (totales.get(cualidad) ?? 0) + (Number(e.series) || 0));
+        const key = `${grupoMuscular}::${cualidad}`;
+        const entry = totales.get(key) ?? { grupoMuscular, cualidad, sets: 0 };
+        entry.sets += Number(e.series) || 0;
+        totales.set(key, entry);
       });
     });
   });
 
-  return [...totales.entries()].map(([cualidad, setsTotales]) => {
-    const fila = TABLA_INTENSIDAD[cualidad];
-    const [min, max] = fila.setsSemana;
-    const estado: ResumenCualidad["estado"] = setsTotales < min ? "bajo" : setsTotales > max ? "sobre" : "dentro";
-    return { cualidad, setsTotales, fila, estado };
-  });
+  return [...totales.values()]
+    .map(({ grupoMuscular, cualidad, sets }) => {
+      const fila = TABLA_INTENSIDAD[cualidad];
+      const [min, max] = fila.setsSemana;
+      const estado: ResumenCualidad["estado"] = sets < min ? "bajo" : sets > max ? "sobre" : "dentro";
+      return { grupoMuscular, cualidad, setsTotales: sets, fila, estado };
+    })
+    .sort((a, b) => a.grupoMuscular.localeCompare(b.grupoMuscular) || a.cualidad.localeCompare(b.cualidad));
 }
 
 export interface AlertaDescanso {
