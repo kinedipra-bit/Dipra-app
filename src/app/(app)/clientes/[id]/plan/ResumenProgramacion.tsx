@@ -29,9 +29,7 @@ export function ResumenProgramacion({ dias, citas }: { dias: DiaPlan[]; citas: C
   return (
     <div className="dp-surface rounded-2xl p-5 shadow-sm">
       <h3 className="dp-text-heading mb-1 font-medium">Sugerencias de programación semanal</h3>
-      <p className="dp-muted mb-3 text-xs">
-        Solo una referencia general (tabla de Movement Solutions) — cada atleta puede salirse del rango.
-      </p>
+      <p className="dp-muted mb-3 text-xs">Solo una referencia general — cada atleta puede salirse del rango.</p>
 
       <div className="flex flex-col gap-2">
         {resumen.map((r) => (
