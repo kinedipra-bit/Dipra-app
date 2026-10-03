@@ -118,8 +118,13 @@ export const GRUPOS_MUSCULARES: GrupoMuscular[] = [
 
 // Cualidades de alta demanda de SNC (trabajo cerca del máximo o explosivo) —
 // necesitan más descanso (48-72h) que una sesión de fuerza general/
-// hipertrofia sobre el mismo grupo muscular (24-48h o menos).
-const ALTA_DEMANDA_SNC: CualidadFuerza[] = ["Fuerza Máxima", "Potencia (Esfuerzo Único)"];
+// hipertrofia sobre el mismo grupo muscular (24-48h o menos). Resistencia a
+// la potencia entra acá también: a diferencia de potencia esfuerzo único
+// (1-2 reps, sin caída de velocidad dentro de la serie), acá sí se
+// acumula fatiga entre repetición y repetición (3-5 reps a intensidad
+// olímpica) — esa fatiga repetida es la que pide el mismo resguardo de
+// descanso.
+const ALTA_DEMANDA_SNC: CualidadFuerza[] = ["Fuerza Máxima", "Potencia (Esfuerzo Único)", "Resistencia a la Potencia"];
 
 // Grupo muscular/cualidad "efectivos" de un ejercicio: lo que el ejercicio
 // trae puesto a mano tiene prioridad (bloques "recíprocos" que alternan
