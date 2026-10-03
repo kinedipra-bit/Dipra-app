@@ -27,7 +27,13 @@ import { BarraDeCarga } from "./BarraDeCarga";
 import { FmsResumenPlan } from "./FmsResumenPlan";
 import { SesionesPorDia } from "@/components/SesionesPorDia";
 import { ResumenProgramacion } from "./ResumenProgramacion";
-import { CUALIDADES, GRUPOS_MUSCULARES, TABLA_INTENSIDAD, aplicarTutSugerido } from "@/lib/dipra/tablaIntensidad";
+import {
+  CUALIDADES,
+  GRUPOS_MUSCULARES,
+  TABLA_INTENSIDAD,
+  aplicarTutSugerido,
+  tutDisponible,
+} from "@/lib/dipra/tablaIntensidad";
 
 type Vista = "editar" | "resumen-dia" | "resumen-semana";
 
@@ -488,21 +494,28 @@ export function PlanView({
                               </option>
                             ))}
                           </select>
-                          {b.cualidad && (
-                            <>
-                              <span className="dp-muted font-mono text-[10px]">
-                                reps {TABLA_INTENSIDAD[b.cualidad].reps} · {TABLA_INTENSIDAD[b.cualidad].porcentaje1RM}{" "}
-                                · TUT {TABLA_INTENSIDAD[b.cualidad].tut} · desc. {TABLA_INTENSIDAD[b.cualidad].descanso}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => aplicarTut(bIdx)}
-                                className="dp-text-amber text-[10px] font-medium hover:underline"
-                              >
-                                Aplicar TUT sugerido
-                              </button>
-                            </>
-                          )}
+                          {b.cualidad &&
+                            TABLA_INTENSIDAD[b.cualidad] &&
+                            (() => {
+                              const fila = TABLA_INTENSIDAD[b.cualidad];
+                              return (
+                                <>
+                                  <span className="dp-muted font-mono text-[10px]">
+                                    reps {fila.reps} · {fila.porcentaje1RM} · series/ejerc. {fila.seriesPorEjercicio}
+                                    {fila.tut && <> · TUT {fila.tut}</>} · desc. {fila.descanso}
+                                  </span>
+                                  {tutDisponible(b) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => aplicarTut(bIdx)}
+                                      className="dp-text-amber text-[10px] font-medium hover:underline"
+                                    >
+                                      Aplicar TUT sugerido
+                                    </button>
+                                  )}
+                                </>
+                              );
+                            })()}
                         </div>
 
                         {b.exercises.length > 0 && (

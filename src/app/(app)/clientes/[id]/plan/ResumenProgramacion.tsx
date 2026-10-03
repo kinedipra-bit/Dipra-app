@@ -1,5 +1,6 @@
 import { alertasDescanso, resumenSetsPorCualidad, type CitaParaDescanso } from "@/lib/dipra/tablaIntensidad";
 import type { DiaPlan } from "@/lib/dipra/types";
+import { TablaReferenciaNSCA } from "./TablaReferenciaNSCA";
 
 function formatFechaHora(iso: string) {
   return new Date(iso).toLocaleString("es-CL", {
@@ -26,28 +27,36 @@ export function ResumenProgramacion({ dias, citas }: { dias: DiaPlan[]; citas: C
   const resumen = resumenSetsPorCualidad(dias);
   const alertas = alertasDescanso(dias, citas);
 
-  if (resumen.length === 0) return null;
-
   return (
     <div className="dp-surface rounded-2xl p-5 shadow-sm">
       <h3 className="dp-text-heading mb-1 font-medium">Sugerencias de programación semanal</h3>
       <p className="dp-muted mb-3 text-xs">Solo una referencia general — cada atleta puede salirse del rango.</p>
 
+      {resumen.length === 0 && (
+        <p className="dp-muted text-xs">
+          Todavía no hay ningún bloque con grupo muscular + cualidad elegidos — tageá al menos uno para ver la
+          sugerencia acá.
+        </p>
+      )}
+
       <div className="flex flex-col gap-2">
         {resumen.map((r) => (
-          <div key={`${r.grupoMuscular}-${r.cualidad}`} className="flex items-center justify-between gap-3 text-sm">
-            <span className="dp-body">
-              {r.grupoMuscular} <span className="dp-muted">· {r.cualidad}</span>
-            </span>
-            <span
-              className={`rounded-full px-2 py-0.5 font-mono text-xs font-medium text-white ${
-                r.estado === "dentro" ? "dp-bg-brand" : "dp-bg-amber"
-              }`}
-            >
-              {r.setsTotales} sets/sem. (sugerido {r.fila.setsSemana[0]}-{r.fila.setsSemana[1]})
-              {r.estado === "bajo" && " · bajo"}
-              {r.estado === "sobre" && " · sobre"}
-            </span>
+          <div key={`${r.grupoMuscular}-${r.cualidad}`} className="flex flex-col gap-0.5">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span className="dp-body">
+                {r.grupoMuscular} <span className="dp-muted">· {r.cualidad}</span>
+              </span>
+              <span
+                className={`rounded-full px-2 py-0.5 font-mono text-xs font-medium text-white ${
+                  r.estado === "dentro" ? "dp-bg-brand" : "dp-bg-amber"
+                }`}
+              >
+                {r.setsTotales} sets/sem. (sugerido {r.setsSemanaSugerido[0]}-{r.setsSemanaSugerido[1]})
+                {r.estado === "bajo" && " · bajo"}
+                {r.estado === "sobre" && " · sobre"}
+              </span>
+            </div>
+            {r.fila.notaSetsSemana && <p className="dp-muted text-[11px]">{r.fila.notaSetsSemana}</p>}
           </div>
         ))}
       </div>
@@ -71,6 +80,8 @@ export function ResumenProgramacion({ dias, citas }: { dias: DiaPlan[]; citas: C
           )}
         </div>
       )}
+
+      <TablaReferenciaNSCA />
     </div>
   );
 }

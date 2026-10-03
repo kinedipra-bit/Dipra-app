@@ -150,12 +150,18 @@ export type GrupoMuscular =
   | "Full body"
   | "Core";
 
+// Categorías NSCA + adaptación práctica (actualizado — reemplaza el set
+// anterior de 6 cualidades, que mezclaba "fuerza general" con "hipertrofia
+// funcional" en una sola categoría y no distinguía hipertrofia funcional
+// (multiarticular) de no funcional (monoarticular)). Ver TABLA_INTENSIDAD
+// en tablaIntensidad.ts para los números de cada una.
 export type CualidadFuerza =
-  | "Fuerza Máxima Relativa"
-  | "Potencia Máxima Relativa"
-  | "Fuerza General (Hipertrofia Funcional)"
-  | "Hipertrofia"
+  | "Fuerza Máxima"
+  | "Fuerza General / Base"
+  | "Hipertrofia Funcional"
+  | "Hipertrofia No Funcional"
   | "Resistencia a la Fuerza"
+  | "Potencia (Esfuerzo Único)"
   | "Resistencia a la Potencia";
 
 export interface BloquePlan {
