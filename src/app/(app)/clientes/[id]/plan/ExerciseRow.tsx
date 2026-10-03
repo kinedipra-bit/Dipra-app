@@ -368,6 +368,16 @@ export function ExerciseRow({
               className={campoInputClass}
             />
           </div>
+          <div className="flex items-center gap-1">
+            <span className="dp-muted text-[10px] font-medium">Nota reps</span>
+            <input
+              value={ex.notaReps || ""}
+              onChange={(e) => onChange({ ...ex, notaReps: e.target.value })}
+              placeholder="Ej. 5 a skip derecha y 5 izquierda"
+              style={{ width: 170 }}
+              className={campoInputClass}
+            />
+          </div>
           <label className="flex cursor-pointer items-center gap-1 select-none">
             <input
               type="checkbox"
@@ -445,8 +455,8 @@ export function ExerciseRow({
         </div>
       )}
 
-      {/* Badges de solo lectura para tipo de carga / tiempo (unilateral ya se ve junto a reps) */}
-      {readOnly && (ex.tipoCarga || ex.tiempoSerie) && (
+      {/* Badges de solo lectura para tipo de carga / tiempo / nota de reps (unilateral ya se ve junto a reps) */}
+      {readOnly && (ex.tipoCarga || ex.tiempoSerie || ex.notaReps) && (
         <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-0.5">
           {ex.tipoCarga && (
             <span className="dp-bg-faint dp-body rounded-full px-2 py-0.5 text-[10px] font-medium">
@@ -456,6 +466,11 @@ export function ExerciseRow({
           {ex.tiempoSerie && (
             <span className="dp-bg-faint dp-body rounded-full px-2 py-0.5 text-[10px] font-medium">
               ⏱ {ex.tiempoSerie}
+            </span>
+          )}
+          {ex.notaReps && (
+            <span className="dp-bg-faint dp-body rounded-full px-2 py-0.5 text-[10px] font-medium">
+              {ex.notaReps}
             </span>
           )}
         </div>

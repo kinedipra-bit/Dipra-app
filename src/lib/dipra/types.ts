@@ -107,6 +107,11 @@ export interface EjercicioPlan {
   // para mostrar y calcular volumen; se puede combinar con pesosSeries
   // (cada índice es la misma serie) o usarse solo (kg uniforme).
   repsSeries?: (number | string)[];
+  // Aclaración de las reps cuando el número solo no alcanza para explicar el
+  // movimiento — ej. "5 a skip a la derecha y 5 a la izquierda". Se muestra
+  // junto al número de reps, no lo reemplaza (el número sigue valiendo para
+  // el volumen).
+  notaReps?: string;
   // Trabajo por tiempo en vez de (o además de) reps — ej. "30 seg" para un
   // isométrico. Texto libre.
   tiempoSerie?: string;
