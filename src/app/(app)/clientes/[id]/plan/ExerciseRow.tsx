@@ -62,10 +62,12 @@ export function ExerciseRow({
   const volumen = volumenEjercicio(ex);
   const seriesCount = Number(ex.series) || 0;
   const pesosSeriesActivo = (ex.pesosSeries ?? []).some((p) => Number(p) > 0);
+  const repsSeriesActivo = (ex.repsSeries ?? []).some((r) => Number(r) > 0);
 
-  // El toggle "peso por serie" arranca abierto si el ejercicio ya trae
-  // valores cargados en pesosSeries (ej. al reabrir un plan guardado).
+  // El toggle "peso por serie" / "reps por serie" arranca abierto si el
+  // ejercicio ya trae valores cargados (ej. al reabrir un plan guardado).
   const [pesoPorSerieAbierto, setPesoPorSerieAbierto] = useState(pesosSeriesActivo);
+  const [repsPorSerieAbierto, setRepsPorSerieAbierto] = useState(repsSeriesActivo);
   const [videoAbierto, setVideoAbierto] = useState(false);
   // El toggle de grupo/cualidad propios arranca abierto solo si el ejercicio
   // ya tiene algo cargado ahí — si no, queda oculto para no repetir en cada
@@ -119,12 +121,35 @@ export function ExerciseRow({
     onChange({ ...ex, pesosSeries: current });
   };
 
+  // Igual que togglePesoPorSerie/handlePesoSerieChange pero para reps por
+  // serie (ej. pirámide/ola 5-3-3-1) — se puede usar junto con peso por
+  // serie o solo (con kg uniforme).
+  const toggleRepsPorSerie = () => {
+    if (repsPorSerieAbierto) {
+      setRepsPorSerieAbierto(false);
+      return;
+    }
+    const base = ex.repsSeries ?? [];
+    const next = Array.from({ length: Math.max(seriesCount, 1) }, (_, i) => base[i] ?? ex.reps ?? 0);
+    onChange({ ...ex, repsSeries: next });
+    setRepsPorSerieAbierto(true);
+  };
+
+  const handleRepsSerieChange = (i: number, value: string) => {
+    const current = Array.from({ length: seriesCount }, (_, idx) => ex.repsSeries?.[idx] ?? ex.reps ?? 0);
+    current[i] = value === "" ? "" : Number(value);
+    onChange({ ...ex, repsSeries: current });
+  };
+
   const campoInputClass =
     "font-mono text-xs border border-black/10 rounded-md px-1 py-0.5 outline-none focus:dp-border-brand text-center";
 
   const kgTexto = pesosSeriesActivo
     ? (ex.pesosSeries ?? []).map((p) => Number(p) || 0).join("/")
     : String(ex.kg ?? 0);
+  const repsTexto = repsSeriesActivo
+    ? (ex.repsSeries ?? []).map((r) => Number(r) || 0).join("/")
+    : String(ex.reps ?? 0);
 
   // En modo solo-lectura (portal del cliente) no hay botón de eliminar, así
   // que se usa una grilla propia sin esa columna y con más espacio para Kg
@@ -177,10 +202,18 @@ export function ExerciseRow({
           />
         )}
 
-        {/* Reps (+ badge "c/u" si es unilateral) */}
+        {/* Reps (uniforme, o texto "5/3/3/1" si hay reps por serie cargado; + badge "c/u" si es unilateral) */}
         {readOnly ? (
           <span className="dp-body flex items-center justify-center gap-1 text-center font-mono text-sm">
-            {ex.reps}
+            {repsTexto}
+            {ex.unilateral && <span className="dp-text-brand text-[10px] font-semibold">c/u</span>}
+          </span>
+        ) : repsPorSerieAbierto ? (
+          <span
+            className="dp-muted flex items-center justify-center gap-1 text-center font-mono text-xs"
+            title="Editando reps por serie más abajo"
+          >
+            por serie
             {ex.unilateral && <span className="dp-text-brand text-[10px] font-semibold">c/u</span>}
           </span>
         ) : (
@@ -362,12 +395,22 @@ export function ExerciseRow({
               {pesoPorSerieAbierto ? "− Peso uniforme" : "+ Peso por serie"}
             </button>
           )}
+          {seriesCount > 1 && (
+            <button
+              type="button"
+              onClick={toggleRepsPorSerie}
+              className="dp-text-brand text-[11px] font-medium hover:underline"
+            >
+              {repsPorSerieAbierto ? "− Reps uniforme" : "+ Reps por serie"}
+            </button>
+          )}
         </div>
       )}
 
       {/* Inputs de peso por serie individual */}
       {!readOnly && pesoPorSerieAbierto && seriesCount > 0 && (
         <div className="dp-bg-faint mt-1 ml-0.5 flex flex-wrap items-center gap-2 rounded-lg px-2 py-1">
+          <span className="dp-muted text-[10px] font-medium">Kg</span>
           {Array.from({ length: seriesCount }).map((_, i) => (
             <div key={i} className="flex items-center gap-1">
               <span className="dp-muted text-[10px] font-medium">S{i + 1}</span>
@@ -376,6 +419,25 @@ export function ExerciseRow({
                 value={ex.pesosSeries?.[i] ?? ex.kg ?? 0}
                 onChange={(e) => handlePesoSerieChange(i, e.target.value)}
                 style={{ width: 48 }}
+                className={campoInputClass}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Inputs de reps por serie individual — ej. pirámide/ola 5-3-3-1 */}
+      {!readOnly && repsPorSerieAbierto && seriesCount > 0 && (
+        <div className="dp-bg-faint mt-1 ml-0.5 flex flex-wrap items-center gap-2 rounded-lg px-2 py-1">
+          <span className="dp-muted text-[10px] font-medium">Reps</span>
+          {Array.from({ length: seriesCount }).map((_, i) => (
+            <div key={i} className="flex items-center gap-1">
+              <span className="dp-muted text-[10px] font-medium">S{i + 1}</span>
+              <input
+                type="number"
+                value={ex.repsSeries?.[i] ?? ex.reps ?? 0}
+                onChange={(e) => handleRepsSerieChange(i, e.target.value)}
+                style={{ width: 40 }}
                 className={campoInputClass}
               />
             </div>

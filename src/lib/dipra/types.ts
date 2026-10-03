@@ -102,6 +102,11 @@ export interface EjercicioPlan {
   // al menos un valor cargado, tiene prioridad sobre `kg` para mostrar y
   // calcular volumen; `kg` queda como valor uniforme de respaldo/legacy.
   pesosSeries?: (number | string)[];
+  // Reps por serie individual (ej. pirámide/ola 5-3-3-1). Igual que
+  // pesosSeries: si tiene algún valor cargado, tiene prioridad sobre `reps`
+  // para mostrar y calcular volumen; se puede combinar con pesosSeries
+  // (cada índice es la misma serie) o usarse solo (kg uniforme).
+  repsSeries?: (number | string)[];
   // Trabajo por tiempo en vez de (o además de) reps — ej. "30 seg" para un
   // isométrico. Texto libre.
   tiempoSerie?: string;

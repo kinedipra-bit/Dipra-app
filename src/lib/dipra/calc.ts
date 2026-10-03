@@ -19,15 +19,18 @@ type Ejercicio = {
   reps?: number | string;
   kg?: number | string;
   pesosSeries?: (number | string)[];
+  repsSeries?: (number | string)[];
   unilateral?: boolean;
   pesoCadaUno?: boolean;
 };
 type Bloque = { exercises: Ejercicio[] };
 type Dia = { bloques: Bloque[] };
 
-// Si `pesosSeries` tiene valores cargados, el volumen se calcula sumando
-// reps × cada peso de serie individual (una serie por entrada del array).
-// Si no, se usa la fórmula uniforme series × reps × kg.
+// Si `pesosSeries` y/o `repsSeries` tienen valores cargados, el volumen se
+// calcula sumando reps × kg serie por serie (mismo índice = misma serie;
+// el que no está activo usa el valor uniforme `reps`/`kg` para todas las
+// series). Si ninguno está activo, se usa la fórmula uniforme
+// series × reps × kg.
 //
 // Dos formas distintas de "duplicar" que no son lo mismo:
 // - `unilateral` ("10 reps por lado"): se hacen el doble de repeticiones
@@ -35,14 +38,30 @@ type Dia = { bloques: Bloque[] };
 // - `pesoCadaUno` (ej. dos mancuernas de 7,5 kg cada una): el número
 //   cargado es el peso de CADA implemento, no el total → se duplica el kg.
 export function volumenEjercicio(e: Ejercicio): number {
-  const repsBase = Number(e.reps) || 0;
-  const reps = e.unilateral ? repsBase * 2 : repsBase;
   const factorPeso = e.pesoCadaUno ? 2 : 1;
-  const pesos = (e.pesosSeries ?? []).map((p) => Number(p) || 0).filter((p) => p > 0);
-  if (pesos.length > 0) {
-    return pesos.reduce((sum, p) => sum + reps * p * factorPeso, 0);
+  const pesosSeries = (e.pesosSeries ?? []).map((p) => Number(p) || 0);
+  const repsSeries = (e.repsSeries ?? []).map((r) => Number(r) || 0);
+  const pesosActivo = pesosSeries.some((p) => p > 0);
+  const repsActivo = repsSeries.some((r) => r > 0);
+
+  if (!pesosActivo && !repsActivo) {
+    const repsBase = Number(e.reps) || 0;
+    const reps = e.unilateral ? repsBase * 2 : repsBase;
+    return (Number(e.series) || 0) * reps * (Number(e.kg) || 0) * factorPeso;
   }
-  return (Number(e.series) || 0) * reps * (Number(e.kg) || 0) * factorPeso;
+
+  const repsUniforme = Number(e.reps) || 0;
+  const kgUniforme = Number(e.kg) || 0;
+  const seriesCount = Math.max(Number(e.series) || 0, pesosSeries.length, repsSeries.length);
+
+  let total = 0;
+  for (let i = 0; i < seriesCount; i++) {
+    const repsBase = repsActivo ? repsSeries[i] ?? 0 : repsUniforme;
+    const reps = e.unilateral ? repsBase * 2 : repsBase;
+    const kg = pesosActivo ? pesosSeries[i] ?? 0 : kgUniforme;
+    total += reps * kg * factorPeso;
+  }
+  return total;
 }
 
 type EjercicioSesionVol = {
