@@ -36,6 +36,42 @@ export async function crearCita(input: NuevaCitaInput) {
   redirect(`/agenda/dia?fecha=${input.fecha}`);
 }
 
+// Agenda grupal: una cita por cada miembro del roster del grupo, todas con
+// la misma fecha/hora/tipo/grupo_id — cada una conserva su propio estado/
+// asistencia (igual que una cita individual), y comparten grupo_id para
+// agruparse al verlas y abrir la planificación del grupo con un clic.
+export async function crearCitaGrupal(input: {
+  grupoId: string;
+  fecha: string;
+  hora: string;
+  estado: Cita["estado"];
+}) {
+  const supabase = await createClient();
+
+  const { data: miembros, error: miembrosError } = await supabase
+    .from("grupo_miembros")
+    .select("client_id, clients(nombre)")
+    .eq("grupo_id", input.grupoId)
+    .returns<{ client_id: string; clients: { nombre: string } | null }[]>();
+  if (miembrosError) throw new Error(miembrosError.message);
+  if (!miembros || miembros.length === 0) throw new Error("Este grupo todavía no tiene miembros.");
+
+  const filas = miembros.map((m) => ({
+    client_id: m.client_id,
+    cliente_nombre: m.clients?.nombre ?? "",
+    fecha: input.fecha,
+    hora: input.hora,
+    tipo: "Entrenamiento grupal",
+    estado: input.estado,
+    grupo_id: input.grupoId,
+  }));
+
+  const { error } = await supabase.from("citas").insert(filas);
+  if (error) throw new Error(error.message);
+  revalidar();
+  redirect(`/agenda/dia?fecha=${input.fecha}`);
+}
+
 // Para el selector "Día del plan" al agendar: trae los días de la semana
 // activa del cliente (solo id + label, no hace falta el resto del plan).
 export async function obtenerDiasPlan(clienteId: string): Promise<{ id: string; label: string }[]> {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import type { Cita } from "@/lib/dipra/types";
+import type { Cita, Grupo } from "@/lib/dipra/types";
 import { CitaRow } from "../CitaRow";
 
 function toISODate(d: Date) {
@@ -46,6 +46,16 @@ export default async function AgendaDiaPage({
     .eq("fecha", fecha)
     .order("hora")
     .returns<Cita[]>();
+
+  // Para las citas de un entrenamiento grupal (comparten grupo_id), resuelve
+  // el nombre del grupo para mostrar un encabezado + link a su planificación
+  // en vez de solo la lista de personas.
+  const grupoIds = [...new Set((citas ?? []).map((c) => c.grupo_id).filter((id): id is string => !!id))];
+  const gruposPorId = new Map<string, Grupo>();
+  if (grupoIds.length > 0) {
+    const { data: grupos } = await supabase.from("grupos").select("*").in("id", grupoIds).returns<Grupo[]>();
+    (grupos ?? []).forEach((g) => gruposPorId.set(g.id, g));
+  }
 
   const dateLabel = new Date(fecha + "T00:00:00").toLocaleDateString("es-CL", {
     weekday: "long",
@@ -99,6 +109,11 @@ export default async function AgendaDiaPage({
         {slots.map((h) => {
           const citasHora = citasPorHora.get(h) ?? [];
           const ocupado = citasHora.length > 0;
+          // Si todas las citas de esta hora son de la misma clase grupal,
+          // se muestra un encabezado con el nombre del grupo + link directo
+          // a su planificación (así se "abre la hora" y aparece lista).
+          const grupoIdsEnHora = [...new Set(citasHora.map((c) => c.grupo_id).filter((id): id is string => !!id))];
+          const grupo = grupoIdsEnHora.length === 1 ? gruposPorId.get(grupoIdsEnHora[0]) : undefined;
           return (
             <div key={h} className={ocupado ? "dp-surface overflow-hidden rounded-xl shadow-sm" : "rounded-xl"}>
               <div className={`flex items-center justify-between px-4 py-2 ${ocupado ? "dp-bg-faint" : ""}`}>
@@ -112,6 +127,14 @@ export default async function AgendaDiaPage({
                   {ocupado ? "+ Agregar a esta hora" : "+ Agregar"}
                 </Link>
               </div>
+              {grupo && (
+                <div className="dp-bg-lime-soft flex items-center justify-between px-4 py-1.5">
+                  <span className="dp-text-heading text-xs font-medium">👥 {grupo.nombre}</span>
+                  <Link href={`/grupos/${grupo.id}`} className="dp-text-brand text-xs font-medium hover:underline">
+                    Ver planificación →
+                  </Link>
+                </div>
+              )}
               {ocupado && (
                 <div className="divide-y divide-black/5">
                   {citasHora.map((c) => (

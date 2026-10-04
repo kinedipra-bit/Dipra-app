@@ -311,6 +311,33 @@ export interface Cita {
   // A qué día del plan corresponde esta cita (ej. "Día 2"), si se asignó —
   // permite calcular descansos reales entre sesiones (ver tablaIntensidad.ts).
   dia_plan_label?: string | null;
+  // Si es parte de un entrenamiento grupal, el grupo al que pertenece — las
+  // citas de la misma clase (misma fecha/hora) comparten este id, cada una
+  // sigue siendo una fila por persona (mismo estado/asistencia de siempre).
+  grupo_id?: string | null;
+}
+
+// Entrenamiento grupal — roster fijo (hasta 8 personas) con su propia
+// planificación, como un "cliente virtual" para el módulo de Plan. Cada
+// miembro conserva su ficha individual intacta: las evaluaciones grupales
+// escriben en client_pr_historial/client_composicion_corporal/clients.fms
+// de cada persona, nunca en una tabla aparte.
+export interface Grupo {
+  id: string;
+  nombre: string;
+  semana_activa_id: string | null;
+  created_at: string;
+}
+
+export interface GrupoPlanSemana {
+  id: string;
+  grupo_id: string;
+  numero: number;
+  mesociclo: string;
+  objetivo: string;
+  dias: DiaPlan[];
+  created_at: string;
+  updated_at: string;
 }
 
 export interface EjercicioBiblioteca {

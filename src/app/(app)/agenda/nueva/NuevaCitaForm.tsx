@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { ESTADOS_CITA, TIPOS_CITA } from "@/lib/dipra/constants";
-import type { Cita } from "@/lib/dipra/types";
-import { contarSesionesKinesiologia, crearCita, obtenerDiasPlan } from "../actions";
+import type { Cita, Grupo } from "@/lib/dipra/types";
+import { contarSesionesKinesiologia, crearCita, crearCitaGrupal, obtenerDiasPlan } from "../actions";
 
 function labelEstado(estado: (typeof ESTADOS_CITA)[number]) {
   if (estado === "alerta") return "Alerta leve";
@@ -14,12 +14,14 @@ function labelEstado(estado: (typeof ESTADOS_CITA)[number]) {
 
 export function NuevaCitaForm({
   clientes,
+  grupos,
   clienteIdInicial,
   clienteNombreInicial,
   fechaInicial,
   horaInicial,
 }: {
   clientes: { id: string; nombre: string }[];
+  grupos: Grupo[];
   clienteIdInicial: string;
   clienteNombreInicial: string;
   fechaInicial: string;
@@ -27,6 +29,8 @@ export function NuevaCitaForm({
 }) {
   const nombreInicial =
     clienteNombreInicial || clientes.find((c) => c.id === clienteIdInicial)?.nombre || "";
+  const [esGrupal, setEsGrupal] = useState(false);
+  const [grupoId, setGrupoId] = useState("");
   const [nombreCliente, setNombreCliente] = useState(nombreInicial);
   const [sinFicha, setSinFicha] = useState(false);
   const [nombreLibre, setNombreLibre] = useState("");
@@ -85,6 +89,14 @@ export function NuevaCitaForm({
   const inputClass = "rounded-lg border border-black/10 px-3 py-2 text-sm outline-none focus:dp-border-brand";
 
   const submit = () => {
+    if (esGrupal) {
+      if (!grupoId) return;
+      startTransition(() => {
+        crearCitaGrupal({ grupoId, fecha, hora, estado });
+      });
+      return;
+    }
+
     if (sinFicha) {
       const nombre = nombreLibre.trim();
       if (!nombre) return;
@@ -116,7 +128,7 @@ export function NuevaCitaForm({
     });
   };
 
-  const puedeAgendar = sinFicha ? !!nombreLibre.trim() : !!clienteIdEfectivo;
+  const puedeAgendar = esGrupal ? !!grupoId : sinFicha ? !!nombreLibre.trim() : !!clienteIdEfectivo;
 
   return (
     <div className="flex flex-col gap-6">
@@ -131,7 +143,62 @@ export function NuevaCitaForm({
           Agendar sesión
         </h1>
 
-        {clientes.length === 0 && !sinFicha ? (
+        {grupos.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setEsGrupal((v) => !v)}
+            className="dp-text-brand w-fit text-xs hover:underline"
+          >
+            {esGrupal ? "← Agendar una sesión individual" : "¿Es un entrenamiento grupal? Elegir un grupo"}
+          </button>
+        )}
+
+        {esGrupal ? (
+          <>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="dp-body font-medium">Grupo</span>
+              <select value={grupoId} onChange={(e) => setGrupoId(e.target.value)} className={inputClass} autoFocus>
+                <option value="">Elegí un grupo…</option>
+                {grupos.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.nombre}
+                  </option>
+                ))}
+              </select>
+              <span className="dp-muted text-xs">Se agenda una cita para cada persona del roster de ese grupo.</span>
+            </label>
+
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="dp-body font-medium">Fecha</span>
+                <input
+                  type="date"
+                  value={fecha}
+                  onChange={(e) => setFecha(e.target.value)}
+                  className={`${inputClass} font-mono`}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="dp-body font-medium">Hora</span>
+                <input
+                  type="time"
+                  value={hora}
+                  onChange={(e) => setHora(e.target.value)}
+                  className={`${inputClass} font-mono`}
+                />
+              </label>
+            </div>
+
+            <button
+              type="button"
+              onClick={submit}
+              disabled={!puedeAgendar || pending}
+              className="dp-bg-brand mt-2 rounded-xl py-2.5 text-sm font-medium text-white disabled:opacity-40"
+            >
+              {pending ? "Agendando…" : "Agendar clase grupal"}
+            </button>
+          </>
+        ) : clientes.length === 0 && !sinFicha ? (
           <p className="dp-muted text-sm">Todavía no hay clientes cargados para agendar.</p>
         ) : (
           <>
