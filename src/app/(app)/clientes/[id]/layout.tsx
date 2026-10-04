@@ -8,6 +8,7 @@ import { DeleteClienteButton } from "./DeleteClienteButton";
 import { ClienteTabs } from "./ClienteTabs";
 import { CopyPortalLink } from "./CopyPortalLink";
 import { VerPortalButton } from "./VerPortalButton";
+import { EnviarPortalPorCorreoButton } from "./EnviarPortalPorCorreoButton";
 
 export default async function ClienteLayout({
   children,
@@ -51,6 +52,7 @@ export default async function ClienteLayout({
         </div>
         <div className="flex items-center gap-2">
           <CopyPortalLink portalToken={cliente.portal_token} />
+          <EnviarPortalPorCorreoButton clienteId={cliente.id} />
           <VerPortalButton portalToken={cliente.portal_token} />
           <Link
             href={`/agenda/nueva?clienteId=${cliente.id}&clienteNombre=${encodeURIComponent(cliente.nombre)}`}

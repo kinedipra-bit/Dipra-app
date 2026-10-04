@@ -45,3 +45,43 @@ export async function enviarCorreoResetPin({
     throw new Error(`Resend respondió ${res.status}: ${body}`);
   }
 }
+
+export async function enviarCorreoLinkPortal({
+  para,
+  nombre,
+  link,
+}: {
+  para: string;
+  nombre: string;
+  link: string;
+}) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error("RESEND_API_KEY no está configurada.");
+
+  const from = process.env.RESEND_FROM_EMAIL || "DIPRA <onboarding@resend.dev>";
+  const primerNombre = nombre.trim().split(" ")[0] || nombre;
+
+  const res = await fetch(RESEND_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: [para],
+      subject: "Tu portal DIPRA",
+      html: `
+        <p>Hola ${primerNombre},</p>
+        <p>Este es el link a tu portal de DIPRA, donde vas a poder ver tu planificación y registrar tus sesiones:</p>
+        <p><a href="${link}">${link}</a></p>
+        <p>La primera vez que entres te va a pedir que elijas un PIN de 4 dígitos para proteger tu información.</p>
+      `,
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Resend respondió ${res.status}: ${body}`);
+  }
+}
