@@ -45,7 +45,7 @@ export function PortalTareasView({ token, dias: diasIniciales }: { token: string
           {dia.foco && <p className="dp-muted mb-3 text-sm">{dia.foco}</p>}
 
           {dia.bloques.map((bloque) => (
-            <div key={bloque.id} className="dp-bg-faint dp-border-brand mb-3 rounded-xl border-l-4 p-3 last:mb-0">
+            <div key={bloque.id} className="dp-bg-faint dp-border-brand mb-4 rounded-xl border-2 p-4 last:mb-0">
               <div className="mb-1 flex items-center justify-between">
                 <h3 className="dp-muted text-base font-semibold tracking-wide uppercase">{bloque.title}</h3>
                 <span className="dp-muted font-mono text-xs">
