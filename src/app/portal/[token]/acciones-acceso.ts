@@ -3,6 +3,7 @@
 import { cookies, headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { enviarCorreoResetPin } from "@/lib/email";
 import { generarTokenReset, hashPin, hashTokenReset, pinValido, verificarPin } from "@/lib/dipra/portalPin";
 import { PORTAL_SESSION_COOKIE, SESSION_DIAS } from "./acceso";
@@ -122,6 +123,31 @@ export async function cerrarSesionPin(token: string) {
   }
   cookieStore.delete(PORTAL_SESSION_COOKIE);
   revalidatePath(`/portal/${token}`, "layout");
+}
+
+// Para que el profesional pueda ver cómo le quedó el portal a un cliente
+// recién armada su planificación, sin tener que pedirle el PIN — solo
+// funciona si quien llama ya está autenticado como profesional (sesión de
+// Supabase Auth del panel, nada que ver con la cookie de sesión del
+// portal). Crea una sesión de portal nueva, igual que si el cliente
+// hubiera iniciado sesión con su PIN.
+export async function entrarComoProfesional(token: string): Promise<Resultado> {
+  const supabaseProfesional = await createClient();
+  const {
+    data: { user },
+  } = await supabaseProfesional.auth.getUser();
+  if (!user) return { ok: false, error: "No autorizado." };
+
+  const admin = createAdminClient();
+  const { data: cliente } = await admin
+    .from("clients")
+    .select("id")
+    .eq("portal_token", token)
+    .single<{ id: string }>();
+  if (!cliente) return { ok: false, error: "Portal no encontrado." };
+
+  await crearSesion(cliente.id);
+  return { ok: true };
 }
 
 export async function solicitarRestablecerPin(token: string): Promise<Resultado> {
