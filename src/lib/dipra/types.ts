@@ -211,6 +211,19 @@ export interface PlanSemana {
   updated_at: string;
 }
 
+// Biblioteca de rutinas — plantilla reutilizable de una semana de plan de
+// fuerza. `cliente_id` null = general (cualquier cliente); con valor = solo
+// para seguir la línea de ese cliente puntual.
+export interface PlantillaRutina {
+  id: string;
+  cliente_id: string | null;
+  titulo: string;
+  mesociclo: string;
+  objetivo: string;
+  dias: DiaPlan[];
+  created_at: string;
+}
+
 // Plan de kinesiología/rehabilitación — independiente del de fuerza y sin
 // el concepto de semanas (un solo set de días en curso por cliente). Mismo
 // mecanismo de "compartir" que PlanSemana.

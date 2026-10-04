@@ -14,6 +14,7 @@ import type {
   CualidadFuerza,
   GrupoMuscular,
   Cita,
+  PlantillaRutina,
 } from "@/lib/dipra/types";
 import {
   compartirSemana,
@@ -21,6 +22,8 @@ import {
   guardarSemana,
   setSemanaActiva as marcarSemanaActiva,
   guardarEnBiblioteca,
+  crearPlantilla,
+  eliminarPlantilla,
 } from "./actions";
 import { ExerciseRow, EXERCISE_ROW_GRID_EDITABLE } from "./ExerciseRow";
 import { ResumenDia } from "./ResumenDia";
@@ -85,6 +88,7 @@ export function PlanView({
   bibliotecaInicial,
   sesiones,
   citas,
+  plantillasIniciales,
 }: {
   clienteId: string;
   fms: FmsData | null | undefined;
@@ -93,6 +97,7 @@ export function PlanView({
   bibliotecaInicial: EjercicioBiblioteca[];
   sesiones: Sesion[];
   citas: Pick<Cita, "fecha" | "hora" | "dia_plan_label">[];
+  plantillasIniciales: PlantillaRutina[];
 }) {
   const [semanas, setSemanas] = useState<PlanSemana[]>(semanasIniciales);
   const [semanaActivaId, setSemanaActivaId] = useState<string | null>(
@@ -108,6 +113,17 @@ export function PlanView({
   const [guardando, startGuardar] = useTransition();
   const [compartiendo, startCompartir] = useTransition();
   const [sharedAt, setSharedAt] = useState<number | null>(null);
+
+  // Biblioteca de rutinas: guardar la semana actual como plantilla
+  // reutilizable, y cargar una plantilla guardada como punto de partida de
+  // una semana nueva (en vez de clonar la semana activa, como hace
+  // "+ Nueva semana").
+  const [plantillas, setPlantillas] = useState<PlantillaRutina[]>(plantillasIniciales);
+  const [mostrarGuardarPlantilla, setMostrarGuardarPlantilla] = useState(false);
+  const [tituloPlantilla, setTituloPlantilla] = useState("");
+  const [alcancePlantilla, setAlcancePlantilla] = useState<"cliente" | "general">("cliente");
+  const [plantillaElegidaId, setPlantillaElegidaId] = useState("");
+  const [guardandoPlantilla, startGuardarPlantilla] = useTransition();
 
   const semanaIdx = Math.max(
     0,
@@ -144,6 +160,68 @@ export function PlanView({
       setSemanaActivaId(creada.id);
       setDiaIdx(0);
       setVista("editar");
+    });
+  };
+
+  // Abre el panel de guardado con un título ya sugerido (mesociclo/objetivo
+  // de la semana actual) — el título es obligatorio para guardar, así toda
+  // plantilla queda identificable en la biblioteca.
+  const abrirGuardarPlantilla = () => {
+    if (!semana) return;
+    setTituloPlantilla([semana.objetivo, semana.mesociclo].filter(Boolean).join(" · "));
+    setAlcancePlantilla("cliente");
+    setMostrarGuardarPlantilla(true);
+  };
+
+  const guardarComoPlantilla = () => {
+    if (!semana || !tituloPlantilla.trim()) return;
+    startGuardarPlantilla(async () => {
+      const creada = await crearPlantilla(clienteId, alcancePlantilla === "general" ? null : clienteId, {
+        titulo: tituloPlantilla.trim(),
+        mesociclo: semana.mesociclo,
+        objetivo: semana.objetivo,
+        dias: structuredClone(semana.dias),
+      });
+      setPlantillas((prev) => [creada, ...prev]);
+      setMostrarGuardarPlantilla(false);
+      setTituloPlantilla("");
+    });
+  };
+
+  const borrarPlantilla = (id: string) => {
+    if (!window.confirm("¿Eliminar esta plantilla de la biblioteca de rutinas?")) return;
+    setPlantillas((prev) => prev.filter((p) => p.id !== id));
+    void eliminarPlantilla(clienteId, id);
+  };
+
+  // Crea una semana nueva a partir de una plantilla de la biblioteca (en vez
+  // de clonar la semana activa, como hace crearNuevaSemana) — regenera
+  // todos los ids (día, bloques, ejercicios) porque una plantilla se reusa
+  // muchas veces, a diferencia del clon puntual de la semana activa.
+  const usarPlantilla = () => {
+    const plantilla = plantillas.find((p) => p.id === plantillaElegidaId);
+    if (!plantilla) return;
+    const id = crypto.randomUUID();
+    const numero = semanas.length + 1;
+    const dias: DiaPlan[] = structuredClone(plantilla.dias).map((d: DiaPlan) => ({
+      ...d,
+      id: crypto.randomUUID(),
+      bloques: clonarBloques(d.bloques),
+    }));
+
+    startCrear(async () => {
+      const creada = await crearSemana(clienteId, {
+        id,
+        numero,
+        mesociclo: plantilla.mesociclo,
+        objetivo: plantilla.objetivo,
+        dias,
+      });
+      setSemanas((prev) => [...prev, creada]);
+      setSemanaActivaId(creada.id);
+      setDiaIdx(0);
+      setVista("editar");
+      setPlantillaElegidaId("");
     });
   };
 
@@ -311,6 +389,34 @@ export function PlanView({
           >
             {creando ? "Creando…" : "Crear primera semana"}
           </button>
+          {plantillas.length > 0 && (
+            <>
+              <p className="dp-muted text-xs">o empezá de una plantilla de la biblioteca de rutinas</p>
+              <div className="flex items-center gap-2">
+                <select
+                  value={plantillaElegidaId}
+                  onChange={(e) => setPlantillaElegidaId(e.target.value)}
+                  className="rounded-lg border border-black/10 px-2 py-1.5 text-sm outline-none focus:dp-border-brand"
+                >
+                  <option value="">Elegí una plantilla…</option>
+                  {plantillas.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.titulo}
+                      {p.cliente_id ? "" : " (general)"}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={usarPlantilla}
+                  disabled={!plantillaElegidaId || creando}
+                  className="dp-text-brand rounded-lg border border-dashed border-black/15 px-2.5 py-1.5 text-xs font-medium disabled:opacity-40"
+                >
+                  Usar
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     );
@@ -351,6 +457,101 @@ export function PlanView({
             + {creando ? "Creando…" : "Nueva semana"}
           </button>
         </div>
+
+        <div className="mb-4 flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={abrirGuardarPlantilla}
+            className="dp-text-brand rounded-lg border border-dashed border-black/15 px-2.5 py-1 text-xs font-medium"
+          >
+            💾 Guardar como plantilla
+          </button>
+          {plantillas.length > 0 && (
+            <>
+              <select
+                value={plantillaElegidaId}
+                onChange={(e) => setPlantillaElegidaId(e.target.value)}
+                className="rounded-lg border border-black/10 px-1.5 py-1 text-xs outline-none focus:dp-border-brand"
+              >
+                <option value="">Cargar plantilla en una semana nueva…</option>
+                {plantillas.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.titulo}
+                    {p.cliente_id ? "" : " (general)"}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={usarPlantilla}
+                disabled={!plantillaElegidaId || creando}
+                className="dp-text-brand rounded-lg border border-dashed border-black/15 px-2.5 py-1 text-xs font-medium disabled:opacity-40"
+              >
+                Usar
+              </button>
+              {plantillaElegidaId && (
+                <button
+                  type="button"
+                  onClick={() => borrarPlantilla(plantillaElegidaId)}
+                  title="Eliminar esta plantilla de la biblioteca"
+                  className="dp-alert text-xs hover:underline"
+                >
+                  ✕
+                </button>
+              )}
+            </>
+          )}
+        </div>
+
+        {mostrarGuardarPlantilla && (
+          <div className="dp-bg-faint mb-4 flex flex-col gap-2 rounded-lg p-3">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="dp-body font-medium">Título de la plantilla (obligatorio)</span>
+              <input
+                value={tituloPlantilla}
+                onChange={(e) => setTituloPlantilla(e.target.value)}
+                placeholder="Ej. Fuerza máxima, Adaptación, Hipertrofia base…"
+                autoFocus
+                className="rounded-lg border border-black/10 px-3 py-1.5 text-sm outline-none focus:dp-border-brand"
+              />
+            </label>
+            <div className="flex items-center gap-4 text-sm">
+              <label className="flex items-center gap-1.5">
+                <input
+                  type="radio"
+                  checked={alcancePlantilla === "cliente"}
+                  onChange={() => setAlcancePlantilla("cliente")}
+                />
+                Solo para este cliente
+              </label>
+              <label className="flex items-center gap-1.5">
+                <input
+                  type="radio"
+                  checked={alcancePlantilla === "general"}
+                  onChange={() => setAlcancePlantilla("general")}
+                />
+                General (disponible para todos)
+              </label>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={guardarComoPlantilla}
+                disabled={!tituloPlantilla.trim() || guardandoPlantilla}
+                className="dp-bg-brand w-fit rounded-lg px-3.5 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+              >
+                {guardandoPlantilla ? "Guardando…" : "Guardar plantilla"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMostrarGuardarPlantilla(false)}
+                className="dp-muted text-xs"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="mb-4 grid grid-cols-2 gap-4">
           <input

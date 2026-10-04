@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { DiaPlan, PlanSemana, EjercicioBiblioteca } from "@/lib/dipra/types";
+import type { DiaPlan, PlanSemana, EjercicioBiblioteca, PlantillaRutina } from "@/lib/dipra/types";
 
 // Crea una semana nueva (clon de la semana activa, o plantilla en blanco si
 // es la primera) y la marca como semana activa del cliente. El id, número y
@@ -99,6 +99,38 @@ export async function compartirSemana(clienteId: string, semanaId: string) {
     .eq("client_id", clienteId);
   if (error) throw new Error(error.message);
 
+  revalidatePath(`/clientes/${clienteId}/plan`);
+}
+
+// Guarda la semana actual como plantilla reutilizable ("biblioteca de
+// rutinas") — `alcanceClienteId` null la deja disponible para cualquier
+// cliente; con valor, queda solo para seguir la línea de ese cliente en
+// mesociclos futuros. `clienteId` es siempre el cliente desde el que se
+// guarda (para revalidar su página de plan), sea o no el mismo que el
+// alcance de la plantilla.
+export async function crearPlantilla(
+  clienteId: string,
+  alcanceClienteId: string | null,
+  plantilla: { titulo: string; mesociclo: string; objetivo: string; dias: DiaPlan[] }
+): Promise<PlantillaRutina> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("plantillas_rutina")
+    .insert({ cliente_id: alcanceClienteId, ...plantilla })
+    .select("*")
+    .single<PlantillaRutina>();
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/clientes/${clienteId}/plan`);
+  return data;
+}
+
+export async function eliminarPlantilla(clienteId: string, plantillaId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("plantillas_rutina").delete().eq("id", plantillaId);
+
+  if (error) throw new Error(error.message);
   revalidatePath(`/clientes/${clienteId}/plan`);
 }
 
