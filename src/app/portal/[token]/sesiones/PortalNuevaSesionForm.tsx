@@ -5,12 +5,25 @@ import { PILARES_KEYS, emptySesionPilares } from "@/lib/dipra/constants";
 import { agruparPorBloque } from "@/lib/dipra/agruparEjercicios";
 import { EscalaUnoADiez } from "@/app/(app)/clientes/[id]/sesiones/EscalaUnoADiez";
 import { youtubeEmbedUrl } from "@/lib/youtube";
+import { tonoEscalaPilar } from "@/lib/dipra/calc";
 import type { DiaPlan, EjercicioSesion } from "@/lib/dipra/types";
 import { crearSesionPortal } from "./actions";
 import { BloqueFocuseable } from "../BloqueFocuseable";
 
 function pilarInvertido(p: (typeof PILARES_KEYS)[number]): boolean {
   return "invertido" in p && p.invertido === true;
+}
+
+// Cuántos pilares quedaron en rojo (ver tonoEscalaPilar) — el profesional ya
+// tiene un aviso con "al menos uno" en su propia vista de sesiones; acá, de
+// cara al atleta, se pide un umbral más alto (2 o más) para no alarmar por
+// un solo indicador bajo puntual.
+function pilaresRojosCount(pilares: ReturnType<typeof emptySesionPilares>) {
+  return PILARES_KEYS.filter((p) => {
+    const raw = pilares[p.key];
+    const v = Number(raw);
+    return raw !== "" && !isNaN(v) && tonoEscalaPilar(v, pilarInvertido(p)) === "dp-bg-alert";
+  }).length;
 }
 
 type Draft = {
@@ -191,6 +204,8 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
     );
   }
 
+  const pilaresRojos = pilaresRojosCount(draft.pilares);
+
   return (
     <div className="dp-surface flex flex-col gap-4 rounded-2xl p-5 shadow-sm">
       <h2 className="font-medium dp-text-heading">¿Cómo estuvo tu entrenamiento de hoy?</h2>
@@ -225,6 +240,13 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
           </div>
         ))}
       </div>
+
+      {pilaresRojos >= 2 && (
+        <p className="dp-bg-alert-soft dp-alert rounded-lg px-3 py-2 text-xs">
+          ⚠ Hoy marcaste varios indicadores bajos — tomátelo con calma, no hace falta forzar la intensidad
+          planificada si el cuerpo no está para eso.
+        </p>
+      )}
 
       {draft.diaPlanLabel && (
         <div className="dp-scope-dark dp-border-brand rounded-xl border-l-4 p-3">
