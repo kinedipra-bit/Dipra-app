@@ -3,6 +3,12 @@
 // navegador (no lleva prefijo NEXT_PUBLIC_).
 const RESEND_API_URL = "https://api.resend.com/emails";
 
+// Gmail no se puede verificar como dominio remitente en Resend (no es un
+// dominio propio), así que el remitente sigue siendo DIPRA/Resend — pero
+// con esto, si el cliente le da "Responder", el correo le llega a Nicolás
+// a su Gmail en vez de perderse en la dirección de envío.
+const REPLY_TO = "kine.dipra@gmail.com";
+
 export async function enviarCorreoResetPin({
   para,
   nombre,
@@ -30,6 +36,7 @@ export async function enviarCorreoResetPin({
     body: JSON.stringify({
       from,
       to: [para],
+      reply_to: REPLY_TO,
       subject: "Restablecé tu PIN de acceso — DIPRA",
       html: `
         <p>Hola ${primerNombre},</p>
@@ -70,6 +77,7 @@ export async function enviarCorreoLinkPortal({
     body: JSON.stringify({
       from,
       to: [para],
+      reply_to: REPLY_TO,
       subject: "Tu portal DIPRA",
       html: `
         <p>Hola ${primerNombre},</p>
