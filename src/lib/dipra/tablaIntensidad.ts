@@ -46,7 +46,7 @@ export const TABLA_INTENSIDAD: Record<CualidadFuerza, FilaIntensidad> = {
     seriesPorEjercicio: "3-6",
     setsSemana: [10, 20],
     notaSetsSemana: "contando todos los ejercicios",
-    descanso: "30s-1,5 min (hoy se usan más 2-3 min en básicos)",
+    descanso: "1-3 min",
   },
   "Hipertrofia No Funcional": {
     reps: "8-15",
