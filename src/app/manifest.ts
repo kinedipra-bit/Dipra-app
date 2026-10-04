@@ -2,10 +2,12 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    id: "/",
     name: "DIPRA",
     short_name: "DIPRA",
     description: "Gestión clínica y de rendimiento — DIPRA",
     start_url: "/",
+    scope: "/",
     display: "standalone",
     background_color: "#f3f6f2",
     theme_color: "#1e8449",

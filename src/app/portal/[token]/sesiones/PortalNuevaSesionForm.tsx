@@ -229,9 +229,9 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
           {draft.ejercicios.length === 0 ? (
             <p className="dp-muted text-xs">Este día no tiene ejercicios cargados todavía.</p>
           ) : (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-4">
               {agruparPorBloque(draft.ejercicios).map((grupo, gIdx) => (
-                <div key={gIdx}>
+                <div key={gIdx} className="dp-bg-faint dp-border-brand rounded-xl border-2 p-4">
                   {grupo.bloqueTitle && (
                     <p className="dp-text-brand mb-1 text-sm font-semibold tracking-wide uppercase">
                       {grupo.bloqueTitle}

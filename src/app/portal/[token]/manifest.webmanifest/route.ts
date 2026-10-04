@@ -9,10 +9,16 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tok
 
   return NextResponse.json(
     {
+      // `id` + `scope` propios (distintos de los del manifest del
+      // profesional, que son "/") — sin esto, Chrome puede confundir el
+      // portal con la app del profesional ya instalada y no ofrecer
+      // instalarlo aparte.
+      id: `/portal/${token}`,
       name: "DIPRA",
       short_name: "DIPRA",
       description: "Portal del cliente — DIPRA",
       start_url: `/portal/${token}`,
+      scope: `/portal/${token}`,
       display: "standalone",
       background_color: "#f3f6f2",
       theme_color: "#1e8449",
