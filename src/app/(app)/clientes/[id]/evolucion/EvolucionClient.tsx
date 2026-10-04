@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { deficitExplosivo, isPR, maxDe } from "@/lib/dipra/calc";
+import { deficitExplosivo } from "@/lib/dipra/calc";
 import type { PrHistorialEntry } from "@/lib/dipra/types";
 import { eliminarPrHistorial } from "./actions";
 import { NuevaMedicionForm } from "./NuevaMedicionForm";
-import { GRUPOS, type MetricKey } from "./metricas";
-
-type NumericHist = Pick<PrHistorialEntry, MetricKey>;
+import { MetricTimeline } from "./MetricTimeline";
+import { GRUPOS } from "./metricas";
 
 function fmtFecha(f: string) {
   const d = new Date(f + "T00:00:00");
@@ -48,26 +47,24 @@ export function EvolucionClient({
       ) : (
         <div className="dp-surface rounded-2xl p-5 shadow-sm">
           <h3 className="dp-text-heading mb-1 font-medium">Evolución de marcas</h3>
-          <p className="dp-muted mb-4 text-xs">
-            Cada columna es un mesociclo — pasa el cursor sobre las barras para ver el detalle.
+          <p className="dp-muted mb-3 text-xs">
+            El eje muestra el tiempo real entre mediciones — las franjas marcan la fase (mesociclo/objetivo) vigente
+            en cada momento. Tocá un punto para ver el detalle exacto.
           </p>
 
-          <div
-            className="mb-4 grid gap-2"
-            style={{ gridTemplateColumns: `repeat(${hist.length}, minmax(0,1fr))` }}
-          >
+          <div className="mb-4 flex flex-wrap gap-1.5">
             {hist.map((h) => (
-              <div key={h.id} className="text-center">
-                <p className="dp-muted font-mono text-[10px]">{fmtFecha(h.fecha)}</p>
-                <p className="dp-text-heading truncate text-[11px] font-semibold">{h.mesociclo}</p>
-                {h.objetivo && <p className="dp-text-brand truncate text-[10px]">{h.objetivo}</p>}
+              <div key={h.id} className="dp-bg-faint flex items-center gap-1.5 rounded-lg px-2 py-1 text-[11px]">
+                <span className="dp-muted font-mono">{fmtFecha(h.fecha)}</span>
+                <span className="dp-text-heading font-medium">{h.mesociclo}</span>
+                {h.objetivo && <span className="dp-text-brand">· {h.objetivo}</span>}
                 <button
                   type="button"
                   onClick={() => borrar(h.id)}
                   disabled={pending && deletingId === h.id}
-                  className="dp-muted mt-0.5 text-[10px] hover:dp-alert disabled:opacity-50"
+                  className="dp-muted hover:dp-alert disabled:opacity-50"
                 >
-                  {pending && deletingId === h.id ? "…" : "eliminar"}
+                  {pending && deletingId === h.id ? "…" : "✕"}
                 </button>
               </div>
             ))}
@@ -108,38 +105,10 @@ export function EvolucionClient({
                     ciclo de estiramiento-acortamiento (foco en trabajo pliométrico/reactivo).
                   </p>
                 )}
-              <div className="flex flex-col gap-4">
-                {g.metrics.map((m) => {
-                  const max = maxDe<NumericHist>(hist, m.key);
-                  return (
-                    <div key={m.key}>
-                      <p className="dp-muted mb-1 text-xs font-medium">{m.label}</p>
-                      <div className="flex h-16 items-end gap-2">
-                        {hist.map((h) => {
-                          const v = h[m.key] || 0;
-                          const pr = isPR<NumericHist>(hist, m.key, v);
-                          return (
-                            <div key={h.id} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
-                              {pr && <span className="dp-text-amber text-[11px]">★</span>}
-                              <div
-                                className="dp-bg-brand w-full rounded-t-md"
-                                style={{ height: `${(v / max) * 100}%`, opacity: pr ? 1 : 0.55 }}
-                                title={`${h.mesociclo} · ${fmtFecha(h.fecha)}: ${v}`}
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div className="mt-1 flex gap-2">
-                        {hist.map((h) => (
-                          <span key={h.id} className="dp-muted flex-1 text-center font-mono text-[10px]">
-                            {h[m.key] || "—"}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="flex flex-col gap-5 overflow-x-auto">
+                {g.metrics.map((m) => (
+                  <MetricTimeline key={m.key} hist={hist} metricKey={m.key} label={m.label} />
+                ))}
               </div>
             </div>
           ))}
