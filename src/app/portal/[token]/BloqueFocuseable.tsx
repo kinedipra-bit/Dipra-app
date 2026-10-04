@@ -22,21 +22,23 @@ export function BloqueFocuseable({
 }) {
   const estadoClass =
     estado === "activo"
-      ? "p-4 shadow-lg scale-[1.02]"
+      ? "bg-[rgba(30,132,73,0.25)] border-[3px] p-6 shadow-xl scale-[1.06]"
       : estado === "atenuado"
-        ? "p-3 opacity-45"
-        : "p-4";
+        ? "dp-bg-faint border-2 p-2 opacity-40 scale-[0.98]"
+        : "dp-bg-faint border-2 p-4";
 
   return (
     <div
-      className={`dp-bg-faint dp-border-brand rounded-xl border-2 transition-all duration-200 ${estadoClass}`}
+      className={`dp-border-brand rounded-xl transition-all duration-200 ${estadoClass}`}
     >
       <button
         type="button"
         onClick={onFocus}
         className="mb-1 flex w-full items-center justify-between gap-2 text-left"
       >
-        <h3 className="dp-muted text-base font-semibold tracking-wide uppercase">{title}</h3>
+        <h3 className={`dp-muted font-semibold tracking-wide uppercase ${estado === "activo" ? "text-lg" : "text-base"}`}>
+          {title}
+        </h3>
         {meta}
       </button>
       {children}
