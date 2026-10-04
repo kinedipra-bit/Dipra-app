@@ -150,6 +150,11 @@ export function ExerciseRow({
   const repsTexto = repsSeriesActivo
     ? (ex.repsSeries ?? []).map((r) => Number(r) || 0).join("/")
     : String(ex.reps ?? 0);
+  // Si no hay peso cargado (0 o sin pesosSeries), mostrar en esa columna lo
+  // que SÍ explica cómo se hace el ejercicio (peso corporal, banda, o los
+  // segundos de una isometría tipo plancha) en vez de un "0" sin sentido.
+  const sinPesoCargado = !pesosSeriesActivo && (Number(ex.kg) || 0) === 0;
+  const kgDisplayTexto = sinPesoCargado && (ex.tipoCarga || ex.tiempoSerie) ? ex.tipoCarga || ex.tiempoSerie! : kgTexto;
 
   // En modo solo-lectura (portal del cliente) no hay botón de eliminar, así
   // que se usa una grilla propia sin esa columna y con más espacio para Kg
@@ -229,10 +234,13 @@ export function ExerciseRow({
           </div>
         )}
 
-        {/* Kg (uniforme, o texto "12/14/16" si hay peso por serie cargado; + badge "c/u" si es peso por implemento) */}
+        {/* Kg (uniforme, o texto "12/14/16" si hay peso por serie cargado; si no hay peso,
+            muestra carga/duración en vez de un "0" sin sentido; + badge "c/u" si es peso por implemento) */}
         {readOnly ? (
-          <span className="dp-body flex items-center justify-center gap-1 text-center font-mono text-sm">
-            {kgTexto}
+          <span
+            className={`dp-body flex items-center justify-center gap-1 text-center ${sinPesoCargado ? "text-xs" : "font-mono text-sm"}`}
+          >
+            {kgDisplayTexto}
             {ex.pesoCadaUno && <span className="dp-text-brand text-[10px] font-semibold">c/u</span>}
           </span>
         ) : pesoPorSerieAbierto ? (
@@ -455,7 +463,9 @@ export function ExerciseRow({
         </div>
       )}
 
-      {/* Badges de solo lectura para tipo de carga / tiempo / nota de reps (unilateral ya se ve junto a reps) */}
+      {/* Badges de solo lectura para tipo de carga / tiempo (iso) / nota de reps
+          (unilateral ya se ve junto a reps). El tiempo lleva aclaración de que
+          es duración de ejecución, NO descanso — eso va aparte más abajo. */}
       {readOnly && (ex.tipoCarga || ex.tiempoSerie || ex.notaReps) && (
         <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-0.5">
           {ex.tipoCarga && (
@@ -465,7 +475,7 @@ export function ExerciseRow({
           )}
           {ex.tiempoSerie && (
             <span className="dp-bg-faint dp-body rounded-full px-2 py-0.5 text-[10px] font-medium">
-              ⏱ {ex.tiempoSerie}
+              ⏱ Duración del ejercicio: {ex.tiempoSerie}
             </span>
           )}
           {ex.notaReps && (
@@ -476,23 +486,45 @@ export function ExerciseRow({
         </div>
       )}
 
-      <div className="mt-1 flex items-center gap-3 pl-0.5">
-        {CAMPOS.map(({ key, label, width }) => (
-          <div key={key} className="flex items-center gap-1">
-            <span className="dp-muted text-[10px] font-medium">{label}</span>
-            {readOnly ? (
-              <span className="dp-body font-mono text-xs">{ex[key] || "—"}</span>
-            ) : (
+      {/* RPE / RIR / descanso entre series — en modo lectura (portal del cliente)
+          se muestran con la etiqueta completa y solo si tienen valor cargado, para
+          que quede claro qué es cada número (antes "Desc. 120" se confundía con
+          el campo "Tiempo" de más arriba, que es otra cosa). */}
+      {readOnly ? (
+        (ex.rpe || ex.rir || ex.descanso) && (
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-0.5">
+            {ex.rpe && (
+              <span className="dp-bg-faint dp-body rounded-full px-2 py-0.5 text-[10px] font-medium">
+                RPE {ex.rpe}
+              </span>
+            )}
+            {ex.rir && (
+              <span className="dp-bg-faint dp-body rounded-full px-2 py-0.5 text-[10px] font-medium">
+                RIR {ex.rir}
+              </span>
+            )}
+            {ex.descanso && (
+              <span className="dp-bg-faint dp-body rounded-full px-2 py-0.5 text-[10px] font-medium">
+                Descanso entre series: {ex.descanso}
+              </span>
+            )}
+          </div>
+        )
+      ) : (
+        <div className="mt-1 flex items-center gap-3 pl-0.5">
+          {CAMPOS.map(({ key, label, width }) => (
+            <div key={key} className="flex items-center gap-1">
+              <span className="dp-muted text-[10px] font-medium">{label}</span>
               <input
                 value={ex[key] || ""}
                 onChange={(e) => onChange({ ...ex, [key]: e.target.value })}
                 style={{ width: width ?? 44 }}
                 className={campoInputClass}
               />
-            )}
-          </div>
-        ))}
-      </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {!readOnly && (
         <div className="mt-1 flex items-center gap-1.5 pl-0.5">

@@ -31,8 +31,8 @@ import {
   CUALIDADES,
   GRUPOS_MUSCULARES,
   TABLA_INTENSIDAD,
-  aplicarTutSugerido,
-  tutDisponible,
+  aplicarDescansoSugerido,
+  descansoDisponible,
 } from "@/lib/dipra/tablaIntensidad";
 
 type Vista = "editar" | "resumen-dia" | "resumen-semana";
@@ -174,10 +174,10 @@ export function PlanView({
     if (!dia) return;
     const nextDia = structuredClone(dia);
     const bloque = nextDia.bloques[bIdx];
+    // "Tiempo" (tiempoSerie) es trabajo isométrico/por tiempo, no una
+    // medida de intensidad — nunca se autocompleta, queda siempre vacío
+    // hasta que el profesional lo cargue a mano si corresponde.
     const ex = nuevoEjercicio();
-    // Si el bloque ya tiene una cualidad asignada, el ejercicio nuevo
-    // arranca con el TUT sugerido de la tabla (editable después).
-    if (bloque.cualidad) ex.tiempoSerie = TABLA_INTENSIDAD[bloque.cualidad].tut;
     bloque.exercises.push(ex);
     updateDia(nextDia);
   };
@@ -232,10 +232,10 @@ export function PlanView({
     nextDia.bloques[bIdx].grupoMuscular = grupoMuscular || undefined;
     updateDia(nextDia);
   };
-  const aplicarTut = (bIdx: number) => {
+  const aplicarDescanso = (bIdx: number) => {
     if (!dia) return;
     const nextDia = structuredClone(dia);
-    nextDia.bloques[bIdx] = aplicarTutSugerido(nextDia.bloques[bIdx]);
+    nextDia.bloques[bIdx] = aplicarDescansoSugerido(nextDia.bloques[bIdx]);
     updateDia(nextDia);
   };
 
@@ -502,15 +502,15 @@ export function PlanView({
                                 <>
                                   <span className="dp-muted font-mono text-[10px]">
                                     reps {fila.reps} · {fila.porcentaje1RM} · series/ejerc. {fila.seriesPorEjercicio}
-                                    {fila.tut && <> · TUT {fila.tut}</>} · desc. {fila.descanso}
+                                    · desc. {fila.descanso}
                                   </span>
-                                  {tutDisponible(b) && (
+                                  {descansoDisponible(b) && (
                                     <button
                                       type="button"
-                                      onClick={() => aplicarTut(bIdx)}
+                                      onClick={() => aplicarDescanso(bIdx)}
                                       className="dp-text-amber text-[10px] font-medium hover:underline"
                                     >
-                                      Aplicar TUT sugerido
+                                      Aplicar descanso sugerido
                                     </button>
                                   )}
                                 </>

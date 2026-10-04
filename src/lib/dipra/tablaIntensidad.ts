@@ -21,9 +21,6 @@ export interface FilaIntensidad {
   // Aclaración de la NSCA sobre `setsSemana` cuando el número solo no
   // alcanza (ej. "se programa por calidad, no por volumen").
   notaSetsSemana?: string;
-  // Tiempo bajo tensión — la tabla NSCA no lo define para estas categorías,
-  // así que queda sin dato (el botón "Aplicar TUT sugerido" no aparece).
-  tut?: string;
   descanso: string;
 }
 
@@ -275,31 +272,38 @@ export function alertasDescanso(dias: DiaPlan[], citas: CitaParaDescanso[] = [])
   return resultado;
 }
 
+// El campo "Tiempo" (tiempoSerie) es trabajo isométrico/por tiempo en vez
+// de reps (ej. plancha 30 seg) — NO es una medida de intensidad ni de
+// descanso, así que a propósito nunca se autocompleta con una sugerencia
+// (confundía: 30'' de iso squat no es lo mismo que 10 sentadillas en 30'',
+// la cantidad en el tiempo/velocidad de ejecución es lo que importa). El
+// campo que sí tiene sugerencia de la tabla es el descanso entre series,
+// que varía según la cualidad (ej. fuerza máxima 2-5min vs. resistencia a
+// la fuerza <30s) — ver aplicarDescansoSugerido más abajo.
+
 // Al taggear un bloque (o un ejercicio suelto, en un bloque recíproco) con
-// una cualidad, se puede aplicar el TUT sugerido de la tabla de un toque —
-// cada ejercicio usa su propia cualidad efectiva (la suya si la tiene, si
-// no la del bloque), el profesional lo puede editar después si su caso es
-// distinto. La tabla NSCA no define TUT para estas categorías, así que no
-// hace nada si no hay un valor cargado (ver tutDisponible más abajo).
-export function aplicarTutSugerido(bloque: BloquePlan): BloquePlan {
+// una cualidad, se puede aplicar el descanso sugerido de la tabla de un
+// toque — cada ejercicio usa su propia cualidad efectiva (la suya si la
+// tiene, si no la del bloque), el profesional lo puede editar después si
+// su caso es distinto.
+export function aplicarDescansoSugerido(bloque: BloquePlan): BloquePlan {
   return {
     ...bloque,
     exercises: bloque.exercises.map((e) => {
       const { cualidad } = etiquetaEfectiva(bloque, e);
-      const tut = cualidad ? TABLA_INTENSIDAD[cualidad]?.tut : undefined;
-      return tut ? { ...e, tiempoSerie: tut } : e;
+      const descanso = cualidad ? TABLA_INTENSIDAD[cualidad]?.descanso : undefined;
+      return descanso ? { ...e, descanso } : e;
     }),
   };
 }
 
-// Si la cualidad efectiva de ALGÚN ejercicio del bloque tiene un TUT
-// definido en la tabla, vale la pena mostrar el botón "Aplicar TUT
-// sugerido" — con la tabla NSCA actual, ninguna cualidad lo trae, así que
-// el botón directamente no aparece (antes de esta tabla, sí lo tenía).
-export function tutDisponible(bloque: BloquePlan): boolean {
+// Si la cualidad efectiva de ALGÚN ejercicio del bloque tiene un descanso
+// definido en la tabla, vale la pena mostrar el botón "Aplicar descanso
+// sugerido".
+export function descansoDisponible(bloque: BloquePlan): boolean {
   return bloque.exercises.some((e) => {
     const { cualidad } = etiquetaEfectiva(bloque, e);
-    return !!(cualidad && TABLA_INTENSIDAD[cualidad]?.tut);
+    return !!(cualidad && TABLA_INTENSIDAD[cualidad]?.descanso);
   });
 }
 
