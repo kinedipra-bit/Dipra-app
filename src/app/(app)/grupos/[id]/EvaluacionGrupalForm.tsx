@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { crearPrHistorial, type NuevaMedicionInput } from "@/app/(app)/clientes/[id]/evolucion/actions";
-import { agregarComposicion } from "@/app/(app)/clientes/[id]/evaluacion/actions";
+import { agregarComposicion, updateFms } from "@/app/(app)/clientes/[id]/evaluacion/actions";
 import { METRICS, camposVacios, type MetricKey } from "@/app/(app)/clientes/[id]/evolucion/metricas";
+import { obtenerFmsDeMiembros } from "../actions";
+import type { FmsData } from "@/lib/dipra/calc";
 
 // Métricas que Nicolás pidió ver primero en la grilla grupal (CMJ, SJ,
 // Sentadilla, Press banca, Peso muerto, Pull-ups/Dead hang) — el resto de
@@ -29,6 +31,16 @@ type ComposicionDraft = {
 
 function composicionVacia(): ComposicionDraft {
   return { talla: "", peso: "", grasa_pct: "", masa_muscular: "", agua_pct: "", masa_osea: "" };
+}
+
+// Del FMS completo, solo estos 3 son puntajes/medidas sueltas (número),
+// a diferencia de pasoValla/estocada/hombro/aslr/rotación (par derecha-
+// izquierda) o los clearings (positivo/negativo) — esos no entran bien en
+// una grilla y siguen cargándose desde la ficha individual de cada persona.
+type FmsDraft = { sentadilla: string; pushUp: string; toeTouch: string };
+
+function fmsVacio(): FmsDraft {
+  return { sentadilla: "", pushUp: "", toeTouch: "" };
 }
 
 function medicionVacia(fecha: string, mesociclo: string, objetivo: string): NuevaMedicionInput {
@@ -69,14 +81,33 @@ export function EvaluacionGrupalForm({ miembros }: { miembros: { id: string; nom
   const [objetivo, setObjetivo] = useState("");
   const [verTodasLasMetricas, setVerTodasLasMetricas] = useState(false);
   const [verComposicion, setVerComposicion] = useState(false);
+  const [verFms, setVerFms] = useState(false);
+  const [cargandoFms, setCargandoFms] = useState(false);
+  const [fmsActual, setFmsActual] = useState<Record<string, FmsData> | null>(null);
   const [rendimiento, setRendimiento] = useState<Record<string, Record<MetricKey, string>>>(() =>
     Object.fromEntries(miembros.map((m) => [m.id, camposVacios()]))
   );
   const [composicion, setComposicion] = useState<Record<string, ComposicionDraft>>(() =>
     Object.fromEntries(miembros.map((m) => [m.id, composicionVacia()]))
   );
+  const [fms, setFms] = useState<Record<string, FmsDraft>>(() =>
+    Object.fromEntries(miembros.map((m) => [m.id, fmsVacio()]))
+  );
   const [pending, startTransition] = useTransition();
   const [guardadoAt, setGuardadoAt] = useState<number | null>(null);
+
+  // El FMS actual de cada miembro se trae recién al abrir esa sección (no
+  // de entrada) — solo hace falta para mergear al guardar, sin pisar el
+  // resto del FMS de cada persona (pasoValla/estocada/clearings, etc.).
+  const toggleFms = () => {
+    setVerFms((v) => !v);
+    if (!fmsActual && !cargandoFms) {
+      setCargandoFms(true);
+      obtenerFmsDeMiembros(miembros.map((m) => m.id))
+        .then(setFmsActual)
+        .finally(() => setCargandoFms(false));
+    }
+  };
 
   const metricasVisibles = verTodasLasMetricas ? METRICS : METRICS.filter((m) => METRICAS_DESTACADAS.includes(m.key));
 
@@ -85,6 +116,9 @@ export function EvaluacionGrupalForm({ miembros }: { miembros: { id: string; nom
   };
   const setComposicionValor = (clienteId: string, key: keyof ComposicionDraft, value: string) => {
     setComposicion((prev) => ({ ...prev, [clienteId]: { ...prev[clienteId], [key]: value } }));
+  };
+  const setFmsValor = (clienteId: string, key: keyof FmsDraft, value: string) => {
+    setFms((prev) => ({ ...prev, [clienteId]: { ...prev[clienteId], [key]: value } }));
   };
 
   const guardar = () => {
@@ -115,10 +149,23 @@ export function EvaluacionGrupalForm({ miembros }: { miembros: { id: string; nom
               masa_osea: comp.masa_osea ? Number(comp.masa_osea) : null,
             });
           }
+
+          const fmsDraft = fms[m.id];
+          const tieneFms = fmsDraft && Object.values(fmsDraft).some((v) => v.trim() !== "");
+          if (tieneFms && fmsActual?.[m.id]) {
+            await updateFms(m.id, {
+              ...fmsActual[m.id],
+              sentadilla: fmsDraft.sentadilla.trim() || fmsActual[m.id].sentadilla,
+              pushUp: fmsDraft.pushUp.trim() || fmsActual[m.id].pushUp,
+              toeTouch: fmsDraft.toeTouch.trim() || fmsActual[m.id].toeTouch,
+            });
+          }
         })
       );
       setRendimiento(Object.fromEntries(miembros.map((m) => [m.id, camposVacios()])));
       setComposicion(Object.fromEntries(miembros.map((m) => [m.id, composicionVacia()])));
+      setFms(Object.fromEntries(miembros.map((m) => [m.id, fmsVacio()])));
+      setFmsActual(null);
       setGuardadoAt(Date.now());
     });
   };
@@ -221,6 +268,10 @@ export function EvaluacionGrupalForm({ miembros }: { miembros: { id: string; nom
         {verComposicion ? "← Ocultar composición corporal" : "+ Composición corporal (para quienes corresponda)"}
       </button>
 
+      <button type="button" onClick={toggleFms} className="dp-text-brand w-fit text-xs hover:underline">
+        {verFms ? "← Ocultar FMS" : "+ FMS (sentadilla, push up, toe touch)"}
+      </button>
+
       {verComposicion && (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
@@ -264,6 +315,55 @@ export function EvaluacionGrupalForm({ miembros }: { miembros: { id: string; nom
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {verFms && (
+        <div className="overflow-x-auto">
+          {cargandoFms ? (
+            <p className="dp-muted text-xs">Cargando FMS actual de cada persona…</p>
+          ) : (
+            <>
+              <p className="dp-muted mb-1 text-[11px]">
+                El resto del FMS (pasoValla, estocada, hombro, aslr, rotación, clearings) sigue cargándose desde la
+                ficha individual de cada persona — acá solo van los 3 puntajes sueltos.
+              </p>
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr>
+                    <th className="dp-muted sticky left-0 bg-inherit px-2 py-1 text-left text-[10px] font-medium uppercase">
+                      Persona
+                    </th>
+                    {(["sentadilla", "pushUp", "toeTouch"] as const).map((k) => (
+                      <th key={k} className="dp-muted min-w-20 px-1 py-1 text-[10px] font-medium">
+                        {{ sentadilla: "Sentadilla (0-3)", pushUp: "Push up (0-3)", toeTouch: "Toe touch" }[k]}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {miembros.map((m) => (
+                    <tr key={m.id} className="border-t border-black/5">
+                      <td className="dp-text-heading sticky left-0 bg-inherit px-2 py-1 text-sm font-medium whitespace-nowrap">
+                        {m.nombre}
+                      </td>
+                      {(["sentadilla", "pushUp", "toeTouch"] as const).map((k) => (
+                        <td key={k} className="px-1 py-1">
+                          <input
+                            value={fms[m.id]?.[k] ?? ""}
+                            onChange={(e) => setFmsValor(m.id, k, e.target.value)}
+                            onFocus={(e) => e.target.select()}
+                            placeholder={String(fmsActual?.[m.id]?.[k] ?? "")}
+                            className={inputClass}
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
         </div>
       )}
 

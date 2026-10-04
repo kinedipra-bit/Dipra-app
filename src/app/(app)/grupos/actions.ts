@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import type { FmsData } from "@/lib/dipra/calc";
 import type { DiaPlan, Grupo, GrupoPlanSemana } from "@/lib/dipra/types";
 
 function revalidar(grupoId?: string) {
@@ -103,4 +104,19 @@ export async function guardarSemanaGrupo(
     .eq("grupo_id", grupoId);
   if (error) throw new Error(error.message);
   revalidar(grupoId);
+}
+
+// Evaluación grupal — FMS: trae el fms ACTUAL de cada miembro (para
+// mergear solo los campos que se tocan en la grilla grupal, sin pisar el
+// resto de su FMS individual, ej. pasoValla/estocada/clearings).
+export async function obtenerFmsDeMiembros(clientIds: string[]): Promise<Record<string, FmsData>> {
+  if (clientIds.length === 0) return {};
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("clients")
+    .select("id, fms")
+    .in("id", clientIds)
+    .returns<{ id: string; fms: FmsData }[]>();
+  if (error) throw new Error(error.message);
+  return Object.fromEntries((data ?? []).map((c) => [c.id, c.fms]));
 }
