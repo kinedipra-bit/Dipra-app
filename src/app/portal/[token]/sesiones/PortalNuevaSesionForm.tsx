@@ -26,6 +26,17 @@ function pilaresRojosCount(pilares: ReturnType<typeof emptySesionPilares>) {
   }).length;
 }
 
+// Umbral más bajo que el de los rojos: con varios pilares "medios" (ni
+// bajos ni altos) ya vale la pena avisar, aunque con un mensaje más suave
+// que el de los rojos (que es el que indica que hay que ir con cuidado).
+function pilaresAmbarCount(pilares: ReturnType<typeof emptySesionPilares>) {
+  return PILARES_KEYS.filter((p) => {
+    const raw = pilares[p.key];
+    const v = Number(raw);
+    return raw !== "" && !isNaN(v) && tonoEscalaPilar(v, pilarInvertido(p)) === "dp-bg-amber";
+  }).length;
+}
+
 type Draft = {
   diaPlanLabel: string;
   pilares: ReturnType<typeof emptySesionPilares>;
@@ -205,6 +216,7 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
   }
 
   const pilaresRojos = pilaresRojosCount(draft.pilares);
+  const pilaresAmbar = pilaresAmbarCount(draft.pilares);
 
   return (
     <div className="dp-surface flex flex-col gap-4 rounded-2xl p-5 shadow-sm">
@@ -241,11 +253,18 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
         ))}
       </div>
 
-      {pilaresRojos >= 2 && (
+      {pilaresRojos >= 2 ? (
         <p className="dp-bg-alert-soft dp-alert rounded-lg px-3 py-2 text-xs">
           ⚠ Hoy marcaste varios indicadores bajos — tomátelo con calma, no hace falta forzar la intensidad
           planificada si el cuerpo no está para eso.
         </p>
+      ) : (
+        pilaresAmbar > 3 && (
+          <p className="dp-bg-amber-soft dp-text-amber rounded-lg px-3 py-2 text-xs">
+            ⚠ Hoy no estás en tu mejor día — hay varios indicadores medios que podrían explicar que rindas un poco
+            menos. Hacé lo que puedas, no es necesario forzar lo planificado.
+          </p>
+        )
       )}
 
       {draft.diaPlanLabel && (

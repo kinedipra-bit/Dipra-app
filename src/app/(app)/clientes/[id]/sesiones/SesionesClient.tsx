@@ -212,36 +212,18 @@ export function SesionesClient({
           <p className="dp-text-heading mb-2 text-xs font-semibold uppercase tracking-wide">
             Pilares del rendimiento — hoy
           </p>
-          {draft.es_primera_sesion ? (
-            <div className="grid grid-cols-2 gap-3">
-              {PILARES_KEYS.map((p) => (
-                <label key={p.key} className="flex flex-col gap-1 text-sm">
-                  <span className="dp-body font-medium">{p.label}</span>
-                  <textarea
-                    rows={2}
-                    value={draft.pilares[p.key]}
-                    onChange={(e) => setDraft({ ...draft, pilares: { ...draft.pilares, [p.key]: e.target.value } })}
-                    placeholder="Cómo lo describe el cliente…"
-                    className={inputClass}
-                  />
-                </label>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2.5">
-              {PILARES_KEYS.map((p) => (
-                <div key={p.key} className="flex items-center gap-3">
-                  <span className="dp-body w-21 shrink-0 text-xs font-medium">{p.label}</span>
-                  <EscalaUnoADiez
-                    value={draft.pilares[p.key]}
-                    onChange={(v) => setDraft({ ...draft, pilares: { ...draft.pilares, [p.key]: v } })}
-                    invertido={pilarInvertido(p)}
-                  />
-                  <span className="dp-muted font-mono text-xs">{draft.pilares[p.key] || "—"}/10</span>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="flex flex-wrap gap-4">
+            {PILARES_KEYS.map((p) => (
+              <div key={p.key} className="flex flex-col gap-1">
+                <span className="dp-muted text-[10px] font-medium">{p.label}</span>
+                <EscalaUnoADiez
+                  value={draft.pilares[p.key]}
+                  onChange={(v) => setDraft({ ...draft, pilares: { ...draft.pilares, [p.key]: v } })}
+                  invertido={pilarInvertido(p)}
+                />
+              </div>
+            ))}
+          </div>
           {alerta && (
             <p className="dp-alert mt-2 text-xs">⚠ Hay al menos un pilar en rojo — revisar antes de cargar intensidad.</p>
           )}
