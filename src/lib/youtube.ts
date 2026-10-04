@@ -15,7 +15,11 @@ export function youtubeEmbedUrl(link: string): string | null {
       id = url.searchParams.get("v");
     }
     if (!id) return null;
-    return `https://www.youtube.com/embed/${id}`;
+    // loop=1 + playlist=<mismo id> es el truco que pide la API de YouTube
+    // para loopear un solo video — sin playlist, loop=1 no hace nada. Así
+    // un clip corto se repite solo, sin que el atleta tenga que buscar el
+    // botón de play de nuevo cada vez que termina.
+    return `https://www.youtube.com/embed/${id}?loop=1&playlist=${id}`;
   } catch {
     return null;
   }

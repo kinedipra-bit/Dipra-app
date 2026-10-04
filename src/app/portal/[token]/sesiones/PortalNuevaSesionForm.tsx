@@ -7,6 +7,7 @@ import { EscalaUnoADiez } from "@/app/(app)/clientes/[id]/sesiones/EscalaUnoADie
 import { youtubeEmbedUrl } from "@/lib/youtube";
 import type { DiaPlan, EjercicioSesion } from "@/lib/dipra/types";
 import { crearSesionPortal } from "./actions";
+import { BloqueFocuseable } from "../BloqueFocuseable";
 
 function pilarInvertido(p: (typeof PILARES_KEYS)[number]): boolean {
   return "invertido" in p && p.invertido === true;
@@ -105,6 +106,9 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
   const [enviado, setEnviado] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [videoAbiertoId, setVideoAbiertoId] = useState<string | null>(null);
+  // Bloque "enfocado" al tocarlo — por posición del grupo (no hay id de
+  // bloque acá, son ejercicios de sesión agrupados por bloqueTitle).
+  const [bloqueActivoIdx, setBloqueActivoIdx] = useState<number | null>(null);
 
   // Al montar, si había un borrador guardado (de una sesión anterior que no
   // se llegó a enviar), lo recupera y abre el formulario directamente.
@@ -130,6 +134,7 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
   const elegirDia = (label: string) => {
     const dia = dias.find((d) => d.label === label);
     setDraft((prev) => ({ ...prev, diaPlanLabel: label, ejercicios: ejerciciosDelDia(dia) }));
+    setBloqueActivoIdx(null);
   };
 
   const actualizarEjercicio = (idx: number, patch: Partial<EjercicioSesion>) => {
@@ -230,13 +235,8 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
             <p className="dp-muted text-xs">Este día no tiene ejercicios cargados todavía.</p>
           ) : (
             <div className="flex flex-col gap-4">
-              {agruparPorBloque(draft.ejercicios).map((grupo, gIdx) => (
-                <div key={gIdx} className="dp-bg-faint dp-border-brand rounded-xl border-2 p-4">
-                  {grupo.bloqueTitle && (
-                    <p className="dp-text-brand mb-1 text-sm font-semibold tracking-wide uppercase">
-                      {grupo.bloqueTitle}
-                    </p>
-                  )}
+              {agruparPorBloque(draft.ejercicios).map((grupo, gIdx) => {
+                const lista = (
                   <div className="flex flex-col divide-y divide-white/10">
                     {grupo.items.map(({ ejercicio: ex, idx }) => {
                       const pesosPlan = (ex.pesosSeriesPlan ?? []).filter((p) => Number(p) > 0);
@@ -358,8 +358,21 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
                       );
                     })}
                   </div>
-                </div>
-              ))}
+                );
+                if (!grupo.bloqueTitle) {
+                  return <div key={gIdx}>{lista}</div>;
+                }
+                return (
+                  <BloqueFocuseable
+                    key={gIdx}
+                    title={grupo.bloqueTitle}
+                    estado={bloqueActivoIdx === null ? "normal" : bloqueActivoIdx === gIdx ? "activo" : "atenuado"}
+                    onFocus={() => setBloqueActivoIdx((prev) => (prev === gIdx ? null : gIdx))}
+                  >
+                    {lista}
+                  </BloqueFocuseable>
+                );
+              })}
             </div>
           )}
         </div>
