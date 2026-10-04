@@ -1,4 +1,4 @@
-import { calcVolumenDia } from "@/lib/dipra/calc";
+import { calcVolumenDia, cargaTipoEfectivo } from "@/lib/dipra/calc";
 import type { DiaPlan } from "@/lib/dipra/types";
 
 // Migrado desde ResumenDia (dipra-app.jsx líneas 661-703).
@@ -27,6 +27,17 @@ export function ResumenDia({ dia }: { dia: DiaPlan }) {
                     pesosSeries.length > 0
                       ? pesosSeries.map((p) => Number(p) || 0).join("/")
                       : String(e.kg ?? 0);
+                  const tipo = cargaTipoEfectivo(e);
+                  const cargaTexto =
+                    tipo === "banda"
+                      ? "Banda"
+                      : tipo === "peso_corporal"
+                        ? "Peso corporal"
+                        : tipo === "tiempo"
+                          ? e.tiempoSerie || "—"
+                          : tipo === "vueltas"
+                            ? `${e.vueltas ?? 0} vueltas`
+                            : `${kgTexto}kg${e.pesoCadaUno ? " c/u" : ""}`;
                   return (
                     <div key={e.id} className="flex items-center justify-between gap-3 py-1.5">
                       <div className="min-w-0">
@@ -48,12 +59,11 @@ export function ResumenDia({ dia }: { dia: DiaPlan }) {
                       </div>
                       <span className="dp-muted shrink-0 text-right font-mono text-xs">
                         {e.series}×{e.reps}
-                        {e.unilateral ? " c/u" : ""}×{kgTexto}kg{e.pesoCadaUno ? " c/u" : ""}
+                        {e.unilateral ? " c/u" : ""}×{cargaTexto}
                         {e.tipoCarga ? ` (${e.tipoCarga})` : ""}
-                        {e.tiempoSerie ? ` · ${e.tiempoSerie}` : ""}
                         {e.rpe ? ` · RPE ${e.rpe}` : ""}
                         {e.rir ? ` · RIR ${e.rir}` : ""}
-                        {e.tut ? ` · TUT ${e.tut}` : ""}
+                        {e.tut ? ` · Tempo ${e.tut}` : ""}
                         {e.descanso ? ` · Desc. ${e.descanso}` : ""}
                       </span>
                     </div>

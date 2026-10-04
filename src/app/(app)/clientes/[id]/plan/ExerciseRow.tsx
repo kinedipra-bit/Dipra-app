@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { volumenEjercicio } from "@/lib/dipra/calc";
+import { cargaTipoEfectivo, volumenEjercicio, type CargaTipo } from "@/lib/dipra/calc";
 import { youtubeEmbedUrl } from "@/lib/youtube";
 import { CUALIDADES, GRUPOS_MUSCULARES } from "@/lib/dipra/tablaIntensidad";
 import type { CualidadFuerza, EjercicioPlan, EjercicioBiblioteca, GrupoMuscular } from "@/lib/dipra/types";
@@ -12,12 +12,26 @@ import type { CualidadFuerza, EjercicioPlan, EjercicioBiblioteca, GrupoMuscular 
 export const EXERCISE_ROW_GRID_EDITABLE = "1.5fr 0.5fr 0.75fr 0.6fr 0.7fr auto";
 export const EXERCISE_ROW_GRID_READONLY = "1.3fr 0.5fr 0.8fr 1fr 0.9fr";
 
-const CAMPOS: { key: "rpe" | "rir" | "tut" | "descanso"; label: string; width?: number }[] = [
+const CAMPOS: { key: "rpe" | "rir" | "tut" | "descanso"; label: string; width?: number; placeholder?: string }[] = [
   { key: "rpe", label: "RPE" },
   { key: "rir", label: "RIR" },
-  { key: "tut", label: "TUT" },
+  { key: "tut", label: "Tempo", width: 50, placeholder: "3-1-1" },
   { key: "descanso", label: "Desc.", width: 56 },
 ];
+
+const CARGA_OPCIONES: { value: CargaTipo; label: string }[] = [
+  { value: "kg", label: "Kg" },
+  { value: "banda", label: "Banda" },
+  { value: "peso_corporal", label: "Peso corporal" },
+  { value: "tiempo", label: "Tiempo" },
+  { value: "vueltas", label: "Vueltas" },
+];
+
+// Para que tocar un número no deje "01" al escribir sobre el 0 por default
+// (los celulares no seleccionan el contenido del input al enfocarlo solos).
+function seleccionarAlEnfocar(e: React.FocusEvent<HTMLInputElement>) {
+  e.target.select();
+}
 
 /**
  * Fila de ejercicio editable, migrada desde ExerciseRow (dipra-app.jsx
@@ -60,6 +74,7 @@ export function ExerciseRow({
   etiquetaBloque?: { grupoMuscular?: GrupoMuscular; cualidad?: CualidadFuerza };
 }) {
   const volumen = volumenEjercicio(ex);
+  const tipo = cargaTipoEfectivo(ex);
   const seriesCount = Number(ex.series) || 0;
   const pesosSeriesActivo = (ex.pesosSeries ?? []).some((p) => Number(p) > 0);
   const repsSeriesActivo = (ex.repsSeries ?? []).some((r) => Number(r) > 0);
@@ -150,11 +165,19 @@ export function ExerciseRow({
   const repsTexto = repsSeriesActivo
     ? (ex.repsSeries ?? []).map((r) => Number(r) || 0).join("/")
     : String(ex.reps ?? 0);
-  // Si no hay peso cargado (0 o sin pesosSeries), mostrar en esa columna lo
-  // que SÍ explica cómo se hace el ejercicio (peso corporal, banda, o los
-  // segundos de una isometría tipo plancha) en vez de un "0" sin sentido.
-  const sinPesoCargado = !pesosSeriesActivo && (Number(ex.kg) || 0) === 0;
-  const kgDisplayTexto = sinPesoCargado && (ex.tipoCarga || ex.tiempoSerie) ? ex.tipoCarga || ex.tiempoSerie! : kgTexto;
+  // Columna "Kg": si la carga no es en Kg, se muestra lo que corresponda
+  // (banda/peso corporal/duración/vueltas) en vez de forzar un número sin
+  // sentido — y el volumen en kg solo aplica/se muestra para carga en Kg.
+  const kgColumnaTexto =
+    tipo === "banda"
+      ? "Banda"
+      : tipo === "peso_corporal"
+        ? "Peso corporal"
+        : tipo === "tiempo"
+          ? ex.tiempoSerie || "—"
+          : tipo === "vueltas"
+            ? `${ex.vueltas ?? 0} vueltas`
+            : kgTexto;
 
   // En modo solo-lectura (portal del cliente) no hay botón de eliminar, así
   // que se usa una grilla propia sin esa columna y con más espacio para Kg
@@ -203,6 +226,7 @@ export function ExerciseRow({
             type="number"
             value={ex.series}
             onChange={(e) => onChange({ ...ex, series: Number(e.target.value) })}
+            onFocus={seleccionarAlEnfocar}
             className="rounded-lg border border-black/10 px-2 py-1 text-center font-mono text-sm outline-none focus:dp-border-brand"
           />
         )}
@@ -227,6 +251,7 @@ export function ExerciseRow({
               type="number"
               value={ex.reps}
               onChange={(e) => onChange({ ...ex, reps: Number(e.target.value) })}
+              onFocus={seleccionarAlEnfocar}
               style={{ minWidth: 40 }}
               className="flex-1 rounded-lg border border-black/10 px-2 py-1 text-center font-mono text-sm outline-none focus:dp-border-brand"
             />
@@ -234,14 +259,36 @@ export function ExerciseRow({
           </div>
         )}
 
-        {/* Kg (uniforme, o texto "12/14/16" si hay peso por serie cargado; si no hay peso,
-            muestra carga/duración en vez de un "0" sin sentido; + badge "c/u" si es peso por implemento) */}
+        {/* Kg/carga — qué se ve y edita acá depende de `tipo` (el selector "Carga" de
+            más abajo): Kg pide número, Tiempo pide duración, Vueltas pide número de
+            vueltas, Banda/Peso corporal no piden nada más (ya queda dicho con el tipo). */}
         {readOnly ? (
           <span
-            className={`dp-body flex items-center justify-center gap-1 text-center ${sinPesoCargado ? "text-xs" : "font-mono text-sm"}`}
+            className={`dp-body flex items-center justify-center gap-1 text-center ${tipo === "kg" ? "font-mono text-sm" : "text-xs"}`}
           >
-            {kgDisplayTexto}
+            {kgColumnaTexto}
             {ex.pesoCadaUno && <span className="dp-text-brand text-[10px] font-semibold">c/u</span>}
+          </span>
+        ) : tipo === "tiempo" ? (
+          <input
+            value={ex.tiempoSerie || ""}
+            onChange={(e) => onChange({ ...ex, tiempoSerie: e.target.value })}
+            placeholder="30 seg"
+            style={{ minWidth: 40 }}
+            className="flex-1 rounded-lg border border-black/10 px-2 py-1 text-center font-mono text-sm outline-none focus:dp-border-brand"
+          />
+        ) : tipo === "vueltas" ? (
+          <input
+            type="number"
+            value={ex.vueltas ?? 0}
+            onChange={(e) => onChange({ ...ex, vueltas: Number(e.target.value) })}
+            onFocus={seleccionarAlEnfocar}
+            style={{ minWidth: 40 }}
+            className="flex-1 rounded-lg border border-black/10 px-2 py-1 text-center font-mono text-sm outline-none focus:dp-border-brand"
+          />
+        ) : tipo === "banda" || tipo === "peso_corporal" ? (
+          <span className="dp-muted flex items-center justify-center text-center text-xs">
+            {tipo === "banda" ? "Banda" : "Peso corporal"}
           </span>
         ) : pesoPorSerieAbierto ? (
           <span
@@ -257,6 +304,7 @@ export function ExerciseRow({
               type="number"
               value={ex.kg}
               onChange={(e) => onChange({ ...ex, kg: Number(e.target.value) })}
+              onFocus={seleccionarAlEnfocar}
               style={{ minWidth: 40 }}
               className="flex-1 rounded-lg border border-black/10 px-2 py-1 text-center font-mono text-sm outline-none focus:dp-border-brand"
             />
@@ -264,7 +312,11 @@ export function ExerciseRow({
           </div>
         )}
 
-        <span className="dp-muted text-right font-mono text-xs">{volumen.toLocaleString("es-CL")} kg</span>
+        {tipo === "kg" ? (
+          <span className="dp-muted text-right font-mono text-xs">{volumen.toLocaleString("es-CL")} kg</span>
+        ) : (
+          <span />
+        )}
         {!readOnly && (
           <button type="button" onClick={onRemove} className="dp-muted hover:dp-alert text-sm">
             ✕
@@ -341,38 +393,29 @@ export function ExerciseRow({
         </div>
       )}
 
-      {/* Carga extendida: tipo de carga no numérica, tiempo, unilateral y toggle de peso por serie */}
+      {/* Carga extendida: tipo de carga, nota de carga, unilateral y toggle de peso por serie.
+          El selector "Carga" decide qué campo se edita en la columna Kg de arriba
+          (Kg, Tiempo o Vueltas) — Banda/Peso corporal no piden número, solo la nota. */}
       {!readOnly && (
         <div className="mt-1 flex flex-wrap items-center gap-3 pl-0.5">
           <div className="flex items-center gap-1">
             <span className="dp-muted text-[10px] font-medium">Carga</span>
+            <select
+              value={tipo}
+              onChange={(e) => onChange({ ...ex, cargaTipo: e.target.value as CargaTipo })}
+              className="dp-body rounded-md border border-black/10 bg-white px-1.5 py-0.5 text-[11px] outline-none focus:dp-border-brand"
+            >
+              {CARGA_OPCIONES.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
             <input
               value={ex.tipoCarga || ""}
               onChange={(e) => onChange({ ...ex, tipoCarga: e.target.value })}
-              placeholder="Ej. peso corporal…"
+              placeholder="Nota (ej. banda roja)"
               style={{ width: 110 }}
-              className={campoInputClass}
-            />
-            {["Banda", "Peso corporal"].map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                onClick={() => onChange({ ...ex, tipoCarga: ex.tipoCarga === preset ? "" : preset })}
-                className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
-                  ex.tipoCarga === preset ? "dp-bg-brand text-white" : "dp-bg-faint dp-body"
-                }`}
-              >
-                {preset}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="dp-muted text-[10px] font-medium">Tiempo</span>
-            <input
-              value={ex.tiempoSerie || ""}
-              onChange={(e) => onChange({ ...ex, tiempoSerie: e.target.value })}
-              placeholder="30 seg"
-              style={{ width: 64 }}
               className={campoInputClass}
             />
           </div>
@@ -404,7 +447,7 @@ export function ExerciseRow({
             />
             <span className="dp-muted text-[10px] font-medium">Peso c/u (2 mancuernas)</span>
           </label>
-          {seriesCount > 1 && (
+          {seriesCount > 1 && tipo === "kg" && (
             <button
               type="button"
               onClick={togglePesoPorSerie}
@@ -426,7 +469,7 @@ export function ExerciseRow({
       )}
 
       {/* Inputs de peso por serie individual */}
-      {!readOnly && pesoPorSerieAbierto && seriesCount > 0 && (
+      {!readOnly && tipo === "kg" && pesoPorSerieAbierto && seriesCount > 0 && (
         <div className="dp-bg-faint mt-1 ml-0.5 flex flex-wrap items-center gap-2 rounded-lg px-2 py-1">
           <span className="dp-muted text-[10px] font-medium">Kg</span>
           {Array.from({ length: seriesCount }).map((_, i) => (
@@ -436,6 +479,7 @@ export function ExerciseRow({
                 type="number"
                 value={ex.pesosSeries?.[i] ?? ex.kg ?? 0}
                 onChange={(e) => handlePesoSerieChange(i, e.target.value)}
+                onFocus={seleccionarAlEnfocar}
                 style={{ width: 48 }}
                 className={campoInputClass}
               />
@@ -455,6 +499,7 @@ export function ExerciseRow({
                 type="number"
                 value={ex.repsSeries?.[i] ?? ex.reps ?? 0}
                 onChange={(e) => handleRepsSerieChange(i, e.target.value)}
+                onFocus={seleccionarAlEnfocar}
                 style={{ width: 40 }}
                 className={campoInputClass}
               />
@@ -491,7 +536,7 @@ export function ExerciseRow({
           que quede claro qué es cada número (antes "Desc. 120" se confundía con
           el campo "Tiempo" de más arriba, que es otra cosa). */}
       {readOnly ? (
-        (ex.rpe || ex.rir || ex.descanso) && (
+        (ex.rpe || ex.rir || ex.tut || ex.descanso) && (
           <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-0.5">
             {ex.rpe && (
               <span className="dp-bg-faint dp-body rounded-full px-2 py-0.5 text-[10px] font-medium">
@@ -503,6 +548,14 @@ export function ExerciseRow({
                 RIR {ex.rir}
               </span>
             )}
+            {ex.tut && (
+              <span
+                className="dp-bg-faint dp-body rounded-full px-2 py-0.5 text-[10px] font-medium"
+                title="Tempo de cada repetición: bajada-pausa-subida"
+              >
+                Tempo {ex.tut}
+              </span>
+            )}
             {ex.descanso && (
               <span className="dp-bg-faint dp-body rounded-full px-2 py-0.5 text-[10px] font-medium">
                 Descanso entre series: {ex.descanso}
@@ -512,12 +565,13 @@ export function ExerciseRow({
         )
       ) : (
         <div className="mt-1 flex items-center gap-3 pl-0.5">
-          {CAMPOS.map(({ key, label, width }) => (
+          {CAMPOS.map(({ key, label, width, placeholder }) => (
             <div key={key} className="flex items-center gap-1">
               <span className="dp-muted text-[10px] font-medium">{label}</span>
               <input
                 value={ex[key] || ""}
                 onChange={(e) => onChange({ ...ex, [key]: e.target.value })}
+                placeholder={placeholder}
                 style={{ width: width ?? 44 }}
                 className={campoInputClass}
               />

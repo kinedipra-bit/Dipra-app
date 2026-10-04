@@ -113,8 +113,16 @@ export interface EjercicioPlan {
   // el volumen).
   notaReps?: string;
   // Trabajo por tiempo en vez de (o además de) reps — ej. "30 seg" para un
-  // isométrico. Texto libre.
+  // isométrico. Es la DURACIÓN del ejercicio, no confundir con `tut` (el
+  // tempo de cada repetición, ver más abajo). Texto libre.
   tiempoSerie?: string;
+  // Qué tipo de carga usa el ejercicio — determina qué campo se pide en vez
+  // del Kg (banda/peso corporal no piden nada más, tiempo pide
+  // `tiempoSerie`, vueltas pide `vueltas`). Sin setear = "kg" (default,
+  // compatible con ejercicios cargados antes de este campo).
+  cargaTipo?: "kg" | "banda" | "peso_corporal" | "tiempo" | "vueltas";
+  // Solo si cargaTipo = "vueltas" (ej. rondas de un circuito).
+  vueltas?: number;
   // Anotación de carga no numérica — ej. "Banda", "Peso corporal", "Lastre 5kg".
   tipoCarga?: string;
   // Marca reps/series "por lado" (ej. "5 reps por brazo") en vez de bilateral.
@@ -132,6 +140,10 @@ export interface EjercicioPlan {
   link: string;
   rpe: string;
   rir: string;
+  // Tempo de CADA repetición (bajada-pausa-subida), ej. "3-1-1" en un
+  // goblet squat = 3s excéntrico, 1s pausa abajo, 1s concéntrico. Solo
+  // aplica a ejercicios CON carga — distinto de `tiempoSerie`, que es la
+  // duración total de un ejercicio isométrico sin reps.
   tut: string;
   descanso: string;
   comentarioCliente: string;

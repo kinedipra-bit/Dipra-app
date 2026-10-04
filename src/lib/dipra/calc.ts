@@ -26,6 +26,22 @@ type Ejercicio = {
 type Bloque = { exercises: Ejercicio[] };
 type Dia = { bloques: Bloque[] };
 
+export type CargaTipo = "kg" | "banda" | "peso_corporal" | "tiempo" | "vueltas";
+
+type EjercicioConCarga = { cargaTipo?: CargaTipo; tipoCarga?: string; tiempoSerie?: string; kg?: number | string };
+
+// `cargaTipo` es el campo nuevo; para ejercicios cargados antes de que
+// existiera, se infiere de lo que ya tenían (tipoCarga "Banda"/"Peso
+// corporal", o tiempoSerie cargado sin kg) — así ningún ejercicio viejo
+// queda mostrando el selector en blanco.
+export function cargaTipoEfectivo(e: EjercicioConCarga): CargaTipo {
+  if (e.cargaTipo) return e.cargaTipo;
+  if (e.tipoCarga === "Banda") return "banda";
+  if (e.tipoCarga === "Peso corporal") return "peso_corporal";
+  if (e.tiempoSerie && !(Number(e.kg) || 0)) return "tiempo";
+  return "kg";
+}
+
 // Si `pesosSeries` y/o `repsSeries` tienen valores cargados, el volumen se
 // calcula sumando reps × kg serie por serie (mismo índice = misma serie;
 // el que no está activo usa el valor uniforme `reps`/`kg` para todas las
