@@ -14,12 +14,19 @@ function clonarDia(dia: DiaPlan): DiaPlan {
   return {
     ...dia,
     id: crypto.randomUUID(),
-    bloques: dia.bloques.map((b) => ({
-      ...b,
-      id: crypto.randomUUID(),
-      exercises: b.exercises.map((e) => ({ ...e, id: crypto.randomUUID() })),
-    })),
+    bloques: clonarBloques(dia.bloques),
   };
+}
+
+// Igual que clonarDia pero solo los bloques — para "Copiar día" DENTRO del
+// mismo plan (reemplaza los bloques del día actual por los de otro, sin
+// tocar su propio id/nombre/foco).
+function clonarBloques(bloques: BloquePlan[]): BloquePlan[] {
+  return bloques.map((b) => ({
+    ...b,
+    id: crypto.randomUUID(),
+    exercises: b.exercises.map((e) => ({ ...e, id: crypto.randomUUID() })),
+  }));
 }
 
 type Vista = "editar" | "resumen";
@@ -69,6 +76,7 @@ export function KinePlanView({
   const [sharedAt, setSharedAt] = useState<number | null>(null);
   const [diasFuerza, setDiasFuerza] = useState<DiaPlan[]>([]);
   const [diaFuerzaElegido, setDiaFuerzaElegido] = useState("");
+  const [diaFuenteCopiaId, setDiaFuenteCopiaId] = useState("");
 
   const [guardando, startGuardar] = useTransition();
   const [compartiendo, startCompartir] = useTransition();
@@ -107,6 +115,21 @@ export function KinePlanView({
   };
   const renameDia = (idx: number, label: string) => {
     setDias((prev) => prev.map((d, i) => (i === idx ? { ...d, label } : d)));
+  };
+
+  // Copia los bloques de otro día de Tareas sobre el día actual — ej.
+  // armaste el día 1 y te equivocaste en el día 2, sin volver a empezar de
+  // cero. Pisa los bloques del día actual (con confirm si ya tenía algo).
+  const copiarDiaDentroDelPlan = () => {
+    if (!dia) return;
+    const fuente = dias.find((d) => d.id === diaFuenteCopiaId);
+    if (!fuente) return;
+    const teniaContenido = dia.bloques.some((b) => b.exercises.length > 0);
+    if (teniaContenido && !window.confirm(`¿Reemplazar los bloques de "${dia.label}" por los de "${fuente.label}"?`)) {
+      return;
+    }
+    updateDia({ ...dia, bloques: clonarBloques(fuente.bloques) });
+    setDiaFuenteCopiaId("");
   };
 
   const addBloque = () => {
@@ -307,6 +330,33 @@ export function KinePlanView({
                   className="dp-text-brand rounded-lg border border-dashed border-black/15 px-2.5 py-1 text-xs font-medium disabled:opacity-40"
                 >
                   Copiar
+                </button>
+              </div>
+            )}
+
+            {dias.length > 1 && (
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={diaFuenteCopiaId}
+                  onChange={(e) => setDiaFuenteCopiaId(e.target.value)}
+                  className="rounded-lg border border-black/10 px-1.5 py-1 text-xs outline-none focus:dp-border-brand"
+                >
+                  <option value="">Copiar otra sesión…</option>
+                  {dias
+                    .filter((d) => d.id !== dia?.id)
+                    .map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.label}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={copiarDiaDentroDelPlan}
+                  disabled={!diaFuenteCopiaId}
+                  className="dp-text-brand rounded-lg border border-dashed border-black/15 px-2.5 py-1 text-xs font-medium disabled:opacity-40"
+                >
+                  Copiar a {dia?.label}
                 </button>
               </div>
             )}

@@ -7,6 +7,7 @@ import { blockTemplate, nuevosDias } from "@/lib/dipra/constants";
 import type {
   PlanSemana,
   DiaPlan,
+  BloquePlan,
   EjercicioPlan,
   EjercicioBiblioteca,
   Sesion,
@@ -53,6 +54,16 @@ function nuevoEjercicio(): EjercicioPlan {
   };
 }
 
+// IDs nuevos en todo el árbol — para "Copiar día" (de otro día de la misma
+// semana a este), evita que choquen ids entre el día copiado y el original.
+function clonarBloques(bloques: BloquePlan[]): BloquePlan[] {
+  return bloques.map((b) => ({
+    ...b,
+    id: crypto.randomUUID(),
+    exercises: b.exercises.map((e) => ({ ...e, id: crypto.randomUUID() })),
+  }));
+}
+
 /**
  * Pestaña "Plan" del detalle de cliente. Migrado desde PlanTab
  * (dipra-app.jsx líneas 1287-1516).
@@ -88,6 +99,7 @@ export function PlanView({
     semanaActivaIdInicial ?? semanasIniciales[0]?.id ?? null
   );
   const [diaIdx, setDiaIdx] = useState(0);
+  const [diaFuenteCopiaId, setDiaFuenteCopiaId] = useState("");
   const [vista, setVista] = useState<Vista>("editar");
   const [biblioteca, setBiblioteca] = useState<EjercicioBiblioteca[]>(bibliotecaInicial);
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -269,6 +281,22 @@ export function PlanView({
     updateSemana({ ...semana, dias: nextDias });
   };
 
+  // Copia los bloques de otro día de la MISMA semana sobre el día actual —
+  // ej. planificaste el día 1, te equivocaste en el día 2 y no querés
+  // volver a armarlo de cero. Pisa los bloques del día actual (con confirm
+  // si ya tenía algo cargado); el nombre/foco del día actual no se tocan.
+  const copiarDiaDentroDeSemana = () => {
+    if (!dia || !semana) return;
+    const fuente = semana.dias.find((d) => d.id === diaFuenteCopiaId);
+    if (!fuente) return;
+    const teniaContenido = dia.bloques.some((b) => b.exercises.length > 0);
+    if (teniaContenido && !window.confirm(`¿Reemplazar los bloques de "${dia.label}" por los de "${fuente.label}"?`)) {
+      return;
+    }
+    updateDia({ ...dia, bloques: clonarBloques(fuente.bloques) });
+    setDiaFuenteCopiaId("");
+  };
+
   if (!semana) {
     return (
       <div className="flex flex-col gap-5">
@@ -305,11 +333,13 @@ export function PlanView({
               key={s.id}
               type="button"
               onClick={() => seleccionarSemana(s.id)}
+              title={`Semana ${s.numero}`}
               className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
                 s.id === semana.id ? "dp-bg-brand text-white" : "dp-bg-faint dp-body"
               }`}
             >
-              Semana {s.numero}
+              {s.mesociclo || `Semana ${s.numero}`}
+              {s.objetivo && ` · ${s.objetivo}`}
             </button>
           ))}
           <button
@@ -424,6 +454,33 @@ export function PlanView({
             >
               + Agregar día
             </button>
+            {semana.dias.length > 1 && (
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={diaFuenteCopiaId}
+                  onChange={(e) => setDiaFuenteCopiaId(e.target.value)}
+                  className="rounded-lg border border-black/10 px-1.5 py-1 text-xs outline-none focus:dp-border-brand"
+                >
+                  <option value="">Copiar día…</option>
+                  {semana.dias
+                    .filter((d) => d.id !== dia?.id)
+                    .map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.label}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={copiarDiaDentroDeSemana}
+                  disabled={!diaFuenteCopiaId}
+                  title={`Reemplaza los bloques de ${dia?.label ?? "este día"} por los del día elegido`}
+                  className="dp-text-brand rounded-lg border border-dashed border-black/15 px-2.5 py-1 text-xs font-medium disabled:opacity-40"
+                >
+                  Copiar a {dia?.label}
+                </button>
+              </div>
+            )}
           </div>
 
           {dia && (
