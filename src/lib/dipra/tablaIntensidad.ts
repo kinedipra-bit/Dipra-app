@@ -78,6 +78,17 @@ export const TABLA_INTENSIDAD: Record<CualidadFuerza, FilaIntensidad> = {
     notaSetsSemana: "ídem — por calidad, no por volumen",
     descanso: "2-5 min",
   },
+  // No se mide en reps/%1RM como el resto — "contactos por sesión" ocupa
+  // el campo reps, con el detalle por nivel en notaSetsSemana. Sin
+  // setsSemana a propósito (misma lógica que potencia: se programa por
+  // calidad, no por volumen semanal).
+  Pliometría: {
+    reps: "80-140 contactos/sesión según nivel",
+    porcentaje1RM: "—",
+    seriesPorEjercicio: "según plan",
+    notaSetsSemana: "Principiante 80-100 · Intermedio 100-120 · Avanzado 120-140 contactos",
+    descanso: "trabajo:pausa 1:5 a 1:10",
+  },
 };
 
 export const CUALIDADES: CualidadFuerza[] = [
@@ -88,11 +99,14 @@ export const CUALIDADES: CualidadFuerza[] = [
   "Resistencia a la Fuerza",
   "Potencia (Esfuerzo Único)",
   "Resistencia a la Potencia",
+  "Pliometría",
 ];
 
-// Referencia de pliometría (NSCA) — contactos por sesión según nivel. No
-// se mide en sets/reps como el resto de la tabla, así que queda aparte
-// como referencia (no se suma a ninguna sugerencia automática).
+// Mismo detalle de PLIOMETRIA_NSCA/PLIOMETRIA_NOTAS, ahora también
+// disponible como cualidad elegible en un bloque (con su propia línea de
+// sugerencia, igual que el resto) — se deja esta tabla aparte además
+// porque trae el desglose completo por nivel que no entra en una sola
+// línea de sugerencia.
 export const PLIOMETRIA_NSCA: { nivel: string; contactos: string }[] = [
   { nivel: "Principiante", contactos: "80-100" },
   { nivel: "Intermedio", contactos: "100-120" },
@@ -120,8 +134,14 @@ export const GRUPOS_MUSCULARES: GrupoMuscular[] = [
 // (1-2 reps, sin caída de velocidad dentro de la serie), acá sí se
 // acumula fatiga entre repetición y repetición (3-5 reps a intensidad
 // olímpica) — esa fatiga repetida es la que pide el mismo resguardo de
-// descanso.
-const ALTA_DEMANDA_SNC: CualidadFuerza[] = ["Fuerza Máxima", "Potencia (Esfuerzo Único)", "Resistencia a la Potencia"];
+// descanso. Pliometría también entra: la propia referencia NSCA pide
+// 48-72h de recuperación entre sesiones del mismo segmento corporal.
+const ALTA_DEMANDA_SNC: CualidadFuerza[] = [
+  "Fuerza Máxima",
+  "Potencia (Esfuerzo Único)",
+  "Resistencia a la Potencia",
+  "Pliometría",
+];
 
 // Grupo muscular/cualidad "efectivos" de un ejercicio: lo que el ejercicio
 // trae puesto a mano tiene prioridad (bloques "recíprocos" que alternan

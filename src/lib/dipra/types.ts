@@ -174,7 +174,8 @@ export type CualidadFuerza =
   | "Hipertrofia No Funcional"
   | "Resistencia a la Fuerza"
   | "Potencia (Esfuerzo Único)"
-  | "Resistencia a la Potencia";
+  | "Resistencia a la Potencia"
+  | "Pliometría";
 
 export interface BloquePlan {
   id: string;
