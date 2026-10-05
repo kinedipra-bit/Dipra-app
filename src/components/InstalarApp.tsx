@@ -35,7 +35,18 @@ export function InstalarApp({ className }: { className?: string }) {
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {
+      // El portal de cada cliente registra su PROPIO service worker, con
+      // scope acotado a ese portal (/portal/<token>) — antes todos
+      // (la app del profesional y cada portal) registraban el mismo
+      // /sw.js con scope "/", y Android podía terminar asociando el
+      // ícono/manifest equivocado al instalar desde un portal (el
+      // profesional veía reemplazado su acceso por el portal de un
+      // cliente). Con scopes separados, cada uno queda como una
+      // instalación independiente.
+      const matchPortal = window.location.pathname.match(/^\/portal\/[^/]+/);
+      const swUrl = matchPortal ? `${matchPortal[0]}/sw.js` : "/sw.js";
+      const scope = matchPortal ? `${matchPortal[0]}` : "/";
+      navigator.serviceWorker.register(swUrl, { scope }).catch(() => {
         // Si falla el registro, el botón de instalar simplemente no va a
         // aparecer en Chrome/Android — no es un error que afecte al resto
         // de la app.
