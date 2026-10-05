@@ -7,7 +7,9 @@ const RESEND_API_URL = "https://api.resend.com/emails";
 // dominio propio), así que el remitente sigue siendo DIPRA/Resend — pero
 // con esto, si el cliente le da "Responder", el correo le llega a Nicolás
 // a su Gmail en vez de perderse en la dirección de envío.
-const REPLY_TO = "kine.dipra@gmail.com";
+// La API de Resend espera reply_to como ARRAY, no como string suelto —
+// mandarlo como string hace que la API rechace el envío entero.
+const REPLY_TO = ["kine.dipra@gmail.com"];
 
 export async function enviarCorreoResetPin({
   para,
