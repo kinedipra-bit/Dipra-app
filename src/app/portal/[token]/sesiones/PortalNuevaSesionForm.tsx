@@ -14,6 +14,18 @@ function pilarInvertido(p: (typeof PILARES_KEYS)[number]): boolean {
   return "invertido" in p && p.invertido === true;
 }
 
+// Qué significa cada número para ese pilar puntual — el de estrés se
+// puntúa al revés de los demás (acá 10 es MALO, no bueno), así que sin
+// esta aclaración un número alto ahí se ve raro marcado en rojo.
+const AYUDA_PILARES: Record<string, string> = {
+  sueno: "1 = dormiste muy mal o casi nada. 10 = dormiste excelente y te despertaste descansado.",
+  nutricion: "1 = comiste muy mal o te saltaste comidas. 10 = comiste bien y balanceado.",
+  hidratacion: "1 = tomaste muy poca agua en el día. 10 = tomaste toda el agua que necesitabas.",
+  movimiento: "1 = casi no te moviste en el día (fuera del entrenamiento). 10 = te mantuviste activo todo el día.",
+  estres:
+    "Acá es al revés que los demás pilares: 1 = te sentiste tranquilo, sin estrés. 10 = te sentiste muy estresado o sobrepasado. Por eso un número alto en estrés se marca en rojo — significa que estuviste muy estresado, no que estuviste bien.",
+};
+
 // Cuántos pilares quedaron en rojo (ver tonoEscalaPilar) — el profesional ya
 // tiene un aviso con "al menos uno" en su propia vista de sesiones; acá, de
 // cara al atleta, se pide un umbral más alto (2 o más) para no alarmar por
@@ -133,6 +145,8 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
   // Bloque "enfocado" al tocarlo — por posición del grupo (no hay id de
   // bloque acá, son ejercicios de sesión agrupados por bloqueTitle).
   const [bloqueActivoIdx, setBloqueActivoIdx] = useState<number | null>(null);
+  // Qué pilar tiene la ayuda abierta (toca el "?") — solo uno a la vez.
+  const [pilarAyuda, setPilarAyuda] = useState<string | null>(null);
 
   // Al montar, si había un borrador guardado (de una sesión anterior que no
   // se llegó a enviar), lo recupera y abre el formulario directamente.
@@ -243,7 +257,17 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
       <div className="flex flex-wrap gap-4">
         {PILARES_KEYS.map((p) => (
           <div key={p.key} className="flex flex-col gap-1">
-            <span className="dp-muted text-[10px] font-medium">{p.label}</span>
+            <span className="dp-muted flex items-center gap-1 text-[10px] font-medium">
+              {p.label}
+              <button
+                type="button"
+                onClick={() => setPilarAyuda((prev) => (prev === p.key ? null : p.key))}
+                aria-label={`Qué anotar en ${p.label}`}
+                className="dp-muted flex h-3.5 w-3.5 items-center justify-center rounded-full border border-black/15 text-[9px] font-semibold leading-none hover:dp-border-brand hover:dp-text-brand"
+              >
+                ?
+              </button>
+            </span>
             <EscalaUnoADiez
               value={draft.pilares[p.key]}
               onChange={(v) => setDraft((prev) => ({ ...prev, pilares: { ...prev.pilares, [p.key]: v } }))}
@@ -252,6 +276,15 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
           </div>
         ))}
       </div>
+
+      {pilarAyuda && (
+        <p className="dp-bg-faint dp-body rounded-lg px-3 py-2 text-xs">
+          <span className="dp-text-heading font-medium">
+            {PILARES_KEYS.find((p) => p.key === pilarAyuda)?.label}:
+          </span>{" "}
+          {AYUDA_PILARES[pilarAyuda]}
+        </p>
+      )}
 
       {pilaresRojos >= 2 ? (
         <p className="dp-bg-alert-soft dp-alert rounded-lg px-3 py-2 text-xs">
