@@ -332,6 +332,15 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
                         current[i] = value;
                         actualizarEjercicio(idx, { rpeSeries: current });
                       };
+                      const cambiarRepsReal = (i: number, value: string) => {
+                        const largo = Math.max(ex.seriesReal, 1);
+                        const current = Array.from(
+                          { length: largo },
+                          (_, idx2) => ex.repsSeriesReal?.[idx2] ?? ex.repsReal
+                        );
+                        current[i] = value === "" ? "" : Number(value);
+                        actualizarEjercicio(idx, { repsSeriesReal: current });
+                      };
                       const embedUrl = youtubeEmbedUrl(ex.link ?? "");
                       const videoAbierto = videoAbiertoId === ex.id;
                       return (
@@ -387,14 +396,17 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
                               style={{ width: 40 }}
                               className={inputClass}
                             />
-                            <span className="dp-muted text-[10px]">Reps</span>
-                            <input
-                              type="number"
-                              value={ex.repsReal}
-                              onChange={(e) => actualizarEjercicio(idx, { repsReal: Number(e.target.value) })}
-                              style={{ width: 40 }}
-                              className={inputClass}
-                            />
+                            <span className="dp-muted text-[10px]">Reps por serie</span>
+                            {Array.from({ length: Math.max(ex.seriesReal, 1) }).map((_, i) => (
+                              <input
+                                key={i}
+                                type="number"
+                                value={ex.repsSeriesReal?.[i] ?? ex.repsReal}
+                                onChange={(e) => cambiarRepsReal(i, e.target.value)}
+                                style={{ width: 40 }}
+                                className={inputClass}
+                              />
+                            ))}
                             <span className="dp-muted text-[10px]">Kg</span>
                             {pesosRealActivo ? (
                               Array.from({ length: Math.max(ex.seriesReal, pesosPlan.length, 1) }).map((_, i) => (

@@ -85,22 +85,42 @@ type EjercicioSesionVol = {
   repsReal?: number | string;
   kgReal?: number | string;
   pesosSeriesReal?: (number | string)[];
+  repsSeriesReal?: (number | string)[];
   unilateral?: boolean;
   pesoCadaUno?: boolean;
 };
 
 // Mismo criterio que volumenEjercicio, pero sobre lo REALMENTE ejecutado en
 // una sesión (EjercicioSesion) en vez de lo planificado — se usa para el
-// resumen histórico mensual del portal del atleta.
+// resumen histórico mensual del portal del atleta. Igual que ahí, si
+// pesosSeriesReal y/o repsSeriesReal tienen valores, se empareja cada
+// índice (misma serie); lo que no está activo usa el valor uniforme
+// repsReal/kgReal para todas las series.
 export function volumenEjercicioSesion(e: EjercicioSesionVol): number {
-  const repsBase = Number(e.repsReal) || 0;
-  const reps = e.unilateral ? repsBase * 2 : repsBase;
   const factorPeso = e.pesoCadaUno ? 2 : 1;
-  const pesos = (e.pesosSeriesReal ?? []).map((p) => Number(p) || 0).filter((p) => p > 0);
-  if (pesos.length > 0) {
-    return pesos.reduce((sum, p) => sum + reps * p * factorPeso, 0);
+  const pesosSeries = (e.pesosSeriesReal ?? []).map((p) => Number(p) || 0);
+  const repsSeries = (e.repsSeriesReal ?? []).map((r) => Number(r) || 0);
+  const pesosActivo = pesosSeries.some((p) => p > 0);
+  const repsActivo = repsSeries.some((r) => r > 0);
+
+  if (!pesosActivo && !repsActivo) {
+    const repsBase = Number(e.repsReal) || 0;
+    const reps = e.unilateral ? repsBase * 2 : repsBase;
+    return (Number(e.seriesReal) || 0) * reps * (Number(e.kgReal) || 0) * factorPeso;
   }
-  return (Number(e.seriesReal) || 0) * reps * (Number(e.kgReal) || 0) * factorPeso;
+
+  const repsUniforme = Number(e.repsReal) || 0;
+  const kgUniforme = Number(e.kgReal) || 0;
+  const seriesCount = Math.max(Number(e.seriesReal) || 0, pesosSeries.length, repsSeries.length);
+
+  let total = 0;
+  for (let i = 0; i < seriesCount; i++) {
+    const repsBase = repsActivo ? repsSeries[i] ?? 0 : repsUniforme;
+    const reps = e.unilateral ? repsBase * 2 : repsBase;
+    const kg = pesosActivo ? pesosSeries[i] ?? 0 : kgUniforme;
+    total += reps * kg * factorPeso;
+  }
+  return total;
 }
 
 export function calcVolumenBloque(bloque: Bloque) {

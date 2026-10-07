@@ -256,6 +256,10 @@ export interface EjercicioSesion {
   // Peso real por serie, editable — arranca con los mismos valores que
   // pesosSeriesPlan y el atleta/profesional ajusta según lo que hizo.
   pesosSeriesReal?: (number | string)[];
+  // Reps reales por serie — para cuando el peso quedó fijo pero en una
+  // vuelta puntual salieron menos repeticiones que las pedidas (fatiga,
+  // técnica, etc.), en vez de un solo repsReal parejo para todas las series.
+  repsSeriesReal?: (number | string)[];
   // Copiados del ejercicio del plan para que la sesión muestre exactamente
   // lo mismo que ve el profesional/atleta en la rutina (unilateral, peso
   // c/u, tipo de carga, tiempo bajo tensión).

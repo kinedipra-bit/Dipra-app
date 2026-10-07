@@ -274,6 +274,15 @@ export function SesionesClient({
                         current[i] = value;
                         updateEjercicio(idx, { rpeSeries: current });
                       };
+                      const cambiarRepsReal = (i: number, value: string) => {
+                        const largo = Math.max(ex.seriesReal, 1);
+                        const current = Array.from(
+                          { length: largo },
+                          (_, idx2) => ex.repsSeriesReal?.[idx2] ?? ex.repsReal
+                        );
+                        current[i] = value === "" ? "" : Number(value);
+                        updateEjercicio(idx, { repsSeriesReal: current });
+                      };
                       const embedUrl = youtubeEmbedUrl(ex.link ?? "");
                       const videoAbierto = videoAbiertoId === ex.id;
                       return (
@@ -319,12 +328,18 @@ export function SesionesClient({
                             onChange={(e) => updateEjercicio(idx, { seriesReal: Number(e.target.value) })}
                             className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-sm outline-none focus:dp-border-brand"
                           />
-                          <input
-                            type="number"
-                            value={ex.repsReal}
-                            onChange={(e) => updateEjercicio(idx, { repsReal: Number(e.target.value) })}
-                            className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-sm outline-none focus:dp-border-brand"
-                          />
+                          <div className="flex flex-wrap items-center gap-1">
+                            {Array.from({ length: Math.max(ex.seriesReal, 1) }).map((_, i) => (
+                              <input
+                                key={i}
+                                type="number"
+                                value={ex.repsSeriesReal?.[i] ?? ex.repsReal}
+                                onChange={(e) => cambiarRepsReal(i, e.target.value)}
+                                style={{ width: 36 }}
+                                className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-xs outline-none focus:dp-border-brand"
+                              />
+                            ))}
+                          </div>
                           {pesosRealActivo ? (
                             <div className="flex flex-wrap items-center gap-1">
                               {Array.from({ length: Math.max(ex.seriesReal, pesosPlan.length, 1) }).map((_, i) => (
@@ -505,12 +520,16 @@ export function SesionesClient({
                                   ex.rpeSeries && ex.rpeSeries.some((r) => r !== "" && r !== undefined)
                                     ? ex.rpeSeries.map((r) => (r === "" || r === undefined ? "—" : r)).join("/")
                                     : ex.rpe;
+                                const repsRealTexto =
+                                  ex.repsSeriesReal && ex.repsSeriesReal.some((r) => Number(r) > 0)
+                                    ? ex.repsSeriesReal.map((r) => Number(r) || 0).join("/")
+                                    : String(ex.repsReal);
                                 return (
                                   <div key={ex.id} className="flex items-center justify-between py-1.5 text-sm">
                                     <span className="dp-text-heading">{ex.nombre}</span>
                                     <span className="dp-muted font-mono text-xs">
                                       plan {ex.seriesPlan}×{ex.repsPlan}×{kgPlanTexto}kg → real {ex.seriesReal}×
-                                      {ex.repsReal}×{kgRealTexto}kg{rpeTexto ? ` · RPE ${rpeTexto}` : ""}
+                                      {repsRealTexto}×{kgRealTexto}kg{rpeTexto ? ` · RPE ${rpeTexto}` : ""}
                                     </span>
                                   </div>
                                 );
