@@ -268,6 +268,12 @@ export function SesionesClient({
                         current[i] = value === "" ? "" : Number(value);
                         updateEjercicio(idx, { pesosSeriesReal: current });
                       };
+                      const cambiarRpeReal = (i: number, value: string) => {
+                        const largo = Math.max(ex.seriesReal, 1);
+                        const current = Array.from({ length: largo }, (_, idx2) => ex.rpeSeries?.[idx2] ?? "");
+                        current[i] = value;
+                        updateEjercicio(idx, { rpeSeries: current });
+                      };
                       const embedUrl = youtubeEmbedUrl(ex.link ?? "");
                       const videoAbierto = videoAbiertoId === ex.id;
                       return (
@@ -340,15 +346,21 @@ export function SesionesClient({
                               className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-sm outline-none focus:dp-border-brand"
                             />
                           )}
-                          <input
-                            type="number"
-                            min={0}
-                            max={10}
-                            value={ex.rpe}
-                            onChange={(e) => updateEjercicio(idx, { rpe: e.target.value })}
-                            placeholder="—"
-                            className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-sm outline-none focus:dp-border-brand"
-                          />
+                          <div className="flex flex-wrap items-center gap-1">
+                            {Array.from({ length: Math.max(ex.seriesReal, 1) }).map((_, i) => (
+                              <input
+                                key={i}
+                                type="number"
+                                min={0}
+                                max={10}
+                                value={ex.rpeSeries?.[i] ?? ""}
+                                onChange={(e) => cambiarRpeReal(i, e.target.value)}
+                                placeholder="—"
+                                style={{ width: 36 }}
+                                className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-xs outline-none focus:dp-border-brand"
+                              />
+                            ))}
+                          </div>
                         </div>
                         {videoAbierto && embedUrl && (
                           <div className="mt-2 aspect-video w-full max-w-md overflow-hidden rounded-lg">
@@ -489,12 +501,16 @@ export function SesionesClient({
                                   ex.pesosSeriesReal && ex.pesosSeriesReal.filter((p) => Number(p) > 0).length > 0
                                     ? ex.pesosSeriesReal.map((p) => Number(p) || 0).join("/")
                                     : String(ex.kgReal);
+                                const rpeTexto =
+                                  ex.rpeSeries && ex.rpeSeries.some((r) => r !== "" && r !== undefined)
+                                    ? ex.rpeSeries.map((r) => (r === "" || r === undefined ? "—" : r)).join("/")
+                                    : ex.rpe;
                                 return (
                                   <div key={ex.id} className="flex items-center justify-between py-1.5 text-sm">
                                     <span className="dp-text-heading">{ex.nombre}</span>
                                     <span className="dp-muted font-mono text-xs">
                                       plan {ex.seriesPlan}×{ex.repsPlan}×{kgPlanTexto}kg → real {ex.seriesReal}×
-                                      {ex.repsReal}×{kgRealTexto}kg{ex.rpe ? ` · RPE ${ex.rpe}` : ""}
+                                      {ex.repsReal}×{kgRealTexto}kg{rpeTexto ? ` · RPE ${rpeTexto}` : ""}
                                     </span>
                                   </div>
                                 );

@@ -272,7 +272,11 @@ export interface EjercicioSesion {
   // rutina, en vez de una lista plana de ejercicios. Sesiones guardadas
   // antes de este campo simplemente no lo traen.
   bloqueTitle?: string;
+  // RPE general del ejercicio en la sesión — se mantiene por compatibilidad
+  // con sesiones guardadas antes de poder marcarlo por serie (ver
+  // rpeSeries). Si rpeSeries tiene valores, esos son los que se muestran.
   rpe: string;
+  rpeSeries?: (number | string)[];
   // Comentario del atleta sobre ESTE ejercicio en ESTA sesión puntual —
   // distinto de EjercicioPlan.comentarioCliente, que es un único campo
   // persistente en la rutina (no queda registro de en qué sesión se

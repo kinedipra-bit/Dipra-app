@@ -326,6 +326,12 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
                         current[i] = value === "" ? "" : Number(value);
                         actualizarEjercicio(idx, { pesosSeriesReal: current });
                       };
+                      const cambiarRpeReal = (i: number, value: string) => {
+                        const largo = Math.max(ex.seriesReal, 1);
+                        const current = Array.from({ length: largo }, (_, idx2) => ex.rpeSeries?.[idx2] ?? "");
+                        current[i] = value;
+                        actualizarEjercicio(idx, { rpeSeries: current });
+                      };
                       const embedUrl = youtubeEmbedUrl(ex.link ?? "");
                       const videoAbierto = videoAbiertoId === ex.id;
                       return (
@@ -410,17 +416,20 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
                                 className={inputClass}
                               />
                             )}
-                            <span className="dp-muted text-[10px]">RPE</span>
-                            <input
-                              type="number"
-                              min={0}
-                              max={10}
-                              value={ex.rpe}
-                              onChange={(e) => actualizarEjercicio(idx, { rpe: e.target.value })}
-                              placeholder="—"
-                              style={{ width: 40 }}
-                              className={inputClass}
-                            />
+                            <span className="dp-muted text-[10px]">RPE por serie</span>
+                            {Array.from({ length: Math.max(ex.seriesReal, 1) }).map((_, i) => (
+                              <input
+                                key={i}
+                                type="number"
+                                min={0}
+                                max={10}
+                                value={ex.rpeSeries?.[i] ?? ""}
+                                onChange={(e) => cambiarRpeReal(i, e.target.value)}
+                                placeholder="—"
+                                style={{ width: 40 }}
+                                className={inputClass}
+                              />
+                            ))}
                           </div>
                           <input
                             value={ex.comentario ?? ""}
