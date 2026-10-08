@@ -110,18 +110,19 @@ export async function guardarSemanaGrupo(
 // Sesión grupal: deja registrado que la clase se hizo, creando una fila en
 // `sesiones` por cada asistente — misma tabla que usa Sesiones individual,
 // así la clase queda visible en la ficha de cada persona (y en su
-// Evolución) igual que si se hubiese cargado una por una.
+// Evolución) igual que si se hubiese cargado una por una. Cada asistente
+// trae su propio array de ejercicios (mismo día, pero el peso real puede
+// ser distinto persona a persona).
 export async function crearSesionGrupal(input: {
   grupoId: string;
-  asistentes: string[];
   fecha: string;
   diaPlanLabel: string;
-  ejercicios: EjercicioSesion[];
   comentarios: string;
+  sesionesPorAsistente: { clientId: string; ejercicios: EjercicioSesion[] }[];
 }) {
-  if (input.asistentes.length === 0) throw new Error("Marcá al menos una persona que asistió.");
+  if (input.sesionesPorAsistente.length === 0) throw new Error("Marcá al menos una persona que asistió.");
   const supabase = await createClient();
-  const filas = input.asistentes.map((clientId) => ({
+  const filas = input.sesionesPorAsistente.map(({ clientId, ejercicios }) => ({
     client_id: clientId,
     fecha: input.fecha,
     tipo: "Entrenamiento grupal",
@@ -130,17 +131,47 @@ export async function crearSesionGrupal(input: {
     comentarios_pre: "",
     pilares: emptySesionPilares(),
     comentarios: input.comentarios,
-    ejercicios: input.ejercicios,
+    ejercicios,
     registrada_por_cliente: false,
     revisada: true,
   }));
   const { error } = await supabase.from("sesiones").insert(filas);
   if (error) throw new Error(error.message);
 
-  input.asistentes.forEach((clientId) => revalidatePath(`/clientes/${clientId}/sesiones`));
+  input.sesionesPorAsistente.forEach(({ clientId }) => revalidatePath(`/clientes/${clientId}/sesiones`));
   revalidatePath("/");
   revalidatePath("/clientes");
   revalidar(input.grupoId);
+}
+
+// Para precargar la grilla de la sesión grupal con el peso que cada persona
+// venía haciendo — trae, por miembro, la última sesión registrada para ese
+// mismo día del plan (si existe) y el kg real que quedó por ejercicio. Así
+// el profesional ve/recuerda la carga de la semana anterior al cargar la
+// de esta semana, en vez de partir siempre del peso planificado.
+export async function obtenerUltimosPesosGrupales(
+  clientIds: string[],
+  diaPlanLabel: string
+): Promise<Record<string, Record<string, number>>> {
+  if (clientIds.length === 0 || !diaPlanLabel) return {};
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("sesiones")
+    .select("client_id, fecha, ejercicios")
+    .in("client_id", clientIds)
+    .eq("dia_plan_label", diaPlanLabel)
+    .order("fecha", { ascending: false })
+    .returns<{ client_id: string; fecha: string; ejercicios: EjercicioSesion[] }[]>();
+  if (error) throw new Error(error.message);
+
+  const resultado: Record<string, Record<string, number>> = {};
+  (data ?? []).forEach((row) => {
+    if (resultado[row.client_id]) return; // ya se guardó la más reciente de esta persona (orden desc)
+    resultado[row.client_id] = Object.fromEntries(
+      row.ejercicios.map((ex) => [ex.nombre, Number(ex.kgReal) || 0])
+    );
+  });
+  return resultado;
 }
 
 // Evaluación grupal — FMS: trae el fms ACTUAL de cada miembro (para
