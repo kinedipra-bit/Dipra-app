@@ -205,6 +205,51 @@ export function deficitExplosivo(cmj: number, squatJump: number): number | null 
   return ((cmj - squatJump) / squatJump) * 100;
 }
 
+// Interpretación DIPRA del déficit CMJ vs. salto sin contramovimiento
+// (NCMJ/squat jump) — reemplaza el umbral binario "bajo 15% = alerta" por
+// los 3 perfiles reales de la literatura. El déficit NO mide
+// "explosividad" directamente: mide cuánto aporta el contramovimiento
+// respecto de un salto estático, así que ningún perfil es por sí solo
+// "malo" — cada uno trae su propia lectura y orientación.
+export type PerfilDeficitExplosivo = "baja_contribucion" | "equilibrado" | "alta_contribucion";
+
+export function perfilDeficitExplosivo(deficitPct: number): PerfilDeficitExplosivo {
+  if (deficitPct < 5) return "baja_contribucion";
+  if (deficitPct <= 15) return "equilibrado";
+  return "alta_contribucion";
+}
+
+export const DEFICIT_EXPLOSIVO_INFO: Record<
+  PerfilDeficitExplosivo,
+  { rango: string; label: string; interpretacion: string; orientacion: string; tono: "amber" | "brand" }
+> = {
+  baja_contribucion: {
+    rango: "< 5%",
+    label: "Baja contribución del contramovimiento",
+    interpretacion:
+      "El CMJ supera poco al salto sin contramovimiento (SJ/NCMJ) — baja ganancia relativa por el contramovimiento. No significa necesariamente baja explosividad.",
+    orientacion:
+      "Revisar especialmente el SJ y la capacidad concéntrica. Si ambos saltos son altos, puede existir un perfil explosivo con poca dependencia del ciclo de estiramiento-acortamiento.",
+    tono: "amber",
+  },
+  equilibrado: {
+    rango: "5-15%",
+    label: "Contribución equilibrada",
+    interpretacion: "Existe una contribución relevante del contramovimiento, sin una dependencia excesiva de este.",
+    orientacion: "Mantener y desarrollar fuerza, potencia y capacidad reactiva según las demandas del deporte.",
+    tono: "brand",
+  },
+  alta_contribucion: {
+    rango: "> 15%",
+    label: "Alta contribución del contramovimiento / posible déficit de iniciación",
+    interpretacion:
+      "El CMJ mejora considerablemente respecto del SJ/NCMJ. Puede existir buena utilización del ciclo de estiramiento-acortamiento, pero también una menor capacidad de generar impulso desde una situación estática.",
+    orientacion:
+      "Considerar fuerza explosiva desde posiciones estáticas, producción rápida de fuerza y trabajo concéntrico, manteniendo la capacidad reactiva.",
+    tono: "amber",
+  },
+};
+
 export function maxDe<T extends Record<string, number>>(hist: T[], key: keyof T): number {
   return Math.max(...hist.map((h) => Number(h[key]) || 0), 1);
 }

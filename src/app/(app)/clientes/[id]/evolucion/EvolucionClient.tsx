@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { deficitExplosivo } from "@/lib/dipra/calc";
+import { DEFICIT_EXPLOSIVO_INFO, deficitExplosivo, perfilDeficitExplosivo } from "@/lib/dipra/calc";
 import type { PrHistorialEntry } from "@/lib/dipra/types";
 import { eliminarPrHistorial } from "./actions";
 import { NuevaMedicionForm } from "./NuevaMedicionForm";
@@ -79,13 +79,14 @@ export function EvolucionClient({
                     {hist.map((h) => {
                       const deficit = deficitExplosivo(h.cmj, h.squat_jump);
                       if (deficit === null) return null;
-                      const bajo = deficit < 15;
+                      const perfil = perfilDeficitExplosivo(deficit);
+                      const info = DEFICIT_EXPLOSIVO_INFO[perfil];
                       return (
                         <span
                           key={h.id}
-                          title={`${h.mesociclo}: (CMJ-SJ)/SJ`}
+                          title={`${h.mesociclo}: (CMJ-SJ)/SJ — ${info.label}`}
                           className={`rounded-full px-2 py-0.5 font-mono text-[10px] font-medium text-white ${
-                            bajo ? "dp-bg-alert" : "dp-bg-brand"
+                            info.tono === "amber" ? "dp-bg-amber" : "dp-bg-brand"
                           }`}
                         >
                           Déficit expl. {deficit.toFixed(0)}%
@@ -96,15 +97,35 @@ export function EvolucionClient({
                 )}
               </div>
               {g.titulo === "Saltos" &&
-                hist.some((h) => {
-                  const d = deficitExplosivo(h.cmj, h.squat_jump);
-                  return d !== null && d < 15;
-                }) && (
-                  <p className="dp-alert mb-2 text-[11px]">
-                    ⚠ Déficit explosivo bajo 15% — el CMJ casi no mejora al SJ, sugiere poco aprovechamiento del
-                    ciclo de estiramiento-acortamiento (foco en trabajo pliométrico/reactivo).
-                  </p>
-                )}
+                (() => {
+                  // Perfil del déficit explosivo de la medición más reciente —
+                  // los 3 perfiles (DEFICIT_EXPLOSIVO_INFO) son lecturas, no un
+                  // binario bueno/malo, así que siempre se muestra la
+                  // interpretación vigente, no solo cuando "está mal".
+                  const ultimaConDeficit = [...hist].reverse().find((h) => deficitExplosivo(h.cmj, h.squat_jump) !== null);
+                  if (!ultimaConDeficit) return null;
+                  const deficit = deficitExplosivo(ultimaConDeficit.cmj, ultimaConDeficit.squat_jump);
+                  if (deficit === null) return null;
+                  const info = DEFICIT_EXPLOSIVO_INFO[perfilDeficitExplosivo(deficit)];
+                  const claseFondo = info.tono === "amber" ? "dp-bg-amber-soft" : "dp-bg-brand-soft";
+                  const claseTexto = info.tono === "amber" ? "dp-text-amber" : "dp-text-brand";
+                  return (
+                    <div className={`${claseFondo} mb-2 rounded-lg px-3 py-2 text-[11px]`}>
+                      <p className={`${claseTexto} font-semibold`}>
+                        {info.rango} · {info.label} ({ultimaConDeficit.mesociclo})
+                      </p>
+                      <p className="dp-body mt-0.5">{info.interpretacion}</p>
+                      <p className="dp-body mt-0.5">
+                        <span className="font-medium">Orientación: </span>
+                        {info.orientacion}
+                      </p>
+                      <p className="dp-muted mt-1 text-[10px]">
+                        El déficit no mide la explosividad directamente — cruzá este porcentaje con la altura
+                        absoluta de CMJ y SJ, no lo tomes como diagnóstico aislado.
+                      </p>
+                    </div>
+                  );
+                })()}
               <div className="flex flex-col gap-5 overflow-x-auto">
                 {g.metrics.map((m) => (
                   <MetricTimeline key={m.key} hist={hist} metricKey={m.key} label={m.label} />
