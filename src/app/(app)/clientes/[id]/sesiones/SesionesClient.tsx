@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { tonoEscalaPilar } from "@/lib/dipra/calc";
-import { agruparPorBloque } from "@/lib/dipra/agruparEjercicios";
+import { agruparPorBloque, ejerciciosDesdeDia } from "@/lib/dipra/agruparEjercicios";
 import { PILARES_KEYS, TIPOS_SESION, emptySesionPilares } from "@/lib/dipra/constants";
 import { youtubeEmbedUrl } from "@/lib/youtube";
 import type { DiaPlan, EjercicioSesion, Sesion } from "@/lib/dipra/types";
@@ -74,32 +74,7 @@ export function SesionesClient({
   const elegirDia = (label: string) => {
     if (!draft) return;
     const dia = diasPlan.find((d) => d.label === label);
-    const ejercicios: EjercicioSesion[] = [];
-    if (dia) {
-      dia.bloques.forEach((b) =>
-        b.exercises.forEach((e) => {
-          ejercicios.push({
-            id: crypto.randomUUID(),
-            nombre: e.nombre,
-            seriesPlan: e.series,
-            repsPlan: e.reps,
-            kgPlan: e.kg,
-            pesosSeriesPlan: e.pesosSeries,
-            seriesReal: e.series,
-            repsReal: e.reps,
-            kgReal: e.kg,
-            pesosSeriesReal: e.pesosSeries,
-            unilateral: e.unilateral,
-            pesoCadaUno: e.pesoCadaUno,
-            tipoCarga: e.tipoCarga,
-            tiempoSerie: e.tiempoSerie,
-            link: e.link,
-            bloqueTitle: b.title,
-            rpe: "",
-          });
-        })
-      );
-    }
+    const ejercicios = dia ? ejerciciosDesdeDia(dia) : [];
     setDraft({ ...draft, dia_plan_label: label, ejercicios });
   };
 

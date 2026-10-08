@@ -1,4 +1,36 @@
-import type { EjercicioSesion } from "./types";
+import type { DiaPlan, EjercicioSesion } from "./types";
+
+// Arma los EjercicioSesion de un día del plan tal como se ven recién
+// elegidos (real = plan todavía sin ejecutar) — usado al iniciar una sesión
+// nueva desde Sesiones y, con el mismo criterio, al registrar una sesión
+// grupal (ver grupos/actions.ts).
+export function ejerciciosDesdeDia(dia: DiaPlan): EjercicioSesion[] {
+  const ejercicios: EjercicioSesion[] = [];
+  dia.bloques.forEach((b) =>
+    b.exercises.forEach((e) => {
+      ejercicios.push({
+        id: crypto.randomUUID(),
+        nombre: e.nombre,
+        seriesPlan: e.series,
+        repsPlan: e.reps,
+        kgPlan: e.kg,
+        pesosSeriesPlan: e.pesosSeries,
+        seriesReal: e.series,
+        repsReal: e.reps,
+        kgReal: e.kg,
+        pesosSeriesReal: e.pesosSeries,
+        unilateral: e.unilateral,
+        pesoCadaUno: e.pesoCadaUno,
+        tipoCarga: e.tipoCarga,
+        tiempoSerie: e.tiempoSerie,
+        link: e.link,
+        bloqueTitle: b.title,
+        rpe: "",
+      });
+    })
+  );
+  return ejercicios;
+}
 
 export interface GrupoEjerciciosSesion {
   bloqueTitle: string;

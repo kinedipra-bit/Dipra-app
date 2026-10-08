@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { FmsData } from "@/lib/dipra/calc";
-import type { DiaPlan, Grupo, GrupoPlanSemana } from "@/lib/dipra/types";
+import { emptySesionPilares } from "@/lib/dipra/constants";
+import type { DiaPlan, EjercicioSesion, Grupo, GrupoPlanSemana } from "@/lib/dipra/types";
 
 function revalidar(grupoId?: string) {
   revalidatePath("/grupos");
@@ -104,6 +105,42 @@ export async function guardarSemanaGrupo(
     .eq("grupo_id", grupoId);
   if (error) throw new Error(error.message);
   revalidar(grupoId);
+}
+
+// Sesión grupal: deja registrado que la clase se hizo, creando una fila en
+// `sesiones` por cada asistente — misma tabla que usa Sesiones individual,
+// así la clase queda visible en la ficha de cada persona (y en su
+// Evolución) igual que si se hubiese cargado una por una.
+export async function crearSesionGrupal(input: {
+  grupoId: string;
+  asistentes: string[];
+  fecha: string;
+  diaPlanLabel: string;
+  ejercicios: EjercicioSesion[];
+  comentarios: string;
+}) {
+  if (input.asistentes.length === 0) throw new Error("Marcá al menos una persona que asistió.");
+  const supabase = await createClient();
+  const filas = input.asistentes.map((clientId) => ({
+    client_id: clientId,
+    fecha: input.fecha,
+    tipo: "Entrenamiento grupal",
+    dia_plan_label: input.diaPlanLabel,
+    es_primera_sesion: false,
+    comentarios_pre: "",
+    pilares: emptySesionPilares(),
+    comentarios: input.comentarios,
+    ejercicios: input.ejercicios,
+    registrada_por_cliente: false,
+    revisada: true,
+  }));
+  const { error } = await supabase.from("sesiones").insert(filas);
+  if (error) throw new Error(error.message);
+
+  input.asistentes.forEach((clientId) => revalidatePath(`/clientes/${clientId}/sesiones`));
+  revalidatePath("/");
+  revalidatePath("/clientes");
+  revalidar(input.grupoId);
 }
 
 // Evaluación grupal — FMS: trae el fms ACTUAL de cada miembro (para

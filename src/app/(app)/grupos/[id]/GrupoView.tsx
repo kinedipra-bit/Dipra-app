@@ -7,10 +7,11 @@ import type { EjercicioBiblioteca, Grupo, GrupoPlanSemana } from "@/lib/dipra/ty
 import { actualizarMiembros, eliminarGrupo, renombrarGrupo } from "../actions";
 import { GrupoPlanView } from "./GrupoPlanView";
 import { EvaluacionGrupalForm } from "./EvaluacionGrupalForm";
+import { SesionGrupalForm } from "./SesionGrupalForm";
 
 const CUPO_MAXIMO = 8;
 
-type Tab = "plan" | "evaluacion" | "miembros";
+type Tab = "plan" | "sesion" | "evaluacion" | "miembros";
 
 export function GrupoView({
   grupo,
@@ -32,6 +33,11 @@ export function GrupoView({
   const [guardandoNombre, startGuardarNombre] = useTransition();
   const [guardandoMiembros, startGuardarMiembros] = useTransition();
   const [eliminando, startEliminar] = useTransition();
+
+  // Días de la planificación grupal vigente — para elegir qué día se hizo
+  // al registrar una sesión grupal (ver SesionGrupalForm).
+  const semanaActiva = semanasIniciales.find((s) => s.id === grupo.semana_activa_id) ?? semanasIniciales[0];
+  const diasPlan = semanaActiva?.dias ?? [];
 
   const guardarNombre = () => {
     if (!nombre.trim()) return;
@@ -87,6 +93,7 @@ export function GrupoView({
         {(
           [
             { id: "plan", label: "Planificación" },
+            { id: "sesion", label: "Sesión grupal" },
             { id: "evaluacion", label: "Evaluación grupal" },
             { id: "miembros", label: `Miembros (${miembros.length}/${CUPO_MAXIMO})` },
           ] as const
@@ -112,6 +119,8 @@ export function GrupoView({
           bibliotecaInicial={bibliotecaInicial}
         />
       )}
+
+      {tab === "sesion" && <SesionGrupalForm grupoId={grupo.id} miembros={miembros} diasPlan={diasPlan} />}
 
       {tab === "evaluacion" && <EvaluacionGrupalForm miembros={miembros} />}
 
