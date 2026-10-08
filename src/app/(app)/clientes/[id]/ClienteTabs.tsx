@@ -10,6 +10,7 @@ const TABS = [
   { segment: "tareas", label: "Tareas" },
   { segment: "sesiones", label: "Sesiones" },
   { segment: "evolucion", label: "Evolución" },
+  { segment: "finanzas", label: "Finanzas" },
 ];
 
 export function ClienteTabs({ clienteId }: { clienteId: string }) {

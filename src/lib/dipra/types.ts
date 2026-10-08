@@ -354,3 +354,48 @@ export interface EjercicioBiblioteca {
   nombre: string;
   link: string;
 }
+
+// Finanzas — módulo administrativo (catálogo de servicios, qué plan tiene
+// cada cliente, pagos recibidos y gastos de la clínica).
+export interface Servicio {
+  id: string;
+  nombre: string;
+  tipo: "sesion" | "plan";
+  precio: number;
+  periodicidad: string;
+  descripcion: string;
+  activo: boolean;
+  created_at: string;
+}
+
+export interface ClienteServicio {
+  id: string;
+  client_id: string;
+  servicio_id: string;
+  precio_acordado: number;
+  fecha_inicio: string;
+  fecha_fin: string | null;
+  activo: boolean;
+  created_at: string;
+}
+
+export interface Pago {
+  id: string;
+  client_id: string;
+  cliente_servicio_id: string | null;
+  monto: number;
+  fecha: string;
+  metodo: string;
+  periodo: string;
+  comentario: string;
+  created_at: string;
+}
+
+export interface Gasto {
+  id: string;
+  fecha: string;
+  categoria: string;
+  monto: number;
+  descripcion: string;
+  created_at: string;
+}
