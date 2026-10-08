@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateFms } from "./actions";
-import { FMS_SUGERENCIAS, TOE_TOUCH_SUGERENCIA } from "@/lib/dipra/constants";
+import { crearFmsHistorial, actualizarFmsHistorial, eliminarFmsHistorial } from "./actions";
+import { FMS_SUGERENCIAS, TOE_TOUCH_SUGERENCIA, emptyFms } from "@/lib/dipra/constants";
 import { calcularFinalesFms, totalFms, type FmsData } from "@/lib/dipra/calc";
+import type { FmsHistorialEntry } from "@/lib/dipra/types";
 
 type LadoKey = "d" | "i" | "der" | "izq";
 type ParKey = "pasoValla" | "estocada" | "hombro" | "aslr" | "rotacion";
@@ -112,10 +113,41 @@ function FmsRow({
   );
 }
 
-export function FmsSection({ clienteId, initialFms }: { clienteId: string; initialFms: FmsData }) {
-  const [fms, setFms] = useState<FmsData>(initialFms);
+function fmtFecha(f: string) {
+  const d = new Date(f + "T00:00:00");
+  return isNaN(d.getTime())
+    ? f
+    : d.toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "2-digit" });
+}
+
+export function FmsSection({
+  clienteId,
+  initialItems,
+}: {
+  clienteId: string;
+  initialItems: FmsHistorialEntry[];
+}) {
+  const [items, setItems] = useState<FmsHistorialEntry[]>(
+    [...initialItems].sort((a, b) => b.fecha.localeCompare(a.fecha))
+  );
+  const [editingId, setEditingId] = useState<string | "new" | null>(null);
+  const [fecha, setFecha] = useState("");
+  const [fms, setFms] = useState<FmsData>(emptyFms());
   const [pending, startTransition] = useTransition();
-  const [savedAt, setSavedAt] = useState<number | null>(null);
+
+  const abrirNueva = () => {
+    setEditingId("new");
+    setFecha(new Date().toISOString().slice(0, 10));
+    setFms(emptyFms());
+  };
+
+  const abrirEdicion = (entry: FmsHistorialEntry) => {
+    setEditingId(entry.id);
+    setFecha(entry.fecha);
+    setFms(entry.fms);
+  };
+
+  const cerrar = () => setEditingId(null);
 
   const setPar = (key: ParKey, lado: "d" | "i", value: string) =>
     setFms((prev) => ({ ...prev, [key]: { ...prev[key], [lado]: value } }));
@@ -140,237 +172,319 @@ export function FmsSection({ clienteId, initialFms }: { clienteId: string; initi
   const toeTouchPositivo = Number(fms.toeTouch) > 0;
 
   const guardar = () => {
+    if (!fecha) return;
     startTransition(async () => {
-      await updateFms(clienteId, fms);
-      setSavedAt(Date.now());
+      if (editingId === "new") {
+        const nueva = await crearFmsHistorial(clienteId, fecha, fms);
+        setItems((prev) => [nueva, ...prev].sort((a, b) => b.fecha.localeCompare(a.fecha)));
+      } else if (editingId) {
+        await actualizarFmsHistorial(clienteId, editingId, fecha, fms);
+        setItems((prev) =>
+          prev
+            .map((it) => (it.id === editingId ? { ...it, fecha, fms } : it))
+            .sort((a, b) => b.fecha.localeCompare(a.fecha))
+        );
+      }
+      setEditingId(null);
+    });
+  };
+
+  const eliminar = (id: string) => {
+    if (!confirm("¿Eliminar esta evaluación FMS? Esta acción no se puede deshacer.")) return;
+    startTransition(async () => {
+      await eliminarFmsHistorial(clienteId, id);
+      setItems((prev) => prev.filter((it) => it.id !== id));
+      if (editingId === id) setEditingId(null);
     });
   };
 
   return (
-    <section className="grid grid-cols-2 gap-5">
-      <div className="dp-surface rounded-2xl p-5 shadow-sm">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-medium dp-text-heading">Screening de movimiento · FMS</h2>
-          <div className="text-right">
-            <p className="dp-muted text-[10px] font-medium uppercase tracking-wide">Total score</p>
-            <p className="font-mono text-xl font-semibold dp-text-heading">
-              {total}
-              <span className="dp-muted text-xs"> / 21</span>
-            </p>
-          </div>
-        </div>
-
-        <div
-          className="dp-muted grid gap-1 pb-1 text-[10px] font-medium uppercase tracking-wide"
-          style={{ gridTemplateColumns: "1.4fr 0.3fr 0.6fr 0.6fr" }}
-        >
-          <span>Movimiento</span>
-          <span />
-          <span>Raw</span>
-          <span className="text-center">Final</span>
-        </div>
-
-        <FmsRow
-          label="Sentadilla"
-          single
-          singleValue={fms.sentadilla}
-          onSingle={(v) => setFms((prev) => ({ ...prev, sentadilla: v }))}
-          final={finales.sentadilla}
-        />
-        <FmsRow
-          label="Paso valla"
-          dValue={fms.pasoValla.d}
-          iValue={fms.pasoValla.i}
-          onD={(v) => setPar("pasoValla", "d", v)}
-          onI={(v) => setPar("pasoValla", "i", v)}
-          final={finales.pasoValla}
-        />
-        <FmsRow
-          label="Estocada"
-          dValue={fms.estocada.d}
-          iValue={fms.estocada.i}
-          onD={(v) => setPar("estocada", "d", v)}
-          onI={(v) => setPar("estocada", "i", v)}
-          final={finales.estocada}
-        />
-
-        <div className="flex items-center justify-between border-b border-black/5 py-1.5">
-          <span className="dp-muted text-xs">Clearing tobillo · dolor</span>
-          <div className="flex gap-2">
-            <ClearingToggle
-              value={fms.clearingTobDolor?.d ?? false}
-              onChange={(v) => setClearingPar("clearingTobDolor", "d", v)}
-            />
-            <ClearingToggle
-              value={fms.clearingTobDolor?.i ?? false}
-              onChange={(v) => setClearingPar("clearingTobDolor", "i", v)}
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between border-b border-black/5 py-1.5">
-          <span className="dp-muted text-xs">Clearing tobillo · movilidad</span>
-          <div className="flex gap-2">
-            <ClearingToggle
-              value={fms.clearingTobMob?.d ?? false}
-              onChange={(v) => setClearingPar("clearingTobMob", "d", v)}
-            />
-            <ClearingToggle
-              value={fms.clearingTobMob?.i ?? false}
-              onChange={(v) => setClearingPar("clearingTobMob", "i", v)}
-            />
-          </div>
-        </div>
-
-        <FmsRow
-          label="Movilidad de hombro"
-          dValue={fms.hombro.d}
-          iValue={fms.hombro.i}
-          onD={(v) => setPar("hombro", "d", v)}
-          onI={(v) => setPar("hombro", "i", v)}
-          final={finales.hombro}
-        />
-        <div className="flex items-center justify-between border-b border-black/5 py-1.5">
-          <span className="dp-muted text-xs">Clearing hombro (no fuerza el puntaje)</span>
-          <div className="flex gap-2">
-            <ClearingToggle
-              value={fms.clearingHombro?.d ?? false}
-              onChange={(v) => setClearingPar("clearingHombro", "d", v)}
-            />
-            <ClearingToggle
-              value={fms.clearingHombro?.i ?? false}
-              onChange={(v) => setClearingPar("clearingHombro", "i", v)}
-            />
-          </div>
-        </div>
-
-        <FmsRow
-          label="ASLR"
-          dValue={fms.aslr.d}
-          iValue={fms.aslr.i}
-          onD={(v) => setPar("aslr", "d", v)}
-          onI={(v) => setPar("aslr", "i", v)}
-          final={finales.aslr}
-        />
-        <FmsRow
-          label="Push up"
-          single
-          singleValue={fms.pushUp}
-          onSingle={(v) => setFms((prev) => ({ ...prev, pushUp: v }))}
-          final={finales.pushUp}
-        />
-        <div className="flex items-center justify-between border-b border-black/5 py-1.5">
-          <span className="dp-muted text-xs">Clearing extensión (no fuerza el puntaje)</span>
-          <ClearingToggle
-            value={fms.clearingExtension}
-            onChange={(v) => setFms((prev) => ({ ...prev, clearingExtension: v }))}
-          />
-        </div>
-
-        <FmsRow
-          label="Estabilidad rotacional"
-          dValue={fms.rotacion.d}
-          iValue={fms.rotacion.i}
-          onD={(v) => setPar("rotacion", "d", v)}
-          onI={(v) => setPar("rotacion", "i", v)}
-          final={finales.rotacion}
-        />
-        <div className="flex items-center justify-between border-b border-black/5 py-1.5">
-          <span className="dp-muted text-xs">Clearing flexión (no fuerza el puntaje)</span>
-          <ClearingToggle
-            value={fms.clearingFlexion}
-            onChange={(v) => setFms((prev) => ({ ...prev, clearingFlexion: v }))}
-          />
-        </div>
-
-        <div className="flex items-center justify-between border-b border-black/5 py-1.5">
-          <span className="dp-muted text-xs">Toe touch (cm)</span>
-          <RawInput
-            value={fms.toeTouch ?? ""}
-            onChange={(v) => setFms((prev) => ({ ...prev, toeTouch: v }))}
-            width={50}
-          />
-        </div>
-        <div className="flex items-center justify-between py-1.5">
-          <span className="dp-muted text-xs">Clearing muñeca (der / izq)</span>
-          <div className="flex gap-2">
-            <ClearingToggle
-              value={fms.clearingMuneca?.der ?? false}
-              onChange={(v) => setClearingPar("clearingMuneca", "der", v)}
-            />
-            <ClearingToggle
-              value={fms.clearingMuneca?.izq ?? false}
-              onChange={(v) => setClearingPar("clearingMuneca", "izq", v)}
-            />
-          </div>
-        </div>
-
-        <div className="mt-4 flex items-center gap-3">
+    <section className="dp-surface rounded-2xl p-5 shadow-sm">
+      <div className="mb-1 flex items-center justify-between">
+        <h2 className="font-medium dp-text-heading">Screening de movimiento · FMS</h2>
+        {editingId === null && (
           <button
             type="button"
-            onClick={guardar}
-            disabled={pending}
-            className="dp-bg-brand rounded-lg px-5 py-2 text-sm font-medium text-white disabled:opacity-50"
+            onClick={abrirNueva}
+            className="dp-bg-brand rounded-lg px-3.5 py-1.5 text-sm font-medium text-white"
           >
-            {pending ? "Guardando…" : "Guardar screening FMS"}
+            + Nueva evaluación FMS
           </button>
-          {savedAt && !pending && <span className="dp-muted text-xs">Guardado.</span>}
-        </div>
-      </div>
-
-      <div className="dp-surface sticky top-5 h-fit rounded-2xl p-5 shadow-sm">
-        <h2 className="mb-1 font-medium dp-text-heading">Sugerencias de evaluación</h2>
-        <p className="dp-muted mb-4 text-xs">
-          Se actualizan solas con puntajes 0, 1 o 2 — el 0 significa dolor y es lo más urgente, luego 1 y
-          luego 2.
-        </p>
-        {sugerencias.length === 0 && !toeTouchPositivo ? (
-          <p className="dp-muted py-6 text-center text-sm">
-            Sin puntajes de 0, 1 o 2 todavía. A medida que llenes el screening, aquí aparecerán los tests de
-            seguimiento recomendados.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {toeTouchPositivo && (
-              <div className="dp-bg-faint rounded-xl p-3">
-                <div className="mb-1 flex items-center gap-2">
-                  <span className="dp-bg-amber flex h-5 w-5 items-center justify-center rounded-full font-mono text-xs font-semibold text-white">
-                    !
-                  </span>
-                  <span className="text-sm font-medium dp-text-heading">Toe touch</span>
-                </div>
-                <p className="dp-body text-xs leading-relaxed">{TOE_TOUCH_SUGERENCIA}</p>
-              </div>
-            )}
-            {sugerencias.map((s) => (
-              <div key={s.key} className="dp-bg-faint rounded-xl p-3">
-                <div className="mb-1 flex items-center gap-2">
-                  <span
-                    className={`flex h-5 w-5 items-center justify-center rounded-full font-mono text-xs font-semibold text-white ${
-                      s.score <= 1 ? "dp-bg-alert" : "dp-bg-amber"
-                    }`}
-                  >
-                    {s.score}
-                  </span>
-                  <span className="text-sm font-medium dp-text-heading">{s.label}</span>
-                </div>
-                <p className="dp-body text-xs leading-relaxed">{s[s.score]}</p>
-                <div className="mt-2">
-                  <label className="dp-muted text-[10px] font-medium uppercase tracking-wide">
-                    Tu seguimiento (criterio propio)
-                  </label>
-                  <input
-                    value={fms.seguimientoPropio?.[s.key] || ""}
-                    onChange={(e) => setSeguimiento(s.key, e.target.value)}
-                    placeholder="Ej: test de knee-to-wall, up and go, etc."
-                    className="mt-0.5 w-full rounded-md border border-black/10 bg-white px-2 py-1 text-xs outline-none focus:dp-border-brand"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
         )}
       </div>
+      <p className="dp-muted mb-3 text-xs">
+        Cada evaluación queda guardada con su fecha — podés cambiarla si estás cargando una evaluación
+        antigua.
+      </p>
+
+      {items.length === 0 && editingId === null ? (
+        <p className="dp-muted py-3 text-center text-sm">Sin evaluaciones FMS registradas todavía.</p>
+      ) : (
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {items.map((it) => {
+            const finalesItem = calcularFinalesFms(it.fms);
+            const totalItem = totalFms(finalesItem);
+            return (
+              <div key={it.id} className="dp-bg-faint flex items-center gap-1.5 rounded-lg px-2 py-1 text-[11px]">
+                <span className="dp-muted font-mono">{fmtFecha(it.fecha)}</span>
+                <span className="dp-text-heading font-medium">
+                  {totalItem}
+                  <span className="dp-muted">/21</span>
+                </span>
+                <button type="button" onClick={() => abrirEdicion(it)} className="dp-text-brand font-medium hover:underline">
+                  Editar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => eliminar(it.id)}
+                  disabled={pending}
+                  className="dp-muted hover:dp-alert disabled:opacity-50"
+                >
+                  ✕
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {editingId !== null && (
+        <div className="grid grid-cols-2 gap-5 border-t border-black/5 pt-4">
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <label className="flex items-center gap-2 text-sm">
+                <span className="dp-body font-medium">Fecha</span>
+                <input
+                  type="date"
+                  value={fecha}
+                  onChange={(e) => setFecha(e.target.value)}
+                  className="rounded-lg border border-black/10 px-2 py-1 font-mono text-sm outline-none focus:dp-border-brand"
+                />
+              </label>
+              <div className="text-right">
+                <p className="dp-muted text-[10px] font-medium uppercase tracking-wide">Total score</p>
+                <p className="font-mono text-xl font-semibold dp-text-heading">
+                  {total}
+                  <span className="dp-muted text-xs"> / 21</span>
+                </p>
+              </div>
+            </div>
+
+            <div
+              className="dp-muted grid gap-1 pb-1 text-[10px] font-medium uppercase tracking-wide"
+              style={{ gridTemplateColumns: "1.4fr 0.3fr 0.6fr 0.6fr" }}
+            >
+              <span>Movimiento</span>
+              <span />
+              <span>Raw</span>
+              <span className="text-center">Final</span>
+            </div>
+
+            <FmsRow
+              label="Sentadilla"
+              single
+              singleValue={fms.sentadilla}
+              onSingle={(v) => setFms((prev) => ({ ...prev, sentadilla: v }))}
+              final={finales.sentadilla}
+            />
+            <FmsRow
+              label="Paso valla"
+              dValue={fms.pasoValla.d}
+              iValue={fms.pasoValla.i}
+              onD={(v) => setPar("pasoValla", "d", v)}
+              onI={(v) => setPar("pasoValla", "i", v)}
+              final={finales.pasoValla}
+            />
+            <FmsRow
+              label="Estocada"
+              dValue={fms.estocada.d}
+              iValue={fms.estocada.i}
+              onD={(v) => setPar("estocada", "d", v)}
+              onI={(v) => setPar("estocada", "i", v)}
+              final={finales.estocada}
+            />
+
+            <div className="flex items-center justify-between border-b border-black/5 py-1.5">
+              <span className="dp-muted text-xs">Clearing tobillo · dolor</span>
+              <div className="flex gap-2">
+                <ClearingToggle
+                  value={fms.clearingTobDolor?.d ?? false}
+                  onChange={(v) => setClearingPar("clearingTobDolor", "d", v)}
+                />
+                <ClearingToggle
+                  value={fms.clearingTobDolor?.i ?? false}
+                  onChange={(v) => setClearingPar("clearingTobDolor", "i", v)}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between border-b border-black/5 py-1.5">
+              <span className="dp-muted text-xs">Clearing tobillo · movilidad</span>
+              <div className="flex gap-2">
+                <ClearingToggle
+                  value={fms.clearingTobMob?.d ?? false}
+                  onChange={(v) => setClearingPar("clearingTobMob", "d", v)}
+                />
+                <ClearingToggle
+                  value={fms.clearingTobMob?.i ?? false}
+                  onChange={(v) => setClearingPar("clearingTobMob", "i", v)}
+                />
+              </div>
+            </div>
+
+            <FmsRow
+              label="Movilidad de hombro"
+              dValue={fms.hombro.d}
+              iValue={fms.hombro.i}
+              onD={(v) => setPar("hombro", "d", v)}
+              onI={(v) => setPar("hombro", "i", v)}
+              final={finales.hombro}
+            />
+            <div className="flex items-center justify-between border-b border-black/5 py-1.5">
+              <span className="dp-muted text-xs">Clearing hombro (no fuerza el puntaje)</span>
+              <div className="flex gap-2">
+                <ClearingToggle
+                  value={fms.clearingHombro?.d ?? false}
+                  onChange={(v) => setClearingPar("clearingHombro", "d", v)}
+                />
+                <ClearingToggle
+                  value={fms.clearingHombro?.i ?? false}
+                  onChange={(v) => setClearingPar("clearingHombro", "i", v)}
+                />
+              </div>
+            </div>
+
+            <FmsRow
+              label="ASLR"
+              dValue={fms.aslr.d}
+              iValue={fms.aslr.i}
+              onD={(v) => setPar("aslr", "d", v)}
+              onI={(v) => setPar("aslr", "i", v)}
+              final={finales.aslr}
+            />
+            <FmsRow
+              label="Push up"
+              single
+              singleValue={fms.pushUp}
+              onSingle={(v) => setFms((prev) => ({ ...prev, pushUp: v }))}
+              final={finales.pushUp}
+            />
+            <div className="flex items-center justify-between border-b border-black/5 py-1.5">
+              <span className="dp-muted text-xs">Clearing extensión (no fuerza el puntaje)</span>
+              <ClearingToggle
+                value={fms.clearingExtension}
+                onChange={(v) => setFms((prev) => ({ ...prev, clearingExtension: v }))}
+              />
+            </div>
+
+            <FmsRow
+              label="Estabilidad rotacional"
+              dValue={fms.rotacion.d}
+              iValue={fms.rotacion.i}
+              onD={(v) => setPar("rotacion", "d", v)}
+              onI={(v) => setPar("rotacion", "i", v)}
+              final={finales.rotacion}
+            />
+            <div className="flex items-center justify-between border-b border-black/5 py-1.5">
+              <span className="dp-muted text-xs">Clearing flexión (no fuerza el puntaje)</span>
+              <ClearingToggle
+                value={fms.clearingFlexion}
+                onChange={(v) => setFms((prev) => ({ ...prev, clearingFlexion: v }))}
+              />
+            </div>
+
+            <div className="flex items-center justify-between border-b border-black/5 py-1.5">
+              <span className="dp-muted text-xs">Toe touch (cm)</span>
+              <RawInput
+                value={fms.toeTouch ?? ""}
+                onChange={(v) => setFms((prev) => ({ ...prev, toeTouch: v }))}
+                width={50}
+              />
+            </div>
+            <div className="flex items-center justify-between py-1.5">
+              <span className="dp-muted text-xs">Clearing muñeca (der / izq)</span>
+              <div className="flex gap-2">
+                <ClearingToggle
+                  value={fms.clearingMuneca?.der ?? false}
+                  onChange={(v) => setClearingPar("clearingMuneca", "der", v)}
+                />
+                <ClearingToggle
+                  value={fms.clearingMuneca?.izq ?? false}
+                  onChange={(v) => setClearingPar("clearingMuneca", "izq", v)}
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={guardar}
+                disabled={pending || !fecha}
+                className="dp-bg-brand rounded-lg px-5 py-2 text-sm font-medium text-white disabled:opacity-50"
+              >
+                {pending ? "Guardando…" : editingId === "new" ? "Guardar evaluación" : "Guardar cambios"}
+              </button>
+              <button type="button" onClick={cerrar} disabled={pending} className="dp-muted text-sm hover:underline">
+                Cancelar
+              </button>
+            </div>
+          </div>
+
+          <div className="dp-bg-faint sticky top-5 h-fit rounded-2xl p-5">
+            <h2 className="mb-1 font-medium dp-text-heading">Sugerencias de evaluación</h2>
+            <p className="dp-muted mb-4 text-xs">
+              Se actualizan solas con puntajes 0, 1 o 2 — el 0 significa dolor y es lo más urgente, luego 1 y
+              luego 2.
+            </p>
+            {sugerencias.length === 0 && !toeTouchPositivo ? (
+              <p className="dp-muted py-6 text-center text-sm">
+                Sin puntajes de 0, 1 o 2 todavía. A medida que llenes el screening, aquí aparecerán los tests
+                de seguimiento recomendados.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {toeTouchPositivo && (
+                  <div className="dp-surface rounded-xl p-3">
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className="dp-bg-amber flex h-5 w-5 items-center justify-center rounded-full font-mono text-xs font-semibold text-white">
+                        !
+                      </span>
+                      <span className="text-sm font-medium dp-text-heading">Toe touch</span>
+                    </div>
+                    <p className="dp-body text-xs leading-relaxed">{TOE_TOUCH_SUGERENCIA}</p>
+                  </div>
+                )}
+                {sugerencias.map((s) => (
+                  <div key={s.key} className="dp-surface rounded-xl p-3">
+                    <div className="mb-1 flex items-center gap-2">
+                      <span
+                        className={`flex h-5 w-5 items-center justify-center rounded-full font-mono text-xs font-semibold text-white ${
+                          s.score <= 1 ? "dp-bg-alert" : "dp-bg-amber"
+                        }`}
+                      >
+                        {s.score}
+                      </span>
+                      <span className="text-sm font-medium dp-text-heading">{s.label}</span>
+                    </div>
+                    <p className="dp-body text-xs leading-relaxed">{s[s.score]}</p>
+                    <div className="mt-2">
+                      <label className="dp-muted text-[10px] font-medium uppercase tracking-wide">
+                        Tu seguimiento (criterio propio)
+                      </label>
+                      <input
+                        value={fms.seguimientoPropio?.[s.key] || ""}
+                        onChange={(e) => setSeguimiento(s.key, e.target.value)}
+                        placeholder="Ej: test de knee-to-wall, up and go, etc."
+                        className="mt-0.5 w-full rounded-md border border-black/10 bg-white px-2 py-1 text-xs outline-none focus:dp-border-brand"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

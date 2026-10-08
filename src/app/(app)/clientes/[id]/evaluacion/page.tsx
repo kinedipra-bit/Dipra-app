@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Cliente, ComposicionCorporalEntry, EvaluacionCustomEntry, MovilidadEsferaEntry } from "@/lib/dipra/types";
+import type {
+  Cliente,
+  ComposicionCorporalEntry,
+  EvaluacionCustomEntry,
+  FmsHistorialEntry,
+  MovilidadEsferaEntry,
+} from "@/lib/dipra/types";
 import { MotivoConsultaSection } from "./MotivoConsultaSection";
 import { PilaresSection } from "./PilaresSection";
 import { ComposicionCorporalSection } from "./ComposicionCorporalSection";
@@ -15,7 +21,7 @@ export default async function EvaluacionPage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: cliente }, { data: composicion }, { data: movilidad }, { data: evaluacionesCustom }] =
+  const [{ data: cliente }, { data: composicion }, { data: fmsHistorial }, { data: movilidad }, { data: evaluacionesCustom }] =
     await Promise.all([
       supabase.from("clients").select("*").eq("id", id).single<Cliente>(),
       supabase
@@ -24,6 +30,12 @@ export default async function EvaluacionPage({ params }: { params: Promise<{ id:
         .eq("client_id", id)
         .order("fecha", { ascending: false })
         .returns<ComposicionCorporalEntry[]>(),
+      supabase
+        .from("client_fms_historial")
+        .select("*")
+        .eq("client_id", id)
+        .order("fecha", { ascending: false })
+        .returns<FmsHistorialEntry[]>(),
       supabase
         .from("client_movilidad_esferas")
         .select("*")
@@ -61,7 +73,7 @@ export default async function EvaluacionPage({ params }: { params: Promise<{ id:
         <NuevaMedicionForm clienteId={cliente.id} tituloBoton="+ Cargar evaluación de rendimiento" />
       </section>
 
-      <FmsSection clienteId={cliente.id} initialFms={cliente.fms} />
+      <FmsSection clienteId={cliente.id} initialItems={fmsHistorial ?? []} />
       <DolorAliciaSection clienteId={cliente.id} initialDolorAlicia={cliente.dolor_alicia ?? {}} />
       <MovilidadEsferasSection clienteId={cliente.id} initialItems={movilidad ?? []} />
       <EvaluacionesCustomSection clienteId={cliente.id} initialItems={evaluacionesCustom ?? []} />

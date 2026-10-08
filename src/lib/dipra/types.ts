@@ -38,6 +38,14 @@ export interface Cliente {
   updated_at: string;
 }
 
+export interface FmsHistorialEntry {
+  id: string;
+  client_id: string;
+  fecha: string;
+  fms: import("./calc").FmsData;
+  created_at: string;
+}
+
 export interface ComposicionCorporalEntry {
   id: string;
   client_id: string;

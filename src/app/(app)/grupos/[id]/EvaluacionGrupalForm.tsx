@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { crearPrHistorial, type NuevaMedicionInput } from "@/app/(app)/clientes/[id]/evolucion/actions";
-import { agregarComposicion, updateFms } from "@/app/(app)/clientes/[id]/evaluacion/actions";
+import { agregarComposicion, crearFmsHistorial } from "@/app/(app)/clientes/[id]/evaluacion/actions";
 import { METRICS, camposVacios, type MetricKey } from "@/app/(app)/clientes/[id]/evolucion/metricas";
 import { obtenerFmsDeMiembros } from "../actions";
 import type { FmsData } from "@/lib/dipra/calc";
@@ -153,7 +153,7 @@ export function EvaluacionGrupalForm({ miembros }: { miembros: { id: string; nom
           const fmsDraft = fms[m.id];
           const tieneFms = fmsDraft && Object.values(fmsDraft).some((v) => v.trim() !== "");
           if (tieneFms && fmsActual?.[m.id]) {
-            await updateFms(m.id, {
+            await crearFmsHistorial(m.id, fecha, {
               ...fmsActual[m.id],
               sentadilla: fmsDraft.sentadilla.trim() || fmsActual[m.id].sentadilla,
               pushUp: fmsDraft.pushUp.trim() || fmsActual[m.id].pushUp,
