@@ -81,6 +81,18 @@ export interface PrHistorialEntry {
   plancha_lateral_der: number;
   plancha_lateral_izq: number;
   pararse_del_suelo: number;
+  // Valores de métricas personalizadas (ver MetricaExtra) — clave = su id.
+  extra: Record<string, number>;
+}
+
+// Ejercicio de rendimiento agregado por el profesional además de los fijos
+// (ej. "RDL") — cliente_id null = disponible para todos los clientes,
+// mismo criterio que PlantillaRutina.
+export interface MetricaExtra {
+  id: string;
+  cliente_id: string | null;
+  label: string;
+  created_at: string;
 }
 
 export interface MovilidadEsferaEntry {

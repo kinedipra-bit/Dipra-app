@@ -6,6 +6,7 @@ import type {
   ComposicionCorporalEntry,
   EvaluacionCustomEntry,
   FmsHistorialEntry,
+  MetricaExtra,
   MovilidadEsferaEntry,
 } from "@/lib/dipra/types";
 import { MotivoConsultaSection } from "./MotivoConsultaSection";
@@ -21,34 +22,46 @@ export default async function EvaluacionPage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: cliente }, { data: composicion }, { data: fmsHistorial }, { data: movilidad }, { data: evaluacionesCustom }] =
-    await Promise.all([
-      supabase.from("clients").select("*").eq("id", id).single<Cliente>(),
-      supabase
-        .from("client_composicion_corporal")
-        .select("*")
-        .eq("client_id", id)
-        .order("fecha", { ascending: false })
-        .returns<ComposicionCorporalEntry[]>(),
-      supabase
-        .from("client_fms_historial")
-        .select("*")
-        .eq("client_id", id)
-        .order("fecha", { ascending: false })
-        .returns<FmsHistorialEntry[]>(),
-      supabase
-        .from("client_movilidad_esferas")
-        .select("*")
-        .eq("client_id", id)
-        .order("created_at")
-        .returns<MovilidadEsferaEntry[]>(),
-      supabase
-        .from("client_evaluaciones_custom")
-        .select("*")
-        .eq("client_id", id)
-        .order("created_at")
-        .returns<EvaluacionCustomEntry[]>(),
-    ]);
+  const [
+    { data: cliente },
+    { data: composicion },
+    { data: fmsHistorial },
+    { data: movilidad },
+    { data: evaluacionesCustom },
+    { data: metricasExtra },
+  ] = await Promise.all([
+    supabase.from("clients").select("*").eq("id", id).single<Cliente>(),
+    supabase
+      .from("client_composicion_corporal")
+      .select("*")
+      .eq("client_id", id)
+      .order("fecha", { ascending: false })
+      .returns<ComposicionCorporalEntry[]>(),
+    supabase
+      .from("client_fms_historial")
+      .select("*")
+      .eq("client_id", id)
+      .order("fecha", { ascending: false })
+      .returns<FmsHistorialEntry[]>(),
+    supabase
+      .from("client_movilidad_esferas")
+      .select("*")
+      .eq("client_id", id)
+      .order("created_at")
+      .returns<MovilidadEsferaEntry[]>(),
+    supabase
+      .from("client_evaluaciones_custom")
+      .select("*")
+      .eq("client_id", id)
+      .order("created_at")
+      .returns<EvaluacionCustomEntry[]>(),
+    supabase
+      .from("metricas_rendimiento_extra")
+      .select("*")
+      .or(`cliente_id.is.null,cliente_id.eq.${id}`)
+      .order("created_at")
+      .returns<MetricaExtra[]>(),
+  ]);
 
   if (!cliente) notFound();
 
@@ -70,7 +83,11 @@ export default async function EvaluacionPage({ params }: { params: Promise<{ id:
           Saltos (CMJ/SJ), fuerza, agarre, planchas, etc. — se carga acá y queda disponible en la pestaña
           Evolución.
         </p>
-        <NuevaMedicionForm clienteId={cliente.id} tituloBoton="+ Cargar evaluación de rendimiento" />
+        <NuevaMedicionForm
+          clienteId={cliente.id}
+          tituloBoton="+ Cargar evaluación de rendimiento"
+          metricasExtraIniciales={metricasExtra ?? []}
+        />
       </section>
 
       <FmsSection clienteId={cliente.id} initialItems={fmsHistorial ?? []} />

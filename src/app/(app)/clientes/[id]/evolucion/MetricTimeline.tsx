@@ -49,6 +49,38 @@ function fmtFechaCorta(f: string) {
   return isNaN(d.getTime()) ? f : d.toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "2-digit" });
 }
 
+const MESES_COMPARACION_PROGRESO = 6;
+const DIA_MS = 24 * 60 * 60 * 1000;
+
+function formatearDuracion(dias: number): string {
+  if (dias < 45) return `${Math.round(dias)} día${Math.round(dias) === 1 ? "" : "s"}`;
+  const meses = dias / 30.44;
+  if (meses < 18) return `${Math.round(meses)} meses`;
+  return `${(meses / 12).toFixed(1)} años`;
+}
+
+// Feedback de progreso basado en evidencia: compara el último registro con
+// el que haya más cerca de MESES_COMPARACION_PROGRESO meses antes (o el más
+// antiguo disponible, si hay menos historial que eso) — y lo dice con la
+// duración REAL entre ambos, nunca "6 meses" fijo si en realidad hay menos
+// datos.
+function progresoReciente(puntos: Punto[]): { texto: string; signo: "pos" | "neg" | "neutro" } | null {
+  if (puntos.length < 2) return null;
+  const ultimo = puntos[puntos.length - 1];
+  const objetivoT = ultimo.t - MESES_COMPARACION_PROGRESO * 30.44 * DIA_MS;
+  const anteriores = puntos.slice(0, -1);
+  const comparacion = anteriores.reduce((mejor, p) =>
+    Math.abs(p.t - objetivoT) < Math.abs(mejor.t - objetivoT) ? p : mejor
+  );
+  const dias = (ultimo.t - comparacion.t) / DIA_MS;
+  if (dias < 14) return null; // demasiado poco tiempo entre mediciones para que un delta signifique algo
+  const delta = ultimo.valor - comparacion.valor;
+  const signo = delta > 0 ? "pos" : delta < 0 ? "neg" : "neutro";
+  const deltaTexto = delta > 0 ? `+${delta}` : delta < 0 ? `${delta}` : "sin cambios";
+  const texto = `${deltaTexto} en ${formatearDuracion(dias)} (${fmtFechaCorta(comparacion.fecha)} → ${fmtFechaCorta(ultimo.fecha)})`;
+  return { texto, signo };
+}
+
 // Línea de tiempo real (no columnas parejas) de una métrica — el eje X
 // respeta las fechas de verdad, así un salto de un año entre mediciones se
 // VE como un salto grande, y se puede comparar "mayo" con "mayo del año
@@ -57,19 +89,27 @@ function fmtFechaCorta(f: string) {
 export function MetricTimeline({
   hist,
   metricKey,
+  extraId,
   label,
 }: {
   hist: PrHistorialEntry[];
-  metricKey: MetricKey;
+  // Una métrica fija (columna propia en client_pr_historial) o una
+  // personalizada (clave dentro de la columna `extra` jsonb, ver
+  // metricas.ts) — exactamente una de las dos.
+  metricKey?: MetricKey;
+  extraId?: string;
   label: string;
 }) {
   const [activoId, setActivoId] = useState<string | null>(null);
+
+  const valorDe = (h: PrHistorialEntry) =>
+    metricKey ? Number(h[metricKey]) || 0 : Number(h.extra?.[extraId ?? ""]) || 0;
 
   const puntos: Punto[] = hist
     .map((h) => ({
       id: h.id,
       t: new Date(h.fecha + "T00:00:00").getTime(),
-      valor: Number(h[metricKey]) || 0,
+      valor: valorDe(h),
       fecha: h.fecha,
       mesociclo: h.mesociclo,
       objetivo: h.objetivo,
@@ -88,6 +128,7 @@ export function MetricTimeline({
 
   const maxValor = Math.max(...puntos.map((p) => p.valor));
   const activo = puntos.find((p) => p.id === activoId) ?? null;
+  const progreso = progresoReciente(puntos);
 
   // Un solo punto: nada que trazar en el tiempo, se muestra solo.
   if (puntos.length === 1) {
@@ -136,11 +177,21 @@ export function MetricTimeline({
     <div>
       <div className="mb-1 flex items-center justify-between">
         <p className="dp-muted text-xs font-medium">{label}</p>
-        {activo && (
+        {activo ? (
           <p className="dp-text-heading font-mono text-[11px]">
             {activo.valor} · {fmtFechaCorta(activo.fecha)} · {activo.mesociclo}
             {activo.objetivo && ` · ${activo.objetivo}`}
           </p>
+        ) : (
+          progreso && (
+            <p
+              className={`font-mono text-[11px] font-medium ${
+                progreso.signo === "pos" ? "dp-text-brand" : progreso.signo === "neg" ? "dp-text-amber" : "dp-muted"
+              }`}
+            >
+              {progreso.texto}
+            </p>
+          )
         )}
       </div>
       <svg

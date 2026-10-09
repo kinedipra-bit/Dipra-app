@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { crearPrHistorial, type NuevaMedicionInput } from "./actions";
+import { crearMetricaExtra, crearPrHistorial, eliminarMetricaExtra, type NuevaMedicionInput } from "./actions";
 import { GRUPOS, METRICS, nuevoDraft } from "./metricas";
+import type { MetricaExtra } from "@/lib/dipra/types";
 
 const inputClass = "rounded-lg border border-black/10 px-3 py-1.5 text-sm outline-none focus:dp-border-brand";
 
@@ -12,17 +13,57 @@ const inputClass = "rounded-lg border border-black/10 px-3 py-1.5 text-sm outlin
  * (client_pr_historial) que muestra el historial/gráficos de la pestaña
  * Evolución — pero se usa también, sin los gráficos, desde Evaluación
  * (donde solo hace falta cargar el dato, no ver la evolución histórica).
+ *
+ * Además de las métricas fijas, permite agregar nuevos ejercicios a seguir
+ * (ej. "RDL") — quedan disponibles para siempre (ver metricasExtra), acá y
+ * en los gráficos de Evolución si el padre escucha onMetricasExtraChange.
  */
 export function NuevaMedicionForm({
   clienteId,
   tituloBoton = "+ Nuevo registro de mesociclo",
+  metricasExtraIniciales = [],
+  onMetricasExtraChange,
 }: {
   clienteId: string;
   tituloBoton?: string;
+  metricasExtraIniciales?: MetricaExtra[];
+  onMetricasExtraChange?: (metricas: MetricaExtra[]) => void;
 }) {
   const [showAdd, setShowAdd] = useState(false);
-  const [draft, setDraft] = useState(nuevoDraft());
+  const [draft, setDraft] = useState({ ...nuevoDraft(), extra: {} as Record<string, string> });
+  const [metricasExtra, setMetricasExtra] = useState(metricasExtraIniciales);
+  const [mostrarNuevoEjercicio, setMostrarNuevoEjercicio] = useState(false);
+  const [nuevoEjercicioLabel, setNuevoEjercicioLabel] = useState("");
+  const [alcanceNuevoEjercicio, setAlcanceNuevoEjercicio] = useState<"cliente" | "general">("cliente");
   const [pending, startTransition] = useTransition();
+  const [creandoEjercicio, startCrearEjercicio] = useTransition();
+
+  const actualizarMetricasExtra = (next: MetricaExtra[]) => {
+    setMetricasExtra(next);
+    onMetricasExtraChange?.(next);
+  };
+
+  const agregarEjercicio = () => {
+    if (!nuevoEjercicioLabel.trim()) return;
+    startCrearEjercicio(async () => {
+      const creada = await crearMetricaExtra(
+        clienteId,
+        alcanceNuevoEjercicio === "general" ? null : clienteId,
+        nuevoEjercicioLabel.trim()
+      );
+      actualizarMetricasExtra([...metricasExtra, creada]);
+      setNuevoEjercicioLabel("");
+      setMostrarNuevoEjercicio(false);
+    });
+  };
+
+  const quitarEjercicio = (m: MetricaExtra) => {
+    if (!confirm(`¿Quitar "${m.label}" de la lista? Los valores ya cargados no se borran.`)) return;
+    startCrearEjercicio(async () => {
+      await eliminarMetricaExtra(clienteId, m.id);
+      actualizarMetricasExtra(metricasExtra.filter((x) => x.id !== m.id));
+    });
+  };
 
   const agregar = () => {
     if (!draft.mesociclo.trim()) return;
@@ -47,13 +88,14 @@ export function NuevaMedicionForm({
       plancha_lateral_der: 0,
       plancha_lateral_izq: 0,
       pararse_del_suelo: 0,
+      extra: Object.fromEntries(metricasExtra.map((m) => [m.id, Number(draft.extra[m.id]) || 0])),
     };
     METRICS.forEach((m) => {
       entrada[m.key] = Number(draft[m.key]) || 0;
     });
     startTransition(async () => {
       await crearPrHistorial(clienteId, entrada);
-      setDraft(nuevoDraft());
+      setDraft({ ...nuevoDraft(), extra: {} });
       setShowAdd(false);
     });
   };
@@ -119,6 +161,85 @@ export function NuevaMedicionForm({
               </div>
             </div>
           ))}
+
+          <div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <p className="dp-text-brand text-xs font-semibold uppercase tracking-wide">Personalizados</p>
+              <button
+                type="button"
+                onClick={() => setMostrarNuevoEjercicio((v) => !v)}
+                className="dp-text-brand text-xs font-medium hover:underline"
+              >
+                + Agregar ejercicio
+              </button>
+            </div>
+
+            {mostrarNuevoEjercicio && (
+              <div className="dp-bg-faint mb-2 flex flex-col gap-2 rounded-xl p-3">
+                <input
+                  value={nuevoEjercicioLabel}
+                  onChange={(e) => setNuevoEjercicioLabel(e.target.value)}
+                  placeholder="Ej. RDL (peso muerto rumano)"
+                  className={inputClass}
+                />
+                <div className="flex items-center gap-4 text-sm">
+                  <label className="flex items-center gap-1.5">
+                    <input
+                      type="radio"
+                      checked={alcanceNuevoEjercicio === "cliente"}
+                      onChange={() => setAlcanceNuevoEjercicio("cliente")}
+                    />
+                    Solo para este cliente
+                  </label>
+                  <label className="flex items-center gap-1.5">
+                    <input
+                      type="radio"
+                      checked={alcanceNuevoEjercicio === "general"}
+                      onChange={() => setAlcanceNuevoEjercicio("general")}
+                    />
+                    General (disponible para todos)
+                  </label>
+                </div>
+                <button
+                  type="button"
+                  onClick={agregarEjercicio}
+                  disabled={!nuevoEjercicioLabel.trim() || creandoEjercicio}
+                  className="dp-bg-brand w-fit rounded-lg px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
+                >
+                  {creandoEjercicio ? "Agregando…" : "Agregar"}
+                </button>
+              </div>
+            )}
+
+            {metricasExtra.length === 0 ? (
+              <p className="dp-muted text-xs">Todavía no agregaste ningún ejercicio personalizado.</p>
+            ) : (
+              <div className="grid grid-cols-4 gap-3">
+                {metricasExtra.map((m) => (
+                  <div key={m.id} className="flex flex-col gap-1 text-[11px]">
+                    <span className="dp-body flex items-center justify-between gap-1 font-medium">
+                      <span className="truncate">{m.label}</span>
+                      <button
+                        type="button"
+                        onClick={() => quitarEjercicio(m)}
+                        disabled={creandoEjercicio}
+                        className="dp-muted hover:dp-alert shrink-0 disabled:opacity-50"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                    <input
+                      type="number"
+                      value={draft.extra[m.id] ?? ""}
+                      onChange={(e) => setDraft({ ...draft, extra: { ...draft.extra, [m.id]: e.target.value } })}
+                      className={`${inputClass} font-mono`}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <button
             type="button"
             onClick={agregar}

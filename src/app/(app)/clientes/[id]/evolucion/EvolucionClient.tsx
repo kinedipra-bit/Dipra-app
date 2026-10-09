@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { DEFICIT_EXPLOSIVO_INFO, deficitExplosivo, perfilDeficitExplosivo } from "@/lib/dipra/calc";
-import type { PrHistorialEntry } from "@/lib/dipra/types";
+import type { MetricaExtra, PrHistorialEntry } from "@/lib/dipra/types";
 import { eliminarPrHistorial } from "./actions";
 import { NuevaMedicionForm } from "./NuevaMedicionForm";
 import { MetricTimeline } from "./MetricTimeline";
@@ -18,14 +18,17 @@ function fmtFecha(f: string) {
 export function EvolucionClient({
   clienteId,
   historialInicial,
+  metricasExtraIniciales,
 }: {
   clienteId: string;
   historialInicial: PrHistorialEntry[];
+  metricasExtraIniciales: MetricaExtra[];
 }) {
   const hist = [...historialInicial].sort((a, b) => a.fecha.localeCompare(b.fecha));
 
   const [pending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [metricasExtra, setMetricasExtra] = useState(metricasExtraIniciales);
 
   const borrar = (id: string) => {
     if (!confirm("¿Eliminar este registro de mesociclo? Esta acción no se puede deshacer.")) return;
@@ -38,7 +41,11 @@ export function EvolucionClient({
 
   return (
     <div className="flex flex-col gap-4">
-      <NuevaMedicionForm clienteId={clienteId} />
+      <NuevaMedicionForm
+        clienteId={clienteId}
+        metricasExtraIniciales={metricasExtra}
+        onMetricasExtraChange={setMetricasExtra}
+      />
 
       {hist.length === 0 ? (
         <p className="dp-muted dp-surface rounded-2xl p-8 text-center text-sm shadow-sm">
@@ -133,6 +140,17 @@ export function EvolucionClient({
               </div>
             </div>
           ))}
+
+          {metricasExtra.length > 0 && (
+            <div className="mb-6 last:mb-0">
+              <p className="dp-text-brand mb-2 text-xs font-semibold uppercase tracking-wide">Personalizados</p>
+              <div className="flex flex-col gap-5 overflow-x-auto">
+                {metricasExtra.map((m) => (
+                  <MetricTimeline key={m.id} hist={hist} extraId={m.id} label={m.label} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
