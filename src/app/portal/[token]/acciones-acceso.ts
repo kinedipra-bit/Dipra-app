@@ -174,8 +174,12 @@ export async function solicitarRestablecerPin(token: string): Promise<Resultado>
 
   try {
     await enviarCorreoResetPin({ para: cliente.correo, nombre: cliente.nombre, link });
-  } catch {
-    return { ok: false, error: "No se pudo enviar el correo — intentá de nuevo en un momento." };
+  } catch (error) {
+    // Este mensaje lo ve el CLIENTE en su portal — se mantiene genérico
+    // (el detalle real, ej. dominio de Resend sin verificar, queda en el
+    // log del servidor para que el profesional lo pueda diagnosticar).
+    console.error("solicitarRestablecerPin: fallo al enviar correo", error);
+    return { ok: false, error: "No se pudo enviar el correo — avisale a tu profesional." };
   }
 
   return { ok: true };

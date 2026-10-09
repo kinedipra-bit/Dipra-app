@@ -67,8 +67,9 @@ export async function enviarLinkPortal(clienteId: string): Promise<{ ok: true } 
 
   try {
     await enviarCorreoLinkPortal({ para: cliente.correo, nombre: cliente.nombre, link });
-  } catch {
-    return { ok: false, error: "No se pudo enviar el correo — intentá de nuevo en un momento." };
+  } catch (error) {
+    const mensaje = error instanceof Error ? error.message : "No se pudo enviar el correo — intentá de nuevo en un momento.";
+    return { ok: false, error: mensaje };
   }
   return { ok: true };
 }
