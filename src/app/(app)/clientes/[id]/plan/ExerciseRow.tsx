@@ -119,9 +119,18 @@ export function ExerciseRow({
   // Activa el modo "peso por serie": prellena un array de largo `series`
   // usando los valores de pesosSeries ya guardados (si hay) y, para el
   // resto, el valor uniforme de `kg` como default.
+  //
+  // Al CERRAR el modo, hay que vaciar pesosSeries (no solo ocultar la
+  // grilla): volumenEjercicio, el portal y la sesión del cliente deciden si
+  // usan el peso por serie o el uniforme mirando si pesosSeries tiene algún
+  // valor cargado — no miran este toggle, que es solo de esta fila. Si se
+  // dejaba el array viejo adentro al cerrar, esos valores quedaban
+  // "activos" en todos lados aunque acá se viera (y editara) el campo
+  // uniforme — el profesional cambiaba el Kg uniforme sin efecto real.
   const togglePesoPorSerie = () => {
     if (pesoPorSerieAbierto) {
       setPesoPorSerieAbierto(false);
+      onChange({ ...ex, pesosSeries: [] });
       return;
     }
     const base = ex.pesosSeries ?? [];
@@ -142,6 +151,7 @@ export function ExerciseRow({
   const toggleRepsPorSerie = () => {
     if (repsPorSerieAbierto) {
       setRepsPorSerieAbierto(false);
+      onChange({ ...ex, repsSeries: [] });
       return;
     }
     const base = ex.repsSeries ?? [];
