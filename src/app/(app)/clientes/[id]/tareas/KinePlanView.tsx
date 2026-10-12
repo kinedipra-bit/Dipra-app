@@ -182,10 +182,15 @@ export function KinePlanView({
     });
   };
 
+  // Igual que en PlanView.compartirRutina: guarda lo que está EN PANTALLA
+  // antes de compartir — compartirPlanKine lee `dias` directo de la base,
+  // así que sin este guardado previo una edición sin "Guardar cambios"
+  // quedaba afuera al compartir, sin avisar.
   const compartir = () => {
     startCompartir(async () => {
+      await guardarPlanKine(clienteId, dias);
       await compartirPlanKine(clienteId);
-      setPlan((prev) => ({ ...prev, dias_publicado: dias, cambios_sin_compartir: false }));
+      setPlan((prev) => ({ ...prev, dias, dias_publicado: dias, cambios_sin_compartir: false }));
       setSharedAt(Date.now());
     });
   };
@@ -240,6 +245,20 @@ export function KinePlanView({
         Plan de kinesiología/rehabilitación — independiente de la rutina de fuerza. El cliente lo ve en la pestaña
         &quot;Tareas&quot; de su portal, recién cuando lo compartís.
       </p>
+
+      {plan.cambios_sin_compartir && (
+        <div className="dp-bg-amber-soft flex flex-wrap items-center justify-between gap-2 rounded-2xl px-4 py-3">
+          <p className="dp-text-amber text-sm font-medium">⚠ El cliente todavía NO ve esta versión de Tareas.</p>
+          <button
+            type="button"
+            onClick={compartir}
+            disabled={compartiendo}
+            className="dp-bg-ink shrink-0 rounded-lg px-4 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+          >
+            {compartiendo ? "Compartiendo…" : "Compartir ahora"}
+          </button>
+        </div>
+      )}
 
       <datalist id="biblioteca-datalist-kine">
         {biblioteca.map((b) => (
