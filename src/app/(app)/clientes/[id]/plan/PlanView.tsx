@@ -246,9 +246,20 @@ export function PlanView({
 
   // "Compartir rutina": recién acá el cliente pasa a ver esto en su portal
   // (hasta entonces, sigue viendo la última versión compartida).
+  // Comparte lo que está EN PANTALLA en este momento — antes publicaba
+  // `dias` tal como estaba guardado en la base (compartirSemana lee la
+  // columna directo), así que si había ediciones todavía no guardadas con
+  // "Guardar cambios", "Compartir rutina" las dejaba afuera sin avisar: el
+  // cliente seguía viendo la versión anterior aunque el profesional ya
+  // hubiera tocado "Compartir". Ahora guarda primero, siempre.
   const compartirRutina = () => {
     if (!semana) return;
     startCompartir(async () => {
+      await guardarSemana(clienteId, semana.id, {
+        mesociclo: semana.mesociclo,
+        objetivo: semana.objetivo,
+        dias: semana.dias,
+      });
       await compartirSemana(clienteId, semana.id);
       updateSemana({ ...semana, dias_publicado: semana.dias, cambios_sin_compartir: false });
       setSharedAt(Date.now());
@@ -426,6 +437,23 @@ export function PlanView({
     <div className="flex flex-col gap-5">
       <FmsResumenPlan fms={fms} />
 
+      {semana.cambios_sin_compartir && (
+        <div className="dp-bg-amber-soft flex flex-wrap items-center justify-between gap-2 rounded-2xl px-4 py-3">
+          <p className="dp-text-amber text-sm font-medium">
+            ⚠ El cliente todavía NO ve esta versión de Semana {semana.numero}
+            {semana.mesociclo && ` (${semana.mesociclo})`} — compartila cuando esté lista.
+          </p>
+          <button
+            type="button"
+            onClick={compartirRutina}
+            disabled={compartiendo}
+            className="dp-bg-ink shrink-0 rounded-lg px-4 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+          >
+            {compartiendo ? "Compartiendo…" : "Compartir ahora"}
+          </button>
+        </div>
+      )}
+
       <datalist id="biblioteca-datalist">
         {biblioteca.map((b) => (
           <option key={b.id} value={b.nombre} />
@@ -444,7 +472,8 @@ export function PlanView({
                 s.id === semana.id ? "dp-bg-brand text-white" : "dp-bg-faint dp-body"
               }`}
             >
-              {s.mesociclo || `Semana ${s.numero}`}
+              Semana {s.numero}
+              {s.mesociclo && ` · ${s.mesociclo}`}
               {s.objetivo && ` · ${s.objetivo}`}
             </button>
           ))}

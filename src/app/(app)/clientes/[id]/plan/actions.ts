@@ -4,6 +4,17 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { DiaPlan, PlanSemana, EjercicioBiblioteca, PlantillaRutina } from "@/lib/dipra/types";
 
+// Inicio calcula la alerta "semana completa" (ver alertasProgramacion.ts) a
+// partir de los días/fecha de creación de la semana ACTIVA de cada cliente
+// — crear, guardar, compartir o cambiar de semana activa puede cambiar esa
+// alerta, así que las cuatro acciones de esta semana necesitan revalidar
+// "/" además de la página de Plan (antes solo revalidaban Plan, por eso la
+// alerta se quedaba pegada después de programar la semana siguiente).
+function revalidarInicio() {
+  revalidatePath("/");
+  revalidatePath("/clientes");
+}
+
 // Crea una semana nueva (clon de la semana activa, o plantilla en blanco si
 // es la primera) y la marca como semana activa del cliente. El id, número y
 // días ya vienen resueltos desde el cliente (ver PlanView.crearNuevaSemana)
@@ -40,6 +51,7 @@ export async function crearSemana(
   if (clienteError) throw new Error(clienteError.message);
 
   revalidatePath(`/clientes/${clienteId}/plan`);
+  revalidarInicio();
   return data;
 }
 
@@ -52,6 +64,7 @@ export async function setSemanaActiva(clienteId: string, semanaId: string) {
 
   if (error) throw new Error(error.message);
   revalidatePath(`/clientes/${clienteId}/plan`);
+  revalidarInicio();
 }
 
 // Persiste mesociclo/objetivo y el árbol `dias` completo de una semana en un
@@ -72,6 +85,7 @@ export async function guardarSemana(
 
   if (error) throw new Error(error.message);
   revalidatePath(`/clientes/${clienteId}/plan`);
+  revalidarInicio();
 }
 
 // "Compartir rutina": copia el borrador actual (`dias`) a la versión que
@@ -100,6 +114,7 @@ export async function compartirSemana(clienteId: string, semanaId: string) {
   if (error) throw new Error(error.message);
 
   revalidatePath(`/clientes/${clienteId}/plan`);
+  revalidarInicio();
 }
 
 // Guarda la semana actual como plantilla reutilizable ("biblioteca de
