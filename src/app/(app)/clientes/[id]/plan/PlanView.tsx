@@ -67,6 +67,23 @@ function clonarBloques(bloques: BloquePlan[]): BloquePlan[] {
   }));
 }
 
+// Al clonar una semana (nueva semana o plantilla), el comentario que el
+// CLIENTE haya escrito en un ejercicio (ex.comentarioCliente, editable desde
+// el portal) no debe arrastrarse — vive pegado al id del ejercicio, y como
+// "+ Nueva semana" clona bloques/ejercicios con el MISMO id que la semana
+// anterior (ver comentario en crearNuevaSemana), un comentario de una
+// semana vieja podía seguir apareciendo en la nueva sin que nadie lo haya
+// escrito ahí.
+function limpiarComentariosCliente(dias: DiaPlan[]): DiaPlan[] {
+  return dias.map((d) => ({
+    ...d,
+    bloques: d.bloques.map((b) => ({
+      ...b,
+      exercises: b.exercises.map((e) => ({ ...e, comentarioCliente: "" })),
+    })),
+  }));
+}
+
 /**
  * Pestaña "Plan" del detalle de cliente. Migrado desde PlanTab
  * (dipra-app.jsx líneas 1287-1516).
@@ -100,9 +117,20 @@ export function PlanView({
   plantillasIniciales: PlantillaRutina[];
 }) {
   const [semanas, setSemanas] = useState<PlanSemana[]>(semanasIniciales);
+  // `semanaActivaId` es la semana que se está VIENDO/EDITANDO en esta
+  // pantalla — no necesariamente la que el cliente ve en su portal.
+  // `clienteVeSemanaId` es esa última: solo cambia con una acción explícita
+  // (crear una semana nueva, usar una plantilla, o "Hacer esta la semana
+  // activa"). Antes tocar la pestaña de CUALQUIER semana para revisarla ya
+  // la volvía la activa para el cliente — mirar una semana vieja de
+  // referencia le cambiaba sin querer a Karin qué semana veía en su portal.
   const [semanaActivaId, setSemanaActivaId] = useState<string | null>(
     semanaActivaIdInicial ?? semanasIniciales[0]?.id ?? null
   );
+  const [clienteVeSemanaId, setClienteVeSemanaId] = useState<string | null>(
+    semanaActivaIdInicial ?? semanasIniciales[0]?.id ?? null
+  );
+  const [activando, startActivar] = useTransition();
   const [diaIdx, setDiaIdx] = useState(0);
   const [diaFuenteCopiaId, setDiaFuenteCopiaId] = useState("");
   const [vista, setVista] = useState<Vista>("editar");
@@ -151,13 +179,15 @@ export function PlanView({
     const mesociclo = semana?.mesociclo ?? "";
     const objetivo = semana?.objetivo ?? "";
     const dias: DiaPlan[] = semana
-      ? structuredClone(semana.dias).map((d: DiaPlan) => ({ ...d, id: crypto.randomUUID() }))
+      ? limpiarComentariosCliente(structuredClone(semana.dias).map((d: DiaPlan) => ({ ...d, id: crypto.randomUUID() })))
       : nuevosDias();
 
     startCrear(async () => {
       const creada = await crearSemana(clienteId, { id, numero, mesociclo, objetivo, dias });
       setSemanas((prev) => [...prev, creada]);
       setSemanaActivaId(creada.id);
+      // crearSemana ya la activó server-side — se refleja acá también.
+      setClienteVeSemanaId(creada.id);
       setDiaIdx(0);
       setVista("editar");
     });
@@ -203,11 +233,13 @@ export function PlanView({
     if (!plantilla) return;
     const id = crypto.randomUUID();
     const numero = semanas.length + 1;
-    const dias: DiaPlan[] = structuredClone(plantilla.dias).map((d: DiaPlan) => ({
-      ...d,
-      id: crypto.randomUUID(),
-      bloques: clonarBloques(d.bloques),
-    }));
+    const dias: DiaPlan[] = limpiarComentariosCliente(
+      structuredClone(plantilla.dias).map((d: DiaPlan) => ({
+        ...d,
+        id: crypto.randomUUID(),
+        bloques: clonarBloques(d.bloques),
+      }))
+    );
 
     startCrear(async () => {
       const creada = await crearSemana(clienteId, {
@@ -219,16 +251,27 @@ export function PlanView({
       });
       setSemanas((prev) => [...prev, creada]);
       setSemanaActivaId(creada.id);
+      setClienteVeSemanaId(creada.id);
       setDiaIdx(0);
       setVista("editar");
       setPlantillaElegidaId("");
     });
   };
 
+  // Solo cambia qué semana se está VIENDO en esta pantalla — ya no activa
+  // nada server-side por sí sola (ver nota junto a clienteVeSemanaId).
   const seleccionarSemana = (id: string) => {
     setSemanaActivaId(id);
     setDiaIdx(0);
-    void marcarSemanaActiva(clienteId, id);
+  };
+
+  // Acción explícita para que el cliente pase a ver ESTA semana en su
+  // portal — antes esto pasaba solo con tocar la pestaña de la semana.
+  const activarParaCliente = (id: string) => {
+    startActivar(async () => {
+      await marcarSemanaActiva(clienteId, id);
+      setClienteVeSemanaId(id);
+    });
   };
 
   const guardarCambios = () => {
@@ -437,6 +480,23 @@ export function PlanView({
     <div className="flex flex-col gap-5">
       <FmsResumenPlan fms={fms} />
 
+      {semana.id !== clienteVeSemanaId && (
+        <div className="dp-bg-faint flex flex-wrap items-center justify-between gap-2 rounded-2xl px-4 py-3">
+          <p className="dp-body text-sm">
+            👁 Estás viendo Semana {semana.numero}
+            {semana.mesociclo && ` (${semana.mesociclo})`} — el cliente sigue viendo otra semana en su portal.
+          </p>
+          <button
+            type="button"
+            onClick={() => activarParaCliente(semana.id)}
+            disabled={activando}
+            className="dp-bg-brand shrink-0 rounded-lg px-4 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+          >
+            {activando ? "Activando…" : "Hacer esta la semana activa"}
+          </button>
+        </div>
+      )}
+
       {semana.cambios_sin_compartir && (
         <div className="dp-bg-amber-soft flex flex-wrap items-center justify-between gap-2 rounded-2xl px-4 py-3">
           <p className="dp-text-amber text-sm font-medium">
@@ -467,11 +527,12 @@ export function PlanView({
               key={s.id}
               type="button"
               onClick={() => seleccionarSemana(s.id)}
-              title={`Semana ${s.numero}`}
+              title={s.id === clienteVeSemanaId ? `Semana ${s.numero} — el cliente ve esta` : `Semana ${s.numero}`}
               className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
                 s.id === semana.id ? "dp-bg-brand text-white" : "dp-bg-faint dp-body"
               }`}
             >
+              {s.id === clienteVeSemanaId && "👁 "}
               Semana {s.numero}
               {s.mesociclo && ` · ${s.mesociclo}`}
               {s.objetivo && ` · ${s.objetivo}`}
@@ -728,7 +789,7 @@ export function PlanView({
                 className="mb-4 w-full rounded-lg border border-black/10 px-3 py-1.5 text-sm outline-none focus:dp-border-brand"
               />
 
-              <SesionesPorDia sesiones={sesiones} diaLabel={dia.label} />
+              <SesionesPorDia sesiones={sesiones} diaLabel={dia.label} semanaCreatedAt={semana.created_at} />
 
               <div className="flex flex-col gap-3">
                 {dia.bloques.map((b, bIdx) => {

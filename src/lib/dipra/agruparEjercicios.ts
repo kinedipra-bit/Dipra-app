@@ -23,6 +23,7 @@ export function ejerciciosDesdeDia(dia: DiaPlan): EjercicioSesion[] {
         pesoCadaUno: e.pesoCadaUno,
         tipoCarga: e.tipoCarga,
         tiempoSerie: e.tiempoSerie,
+        notaReps: e.notaReps,
         link: e.link,
         bloqueTitle: b.title,
         rpe: "",

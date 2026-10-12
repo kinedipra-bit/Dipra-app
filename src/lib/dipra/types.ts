@@ -296,6 +296,12 @@ export interface EjercicioSesion {
   // rutina, en vez de una lista plana de ejercicios. Sesiones guardadas
   // antes de este campo simplemente no lo traen.
   bloqueTitle?: string;
+  // Copiado de EjercicioPlan.notaReps (ver ese campo) — aclaración de las
+  // reps que el profesional dejó en el plan (ej. "5 a skip derecha y 5
+  // izquierda", o un aviso puntual tipo "hoy te puse 5kg por una para ver
+  // cómo responde la rodilla"). Antes no se copiaba a la sesión, así que el
+  // cliente nunca la veía al registrar lo que hizo.
+  notaReps?: string;
   // RPE general del ejercicio en la sesión — se mantiene por compatibilidad
   // con sesiones guardadas antes de poder marcarlo por serie (ver
   // rpeSeries). Si rpeSeries tiene valores, esos son los que se muestran.

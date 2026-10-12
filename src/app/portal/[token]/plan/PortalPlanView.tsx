@@ -67,7 +67,7 @@ export function PortalPlanView({
           <h2 className="dp-text-brand font-[family-name:var(--font-display)] font-semibold">{dia.label}</h2>
           {dia.foco && <p className="dp-muted mb-3 text-sm">{dia.foco}</p>}
 
-          <SesionesPorDia sesiones={sesiones} diaLabel={dia.label} />
+          <SesionesPorDia sesiones={sesiones} diaLabel={dia.label} semanaCreatedAt={semana.created_at} />
 
           {dia.bloques.map((bloque) => (
             <div key={bloque.id} className="mb-4 last:mb-0">

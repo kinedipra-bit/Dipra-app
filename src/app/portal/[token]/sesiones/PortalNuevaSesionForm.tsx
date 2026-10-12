@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { PILARES_KEYS, emptySesionPilares } from "@/lib/dipra/constants";
-import { agruparPorBloque } from "@/lib/dipra/agruparEjercicios";
+import { agruparPorBloque, ejerciciosDesdeDia } from "@/lib/dipra/agruparEjercicios";
 import { EscalaUnoADiez } from "@/app/(app)/clientes/[id]/sesiones/EscalaUnoADiez";
 import { youtubeEmbedUrl } from "@/lib/youtube";
 import { tonoEscalaPilar } from "@/lib/dipra/calc";
@@ -90,39 +90,14 @@ function borrarDraft(token: string) {
   }
 }
 
-// Arma la lista de ejercicios de un día a partir de la planificación, igual
-// que elegirDia en la vista del profesional (SesionesClient.tsx) — el
+// Arma la lista de ejercicios de un día a partir de la planificación — el
 // atleta ve su rutina de ESE día puntual y comenta/ajusta ahí mismo, en vez
 // de comentar en "Mi rutina" (donde el comentario queda pisado en el
-// ejercicio y no se sabe de qué sesión/fecha era).
+// ejercicio y no se sabe de qué sesión/fecha era). Reusa el mismo helper que
+// la vista del profesional (antes tenía su propia copia que no traía
+// notaReps — la nota del profesional nunca le llegaba al cliente).
 function ejerciciosDelDia(dia: DiaPlan | undefined): EjercicioSesion[] {
-  if (!dia) return [];
-  const ejercicios: EjercicioSesion[] = [];
-  dia.bloques.forEach((b) =>
-    b.exercises.forEach((e) => {
-      ejercicios.push({
-        id: crypto.randomUUID(),
-        nombre: e.nombre,
-        seriesPlan: e.series,
-        repsPlan: e.reps,
-        kgPlan: e.kg,
-        pesosSeriesPlan: e.pesosSeries,
-        seriesReal: e.series,
-        repsReal: e.reps,
-        kgReal: e.kg,
-        pesosSeriesReal: e.pesosSeries,
-        unilateral: e.unilateral,
-        pesoCadaUno: e.pesoCadaUno,
-        tipoCarga: e.tipoCarga,
-        tiempoSerie: e.tiempoSerie,
-        link: e.link,
-        bloqueTitle: b.title,
-        rpe: "",
-        comentario: "",
-      });
-    })
-  );
-  return ejercicios;
+  return dia ? ejerciciosDesdeDia(dia) : [];
 }
 
 function nuevoDraft(dias: DiaPlan[]): Draft {
@@ -385,6 +360,11 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
                           {(ex.tipoCarga || ex.tiempoSerie) && (
                             <p className="dp-muted text-[10px]">
                               {[ex.tipoCarga, ex.tiempoSerie].filter(Boolean).join(" · ")}
+                            </p>
+                          )}
+                          {ex.notaReps && (
+                            <p className="dp-bg-amber-soft dp-text-amber mt-1 rounded-md px-2 py-1 text-[11px]">
+                              {ex.notaReps}
                             </p>
                           )}
                           <div className="mt-1 flex flex-wrap items-center gap-2">
