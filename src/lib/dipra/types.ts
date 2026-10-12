@@ -425,3 +425,23 @@ export interface Gasto {
   descripcion: string;
   created_at: string;
 }
+
+// Mini calendario del portal: fechas sueltas que el propio cliente confirma
+// como "voy a entrenar este día" — de ahí sale el recordatorio push.
+export interface DiaEntrenamiento {
+  id: string;
+  client_id: string;
+  fecha: string;
+  created_at: string;
+}
+
+// Suscripción de notificaciones push (Web Push) de un dispositivo del
+// portal de un cliente — ver src/lib/push.ts.
+export interface PushSubscriptionRow {
+  id: string;
+  client_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  created_at: string;
+}

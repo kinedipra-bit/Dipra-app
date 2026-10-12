@@ -1,12 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
-import type { DiaPlan, Sesion } from "@/lib/dipra/types";
+import type { DiaEntrenamiento, DiaPlan, Sesion } from "@/lib/dipra/types";
 import { SesionesClient } from "./SesionesClient";
+
+function toISODate(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
 
 export default async function SesionesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: sesiones }, { data: cliente }, { data: semanas }] = await Promise.all([
+  const [{ data: sesiones }, { data: cliente }, { data: semanas }, { data: diasConfirmados }] = await Promise.all([
     supabase
       .from("sesiones")
       .select("*")
@@ -21,6 +25,15 @@ export default async function SesionesPage({ params }: { params: Promise<{ id: s
       .eq("client_id", id)
       .order("numero")
       .returns<{ id: string; numero: number; dias: DiaPlan[] }[]>(),
+    // Días que el cliente confirmó desde su portal (ver mini calendario en
+    // Sesiones del portal) — de hoy en adelante, para mostrar como aviso acá.
+    supabase
+      .from("client_dias_entrenamiento")
+      .select("*")
+      .eq("client_id", id)
+      .gte("fecha", toISODate(new Date()))
+      .order("fecha")
+      .returns<DiaEntrenamiento[]>(),
   ]);
 
   const semanaActiva =
@@ -31,6 +44,7 @@ export default async function SesionesPage({ params }: { params: Promise<{ id: s
       clienteId={id}
       sesionesIniciales={sesiones ?? []}
       diasPlan={semanaActiva?.dias ?? []}
+      diasConfirmados={diasConfirmados ?? []}
     />
   );
 }
