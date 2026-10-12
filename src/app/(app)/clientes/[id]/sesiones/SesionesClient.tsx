@@ -299,6 +299,11 @@ export function SesionesClient({
                                 {[ex.tipoCarga, ex.tiempoSerie].filter(Boolean).join(" · ")}
                               </span>
                             )}
+                            {ex.notaReps && (
+                              <span className="dp-bg-amber-soft dp-text-amber block rounded-md px-1.5 py-0.5 text-[10px]">
+                                {ex.notaReps}
+                              </span>
+                            )}
                           </div>
                           <span className="dp-muted font-mono text-xs">
                             {ex.seriesPlan}×{ex.repsPlan}

@@ -12,10 +12,24 @@ function pilarInvertido(p: (typeof PILARES_KEYS)[number]): boolean {
  * día correspondiente — tanto en el plan que ve el profesional como en el
  * que ve el atleta desde su portal. Muestra las últimas 3, más recientes
  * primero.
+ *
+ * `semanaCreatedAt`, si se pasa, acota a sesiones desde que esa semana se
+ * creó — mismo criterio que alertasProgramacion.ts ("sin esto, una sesión
+ * de una semana anterior que reutilizó la misma etiqueta 'Día 1'/'Día 3'
+ * podía aparecer pegada al día equivocado").
  */
-export function SesionesPorDia({ sesiones, diaLabel }: { sesiones: Sesion[]; diaLabel: string }) {
+export function SesionesPorDia({
+  sesiones,
+  diaLabel,
+  semanaCreatedAt,
+}: {
+  sesiones: Sesion[];
+  diaLabel: string;
+  semanaCreatedAt?: string | null;
+}) {
+  const desde = semanaCreatedAt?.slice(0, 10);
   const delDia = sesiones
-    .filter((s) => s.dia_plan_label === diaLabel)
+    .filter((s) => s.dia_plan_label === diaLabel && (!desde || s.fecha >= desde))
     .sort((a, b) => b.fecha.localeCompare(a.fecha))
     .slice(0, 3);
 
