@@ -2,7 +2,30 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { mandarPushACliente } from "@/lib/push";
 import type { DiaPlan, PlanKine } from "@/lib/dipra/types";
+
+// Aviso push al compartir — best-effort, ver la misma nota en
+// clientes/[id]/plan/actions.ts (avisarSemanaProgramada): nunca debe
+// romper el compartir en sí.
+async function avisarTareasProgramadas(supabase: Awaited<ReturnType<typeof createClient>>, clienteId: string) {
+  try {
+    const { data: cliente } = await supabase
+      .from("clients")
+      .select("nombre, portal_token")
+      .eq("id", clienteId)
+      .single<{ nombre: string; portal_token: string }>();
+    if (!cliente) return;
+    const primerNombre = cliente.nombre.trim().split(" ")[0] || cliente.nombre;
+    await mandarPushACliente(clienteId, {
+      title: "Tus tareas fueron actualizadas 💪",
+      body: `${primerNombre}, tu profesional actualizó tu plan de kinesiología — entrá a verlo.`,
+      url: `/portal/${cliente.portal_token}/tareas`,
+    });
+  } catch {
+    // Silencioso a propósito.
+  }
+}
 
 // El plan de kine es 1 fila por cliente (sin semanas) — se crea recién al
 // primer acceso a la pestaña "Tareas", no de antemano.
@@ -78,4 +101,5 @@ export async function compartirPlanKine(clienteId: string) {
     .eq("client_id", clienteId);
   if (error) throw new Error(error.message);
   revalidatePath(`/clientes/${clienteId}/tareas`);
+  await avisarTareasProgramadas(supabase, clienteId);
 }

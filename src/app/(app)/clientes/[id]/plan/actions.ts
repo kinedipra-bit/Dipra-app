@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { mandarPushACliente } from "@/lib/push";
 import type { DiaPlan, PlanSemana, EjercicioBiblioteca, PlantillaRutina } from "@/lib/dipra/types";
 
 // Inicio calcula la alerta "semana completa" (ver alertasProgramacion.ts) a
@@ -13,6 +14,31 @@ import type { DiaPlan, PlanSemana, EjercicioBiblioteca, PlantillaRutina } from "
 function revalidarInicio() {
   revalidatePath("/");
   revalidatePath("/clientes");
+}
+
+// Aviso push de "tu semana ya está programada" al compartir — best-effort:
+// si el cliente no activó notificaciones, o la infraestructura de push
+// todavía no está configurada (VAPID / tabla de suscripciones), NO debe
+// romper el compartir en sí (lo importante es que la rutina quedó
+// compartida; el aviso es un plus). Por eso va en su propio try/catch,
+// separado del resto de compartirSemana.
+async function avisarSemanaProgramada(supabase: Awaited<ReturnType<typeof createClient>>, clienteId: string) {
+  try {
+    const { data: cliente } = await supabase
+      .from("clients")
+      .select("nombre, portal_token")
+      .eq("id", clienteId)
+      .single<{ nombre: string; portal_token: string }>();
+    if (!cliente) return;
+    const primerNombre = cliente.nombre.trim().split(" ")[0] || cliente.nombre;
+    await mandarPushACliente(clienteId, {
+      title: "Tu semana ya está programada 💪",
+      body: `${primerNombre}, tu profesional actualizó tu rutina — entrá a verla.`,
+      url: `/portal/${cliente.portal_token}/plan`,
+    });
+  } catch {
+    // Silencioso a propósito — ver nota arriba.
+  }
 }
 
 // Crea una semana nueva (clon de la semana activa, o plantilla en blanco si
@@ -115,6 +141,7 @@ export async function compartirSemana(clienteId: string, semanaId: string) {
 
   revalidatePath(`/clientes/${clienteId}/plan`);
   revalidarInicio();
+  await avisarSemanaProgramada(supabase, clienteId);
 }
 
 // Guarda la semana actual como plantilla reutilizable ("biblioteca de
