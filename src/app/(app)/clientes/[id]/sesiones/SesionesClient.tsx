@@ -5,7 +5,7 @@ import { tonoEscalaPilar } from "@/lib/dipra/calc";
 import { agruparPorBloque, ejerciciosDesdeDia } from "@/lib/dipra/agruparEjercicios";
 import { PILARES_KEYS, TIPOS_SESION, emptySesionPilares } from "@/lib/dipra/constants";
 import { youtubeEmbedUrl } from "@/lib/youtube";
-import type { DiaPlan, EjercicioSesion, Sesion } from "@/lib/dipra/types";
+import type { DiaEntrenamiento, DiaPlan, EjercicioSesion, Sesion } from "@/lib/dipra/types";
 import { crearSesion, eliminarSesion, marcarSesionRevisada, type NuevaSesionInput } from "./actions";
 import { EscalaUnoADiez } from "./EscalaUnoADiez";
 
@@ -43,14 +43,21 @@ function tieneAlerta(s: Sesion) {
   return pilarBajo(s.pilares, s.es_primera_sesion);
 }
 
+function fmtFechaDiaConfirmado(f: string) {
+  const d = new Date(f + "T00:00:00");
+  return d.toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short" }).replace(/\.$/, "");
+}
+
 export function SesionesClient({
   clienteId,
   sesionesIniciales,
   diasPlan,
+  diasConfirmados,
 }: {
   clienteId: string;
   sesionesIniciales: Sesion[];
   diasPlan: DiaPlan[];
+  diasConfirmados: DiaEntrenamiento[];
 }) {
   const [modo, setModo] = useState<"list" | "form">("list");
   const [draft, setDraft] = useState<NuevaSesionInput | null>(null);
@@ -400,6 +407,15 @@ export function SesionesClient({
 
   return (
     <div className="flex flex-col gap-4">
+      {diasConfirmados.length > 0 && (
+        <div className="dp-bg-brand-soft rounded-xl px-3.5 py-2">
+          <p className="dp-text-brand text-xs font-medium">
+            Confirmó en su portal que entrena:{" "}
+            {diasConfirmados.map((d) => fmtFechaDiaConfirmado(d.fecha)).join(" · ")}
+          </p>
+        </div>
+      )}
+
       <div className="flex justify-end">
         <button
           type="button"

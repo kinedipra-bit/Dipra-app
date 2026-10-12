@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { EjercicioSesion } from "@/lib/dipra/types";
+import type { DiaEntrenamiento, EjercicioSesion } from "@/lib/dipra/types";
 
 export interface NuevaSesionPortalInput {
   fecha: string;
@@ -61,4 +61,50 @@ export async function eliminarSesionPortal(token: string, sesionId: string) {
 
   revalidatePath(`/portal/${token}/sesiones`);
   revalidatePath(`/clientes/${cliente.id}/sesiones`);
+}
+
+// Mini calendario: el cliente toca una fecha para confirmar "voy a entrenar
+// este día" — de ahí sale el recordatorio push (ver src/lib/push.ts y el
+// cron en app/api/cron/recordatorios-entrenamiento). Son fechas sueltas que
+// el cliente elige él mismo, no un horario fijo que arme el profesional.
+export async function confirmarDiaEntrenamiento(token: string, fecha: string) {
+  const admin = createAdminClient();
+  const { data: cliente } = await admin.from("clients").select("id").eq("portal_token", token).single();
+  if (!cliente) throw new Error("Link inválido");
+
+  const { error } = await admin
+    .from("client_dias_entrenamiento")
+    .upsert({ client_id: cliente.id, fecha }, { onConflict: "client_id,fecha" });
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/portal/${token}/sesiones`);
+  revalidatePath(`/clientes/${cliente.id}/sesiones`);
+}
+
+export async function quitarDiaEntrenamiento(token: string, fecha: string) {
+  const admin = createAdminClient();
+  const { data: cliente } = await admin.from("clients").select("id").eq("portal_token", token).single();
+  if (!cliente) throw new Error("Link inválido");
+
+  const { error } = await admin
+    .from("client_dias_entrenamiento")
+    .delete()
+    .eq("client_id", cliente.id)
+    .eq("fecha", fecha);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/portal/${token}/sesiones`);
+  revalidatePath(`/clientes/${cliente.id}/sesiones`);
+}
+
+export async function obtenerDiasConfirmados(clienteId: string, desde: string): Promise<DiaEntrenamiento[]> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("client_dias_entrenamiento")
+    .select("*")
+    .eq("client_id", clienteId)
+    .gte("fecha", desde)
+    .order("fecha")
+    .returns<DiaEntrenamiento[]>();
+  return data ?? [];
 }
