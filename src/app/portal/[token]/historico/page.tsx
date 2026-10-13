@@ -85,7 +85,6 @@ export default async function PortalHistoricoPage({ params }: { params: Promise<
     const diasEntrenados = new Set(sesionesVentana.map((ses) => ses.dia_plan_label)).size;
     return { numero: s.numero, mesociclo: s.mesociclo, diasTotales: s.dias.length, diasEntrenados, volumen };
   });
-  const maxVolumenSemana = Math.max(1, ...porSemana.map((s) => s.volumen));
 
   // Agrupa por mes calendario (YYYY-MM), más reciente primero.
   const porMes = new Map<string, Sesion[]>();
@@ -110,30 +109,28 @@ export default async function PortalHistoricoPage({ params }: { params: Promise<
           <h2 className="dp-text-brand mb-1 font-[family-name:var(--font-display)] font-semibold">
             Progresión semanal — volumen
           </h2>
-          <p className="dp-muted mb-4 text-xs">
+          <p className="dp-muted mb-3 text-xs">
             Kilos totales movidos por semana planificada — sirve para ver si vas subiendo de carga dentro de
             un mismo ciclo.
           </p>
-          <div className="flex items-end gap-3 overflow-x-auto pb-1">
+          <div className="divide-y divide-white/10">
             {porSemana.map((s) => (
-              <div key={s.numero} className="flex w-16 shrink-0 flex-col items-center gap-1.5">
-                <div className="flex h-28 w-full items-end overflow-hidden rounded-lg bg-white/5">
-                  {s.volumen > 0 && (
-                    <div
-                      title={`${s.volumen.toLocaleString("es-CL")} kg vol.`}
-                      className={`w-full rounded-t-lg ${
-                        s.diasTotales > 0 && s.diasEntrenados >= s.diasTotales ? "dp-bg-brand" : "dp-bg-amber"
-                      }`}
-                      style={{ height: `${(s.volumen / maxVolumenSemana) * 100}%` }}
-                    />
-                  )}
-                </div>
-                <span className="dp-body text-[11px] font-medium">Sem. {s.numero}</span>
-                <span className="dp-muted font-mono text-[10px]">
-                  {s.diasEntrenados}/{s.diasTotales} días
+              <div key={s.numero} className="flex items-center justify-between gap-3 py-2 text-sm">
+                <span className="dp-body font-medium">
+                  Semana {s.numero}
+                  {s.mesociclo && <span className="dp-muted"> · {s.mesociclo}</span>}
                 </span>
-                <span className="dp-ink font-mono text-[10px] font-semibold">
-                  {s.volumen > 0 ? s.volumen.toLocaleString("es-CL") : "—"}
+                <span className="flex items-center gap-3">
+                  <span
+                    className={`font-mono text-xs ${
+                      s.diasTotales > 0 && s.diasEntrenados >= s.diasTotales ? "dp-text-brand" : "dp-muted"
+                    }`}
+                  >
+                    {s.diasEntrenados}/{s.diasTotales} días
+                  </span>
+                  <span className="dp-ink w-28 text-right font-mono text-sm font-semibold">
+                    {s.volumen > 0 ? `${s.volumen.toLocaleString("es-CL")} kg` : "—"}
+                  </span>
                 </span>
               </div>
             ))}
