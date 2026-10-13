@@ -16,6 +16,7 @@ import { FmsSection } from "./FmsSection";
 import { DolorAliciaSection } from "./DolorAliciaSection";
 import { MovilidadEsferasSection } from "./MovilidadEsferasSection";
 import { EvaluacionesCustomSection } from "./EvaluacionesCustomSection";
+import { DiagnosticoKinesicoSection } from "./DiagnosticoKinesicoSection";
 import { NuevaMedicionForm } from "../evolucion/NuevaMedicionForm";
 
 export default async function EvaluacionPage({ params }: { params: Promise<{ id: string }> }) {
@@ -94,6 +95,7 @@ export default async function EvaluacionPage({ params }: { params: Promise<{ id:
       <DolorAliciaSection clienteId={cliente.id} initialDolorAlicia={cliente.dolor_alicia ?? {}} />
       <MovilidadEsferasSection clienteId={cliente.id} initialItems={movilidad ?? []} />
       <EvaluacionesCustomSection clienteId={cliente.id} initialItems={evaluacionesCustom ?? []} />
+      <DiagnosticoKinesicoSection clienteId={cliente.id} initialDiagnostico={cliente.diagnostico_kinesico} />
     </div>
   );
 }
