@@ -59,8 +59,9 @@ export function EvaluacionesCustomSection({
         </button>
       </div>
       <p className="dp-muted mb-3 text-xs">
-        Pruebas puntuales según cada paciente — ej. Up and go test, unipodal test, knee to wall. Los
-        cambios se guardan al salir del campo.
+        Pruebas puntuales según cada paciente — ej. Up and go test, unipodal test, knee to wall. El resultado
+        es texto libre: sirve tanto para un número como para algo tipo &quot;3 intentos: 6.1 / 5.8 / 5.0 seg
+        (mejor)&quot;. Los cambios se guardan al salir del campo.
       </p>
 
       {items.length === 0 && (
@@ -69,22 +70,23 @@ export function EvaluacionesCustomSection({
 
       <div className="flex flex-col gap-2">
         {items.map((e) => (
-          <div key={e.id} className="flex items-center gap-2">
+          <div key={e.id} className="flex items-start gap-2">
             <input
               value={e.nombre}
               onChange={(ev) => setCampo(e.id, { nombre: ev.target.value })}
               onBlur={(ev) => guardarCampo(e.id, { nombre: ev.target.value })}
               placeholder="Nombre del test"
-              className="w-40 rounded-lg border border-black/10 px-2 py-1 text-sm outline-none focus:dp-border-brand"
+              className="w-40 shrink-0 rounded-lg border border-black/10 px-2 py-1.5 text-sm outline-none focus:dp-border-brand"
             />
-            <input
+            <textarea
               value={e.resultado}
               onChange={(ev) => setCampo(e.id, { resultado: ev.target.value })}
               onBlur={(ev) => guardarCampo(e.id, { resultado: ev.target.value })}
-              placeholder="Resultado / observación"
-              className="flex-1 rounded-lg border border-black/10 px-2 py-1 text-sm outline-none focus:dp-border-brand"
+              placeholder="Resultado / observación — ej. 3 intentos: 6.1 / 5.8 / 5.0 seg (mejor)"
+              rows={2}
+              className="flex-1 rounded-lg border border-black/10 px-2 py-1.5 text-sm outline-none focus:dp-border-brand"
             />
-            <button type="button" onClick={() => quitar(e.id)} className="dp-muted hover:dp-alert">
+            <button type="button" onClick={() => quitar(e.id)} className="dp-muted hover:dp-alert mt-1.5">
               ✕
             </button>
           </div>

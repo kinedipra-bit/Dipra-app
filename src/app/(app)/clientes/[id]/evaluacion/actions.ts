@@ -104,6 +104,16 @@ export async function updateMotivoConsulta(clienteId: string, motivoConsulta: st
   revalidar(clienteId);
 }
 
+export async function updateDiagnosticoKinesico(clienteId: string, diagnostico: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("clients")
+    .update({ diagnostico_kinesico: diagnostico })
+    .eq("id", clienteId);
+  if (error) throw new Error(error.message);
+  revalidar(clienteId);
+}
+
 // Composición corporal --------------------------------------------------------
 // Histórico por fecha: solo alta y eliminación, no se editan mediciones pasadas.
 
