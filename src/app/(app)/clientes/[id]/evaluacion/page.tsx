@@ -4,16 +4,16 @@ import { createClient } from "@/lib/supabase/server";
 import type {
   Cliente,
   ComposicionCorporalEntry,
+  EpisodioHistorialEntry,
   EvaluacionCustomEntry,
   FmsHistorialEntry,
   MetricaExtra,
   MovilidadEsferaEntry,
 } from "@/lib/dipra/types";
-import { MotivoConsultaSection } from "./MotivoConsultaSection";
+import { EpisodiosSection } from "./EpisodiosSection";
 import { PilaresSection } from "./PilaresSection";
 import { ComposicionCorporalSection } from "./ComposicionCorporalSection";
 import { FmsSection } from "./FmsSection";
-import { DolorAliciaSection } from "./DolorAliciaSection";
 import { MovilidadEsferasSection } from "./MovilidadEsferasSection";
 import { EvaluacionesCustomSection } from "./EvaluacionesCustomSection";
 import { DiagnosticoKinesicoSection } from "./DiagnosticoKinesicoSection";
@@ -27,6 +27,7 @@ export default async function EvaluacionPage({ params }: { params: Promise<{ id:
     { data: cliente },
     { data: composicion },
     { data: fmsHistorial },
+    { data: episodios },
     { data: movilidad },
     { data: evaluacionesCustom },
     { data: metricasExtra },
@@ -44,6 +45,12 @@ export default async function EvaluacionPage({ params }: { params: Promise<{ id:
       .eq("client_id", id)
       .order("fecha", { ascending: false })
       .returns<FmsHistorialEntry[]>(),
+    supabase
+      .from("client_episodios_historial")
+      .select("*")
+      .eq("client_id", id)
+      .order("fecha", { ascending: false })
+      .returns<EpisodioHistorialEntry[]>(),
     supabase
       .from("client_movilidad_esferas")
       .select("*")
@@ -68,7 +75,7 @@ export default async function EvaluacionPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="flex flex-col gap-6">
-      <MotivoConsultaSection clienteId={cliente.id} initialMotivoConsulta={cliente.motivo_consulta} />
+      <EpisodiosSection clienteId={cliente.id} initialItems={episodios ?? []} />
       <PilaresSection clienteId={cliente.id} initialPilares={cliente.pilares} />
 
       <ComposicionCorporalSection clienteId={cliente.id} initialItems={composicion ?? []} />
@@ -92,7 +99,6 @@ export default async function EvaluacionPage({ params }: { params: Promise<{ id:
       </section>
 
       <FmsSection clienteId={cliente.id} initialItems={fmsHistorial ?? []} />
-      <DolorAliciaSection clienteId={cliente.id} initialDolorAlicia={cliente.dolor_alicia ?? {}} />
       <MovilidadEsferasSection clienteId={cliente.id} initialItems={movilidad ?? []} />
       <EvaluacionesCustomSection clienteId={cliente.id} initialItems={evaluacionesCustom ?? []} />
       <DiagnosticoKinesicoSection clienteId={cliente.id} initialDiagnostico={cliente.diagnostico_kinesico} />

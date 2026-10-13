@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { calcVolumenBloque } from "@/lib/dipra/calc";
 import type { FmsData } from "@/lib/dipra/calc";
-import { blockTemplate, nuevosDias } from "@/lib/dipra/constants";
+import { blockTemplate, nuevosDias, ENFOQUES_PLAN } from "@/lib/dipra/constants";
 import type {
   PlanSemana,
   DiaPlan,
@@ -24,6 +24,7 @@ import {
   guardarEnBiblioteca,
   crearPlantilla,
   eliminarPlantilla,
+  eliminarSemana,
 } from "./actions";
 import { ExerciseRow, EXERCISE_ROW_GRID_EDITABLE } from "./ExerciseRow";
 import { ResumenDia } from "./ResumenDia";
@@ -131,6 +132,7 @@ export function PlanView({
     semanaActivaIdInicial ?? semanasIniciales[0]?.id ?? null
   );
   const [activando, startActivar] = useTransition();
+  const [borrando, startBorrar] = useTransition();
   const [diaIdx, setDiaIdx] = useState(0);
   const [diaFuenteCopiaId, setDiaFuenteCopiaId] = useState("");
   const [vista, setVista] = useState<Vista>("editar");
@@ -160,6 +162,14 @@ export function PlanView({
   const semana = semanas[semanaIdx];
   const dia = semana?.dias[diaIdx];
 
+  // Posición de la semana actual dentro de su mesociclo (por nombre) — para
+  // la cuenta regresiva de fin de ciclo. Cuenta solo semanas con el mismo
+  // nombre de mesociclo, en el orden en que quedaron creadas.
+  const semanasDelMesociclo = semana ? semanas.filter((s) => s.mesociclo === semana.mesociclo) : [];
+  const semanaEnMesociclo = semana ? semanasDelMesociclo.findIndex((s) => s.id === semana.id) + 1 : 0;
+  const cicloCompleto = semana ? semanaEnMesociclo >= semana.duracion_semanas : false;
+  const enfoqueEsPreset = semana ? (ENFOQUES_PLAN as readonly string[]).includes(semana.objetivo) : true;
+
   const updateSemana = (next: PlanSemana) => {
     setSemanas((prev) => prev.map((s) => (s.id === next.id ? next : s)));
   };
@@ -178,12 +188,13 @@ export function PlanView({
     const numero = semanas.length + 1;
     const mesociclo = semana?.mesociclo ?? "";
     const objetivo = semana?.objetivo ?? "";
+    const duracion_semanas = semana?.duracion_semanas ?? 6;
     const dias: DiaPlan[] = semana
       ? limpiarComentariosCliente(structuredClone(semana.dias).map((d: DiaPlan) => ({ ...d, id: crypto.randomUUID() })))
       : nuevosDias();
 
     startCrear(async () => {
-      const creada = await crearSemana(clienteId, { id, numero, mesociclo, objetivo, dias });
+      const creada = await crearSemana(clienteId, { id, numero, mesociclo, objetivo, duracion_semanas, dias });
       setSemanas((prev) => [...prev, creada]);
       setSemanaActivaId(creada.id);
       // crearSemana ya la activó server-side — se refleja acá también.
@@ -247,6 +258,7 @@ export function PlanView({
         numero,
         mesociclo: plantilla.mesociclo,
         objetivo: plantilla.objetivo,
+        duracion_semanas: semana?.duracion_semanas ?? 6,
         dias,
       });
       setSemanas((prev) => [...prev, creada]);
@@ -274,12 +286,39 @@ export function PlanView({
     });
   };
 
+  // Borra una semana (ej. quedó una vacía por un corrimiento de numeración)
+  // y renumera el resto 1..N para no dejar huecos — ver eliminarSemana en
+  // actions.ts, que hace lo mismo server-side.
+  const borrarSemana = (id: string) => {
+    const target = semanas.find((s) => s.id === id);
+    if (!target) return;
+    if (!window.confirm(`¿Eliminar Semana ${target.numero}${target.mesociclo ? ` (${target.mesociclo})` : ""}? Se van a perder todos sus días, bloques y ejercicios planificados.`)) {
+      return;
+    }
+    startBorrar(async () => {
+      await eliminarSemana(clienteId, id);
+      const restantes = semanas
+        .filter((s) => s.id !== id)
+        .sort((a, b) => a.numero - b.numero)
+        .map((s, i) => ({ ...s, numero: i + 1 }));
+      setSemanas(restantes);
+      if (semanaActivaId === id) {
+        setSemanaActivaId(restantes[0]?.id ?? null);
+        setDiaIdx(0);
+      }
+      if (clienteVeSemanaId === id) {
+        setClienteVeSemanaId(restantes[restantes.length - 1]?.id ?? null);
+      }
+    });
+  };
+
   const guardarCambios = () => {
     if (!semana) return;
     startGuardar(async () => {
       await guardarSemana(clienteId, semana.id, {
         mesociclo: semana.mesociclo,
         objetivo: semana.objetivo,
+        duracion_semanas: semana.duracion_semanas,
         dias: semana.dias,
       });
       updateSemana({ ...semana, cambios_sin_compartir: true });
@@ -301,6 +340,7 @@ export function PlanView({
       await guardarSemana(clienteId, semana.id, {
         mesociclo: semana.mesociclo,
         objetivo: semana.objetivo,
+        duracion_semanas: semana.duracion_semanas,
         dias: semana.dias,
       });
       await compartirSemana(clienteId, semana.id);
@@ -523,20 +563,35 @@ export function PlanView({
       <div className="dp-surface rounded-2xl p-5 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center gap-1.5">
           {semanas.map((s) => (
-            <button
+            <div
               key={s.id}
-              type="button"
-              onClick={() => seleccionarSemana(s.id)}
-              title={s.id === clienteVeSemanaId ? `Semana ${s.numero} — el cliente ve esta` : `Semana ${s.numero}`}
-              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
-                s.id === semana.id ? "dp-bg-brand text-white" : "dp-bg-faint dp-body"
-              }`}
+              className={`flex items-center gap-0.5 rounded-lg ${s.id === semana.id ? "dp-bg-brand" : "dp-bg-faint"}`}
             >
-              {s.id === clienteVeSemanaId && "👁 "}
-              Semana {s.numero}
-              {s.mesociclo && ` · ${s.mesociclo}`}
-              {s.objetivo && ` · ${s.objetivo}`}
-            </button>
+              <button
+                type="button"
+                onClick={() => seleccionarSemana(s.id)}
+                title={s.id === clienteVeSemanaId ? `Semana ${s.numero} — el cliente ve esta` : `Semana ${s.numero}`}
+                className={`rounded-lg py-1 pl-2.5 text-xs font-medium transition-colors ${
+                  s.id === semana.id ? "text-white" : "dp-body"
+                } ${semanas.length > 1 ? "pr-1" : "pr-2.5"}`}
+              >
+                {s.id === clienteVeSemanaId && "👁 "}
+                Semana {s.numero}
+                {s.mesociclo && ` · ${s.mesociclo}`}
+                {s.objetivo && ` · ${s.objetivo}`}
+              </button>
+              {semanas.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => borrarSemana(s.id)}
+                  disabled={borrando}
+                  title="Eliminar semana"
+                  className={`pr-2 text-xs disabled:opacity-40 ${s.id === semana.id ? "text-white/70 hover:text-white" : "dp-muted hover:dp-alert"}`}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           ))}
           <button
             type="button"
@@ -643,19 +698,64 @@ export function PlanView({
           </div>
         )}
 
-        <div className="mb-4 grid grid-cols-2 gap-4">
+        <div className="mb-2 grid grid-cols-2 gap-4">
           <input
             value={semana.mesociclo || ""}
             onChange={(e) => updateSemana({ ...semana, mesociclo: e.target.value })}
             placeholder="Mesociclo (ej. Mesociclo 5)"
             className="rounded-lg border border-black/10 px-3 py-1.5 text-sm outline-none focus:dp-border-brand"
           />
-          <input
-            value={semana.objetivo || ""}
-            onChange={(e) => updateSemana({ ...semana, objetivo: e.target.value })}
-            placeholder="Objetivo de la fase (ej. Fuerza máxima)"
+          <label className="flex items-center gap-2 text-sm">
+            <span className="dp-muted shrink-0 text-xs">Duración del ciclo</span>
+            <input
+              type="number"
+              min={1}
+              value={semana.duracion_semanas}
+              onChange={(e) => updateSemana({ ...semana, duracion_semanas: Number(e.target.value) || 1 })}
+              className="w-16 rounded-lg border border-black/10 px-2 py-1.5 text-sm outline-none focus:dp-border-brand"
+            />
+            <span className="dp-muted text-xs">semanas (sugerido 5-8)</span>
+          </label>
+        </div>
+
+        <div className="mb-4 grid grid-cols-2 gap-4">
+          <select
+            value={enfoqueEsPreset ? semana.objetivo || "" : "Otro"}
+            onChange={(e) =>
+              updateSemana({ ...semana, objetivo: e.target.value === "Otro" ? "" : e.target.value })
+            }
             className="rounded-lg border border-black/10 px-3 py-1.5 text-sm outline-none focus:dp-border-brand"
-          />
+          >
+            <option value="">Enfoque de la fase…</option>
+            {ENFOQUES_PLAN.map((e) => (
+              <option key={e} value={e}>
+                {e}
+              </option>
+            ))}
+            <option value="Otro">Otro (especificar)</option>
+          </select>
+          {!enfoqueEsPreset && (
+            <input
+              value={semana.objetivo || ""}
+              onChange={(e) => updateSemana({ ...semana, objetivo: e.target.value })}
+              placeholder="Especificá el enfoque de la fase"
+              autoFocus
+              className="rounded-lg border border-black/10 px-3 py-1.5 text-sm outline-none focus:dp-border-brand"
+            />
+          )}
+        </div>
+
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="dp-bg-faint dp-body rounded-lg px-2.5 py-1 text-xs font-medium">
+            Semana {semanaEnMesociclo} de {semana.duracion_semanas}
+            {semana.mesociclo && ` — ${semana.mesociclo}`}
+          </span>
+          {cicloCompleto && (
+            <span className="dp-bg-amber-soft dp-text-amber rounded-lg px-2.5 py-1 text-xs font-medium">
+              ⏳ Este ciclo ya cumplió su duración sugerida — al armar la próxima semana, elegí si corresponde
+              un enfoque nuevo.
+            </span>
+          )}
         </div>
 
         <h3 className="dp-ink mb-1 font-semibold">Carga semanal</h3>

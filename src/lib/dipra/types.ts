@@ -49,6 +49,17 @@ export interface FmsHistorialEntry {
   created_at: string;
 }
 
+// Motivo de consulta + ALICIA de un episodio puntual — un cliente que vuelve
+// por una consulta distinta agrega uno nuevo en vez de pisar el anterior.
+export interface EpisodioHistorialEntry {
+  id: string;
+  client_id: string;
+  fecha: string;
+  motivo_consulta: string;
+  dolor_alicia: Record<string, string>;
+  created_at: string;
+}
+
 export interface ComposicionCorporalEntry {
   id: string;
   client_id: string;
@@ -111,6 +122,7 @@ export interface MovilidadEsferaEntry {
 export interface EvaluacionCustomEntry {
   id: string;
   client_id: string;
+  fecha: string;
   nombre: string;
   resultado: string;
 }
@@ -224,6 +236,9 @@ export interface PlanSemana {
   numero: number;
   mesociclo: string;
   objetivo: string;
+  // Duración sugerida del mesociclo en semanas (típico 5-8) — con esto se
+  // calcula "semana X de Y" y el aviso de fin de ciclo en Plan.
+  duracion_semanas: number;
   dias: DiaPlan[];
   // "Compartir rutina": `dias` es el borrador que edita el profesional;
   // `dias_publicado` es lo último que el profesional compartió, y es lo

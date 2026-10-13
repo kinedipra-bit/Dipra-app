@@ -6,6 +6,7 @@ import type { FmsData } from "@/lib/dipra/calc";
 import { emptyFms } from "@/lib/dipra/constants";
 import type {
   ComposicionCorporalEntry,
+  EpisodioHistorialEntry,
   EvaluacionCustomEntry,
   FmsHistorialEntry,
   MovilidadEsferaEntry,
@@ -74,15 +75,46 @@ export async function eliminarFmsHistorial(clienteId: string, id: string) {
   revalidar(clienteId);
 }
 
-// Dolor (ALICIA) --------------------------------------------------------------
-// Se guarda como jsonb en la fila del cliente, igual que Ficha.
+// Episodios (motivo de consulta + ALICIA) -------------------------------------
+// Historial por fecha, igual patrón que FMS: un paciente que vuelve por una
+// consulta distinta agrega un episodio nuevo en vez de pisar el anterior.
 
-export async function updateDolorAlicia(clienteId: string, dolorAlicia: Record<string, string>) {
+export async function crearEpisodio(
+  clienteId: string,
+  fecha: string,
+  motivoConsulta: string,
+  dolorAlicia: Record<string, string>
+) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("client_episodios_historial")
+    .insert({ client_id: clienteId, fecha, motivo_consulta: motivoConsulta, dolor_alicia: dolorAlicia })
+    .select("*")
+    .single<EpisodioHistorialEntry>();
+  if (error) throw new Error(error.message);
+  revalidar(clienteId);
+  return data;
+}
+
+export async function actualizarEpisodio(
+  clienteId: string,
+  id: string,
+  fecha: string,
+  motivoConsulta: string,
+  dolorAlicia: Record<string, string>
+) {
   const supabase = await createClient();
   const { error } = await supabase
-    .from("clients")
-    .update({ dolor_alicia: dolorAlicia })
-    .eq("id", clienteId);
+    .from("client_episodios_historial")
+    .update({ fecha, motivo_consulta: motivoConsulta, dolor_alicia: dolorAlicia })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidar(clienteId);
+}
+
+export async function eliminarEpisodio(clienteId: string, id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("client_episodios_historial").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidar(clienteId);
 }
@@ -90,16 +122,6 @@ export async function updateDolorAlicia(clienteId: string, dolorAlicia: Record<s
 export async function updatePilaresDescriptivos(clienteId: string, pilares: Record<string, string>) {
   const supabase = await createClient();
   const { error } = await supabase.from("clients").update({ pilares }).eq("id", clienteId);
-  if (error) throw new Error(error.message);
-  revalidar(clienteId);
-}
-
-export async function updateMotivoConsulta(clienteId: string, motivoConsulta: string) {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("clients")
-    .update({ motivo_consulta: motivoConsulta })
-    .eq("id", clienteId);
   if (error) throw new Error(error.message);
   revalidar(clienteId);
 }
@@ -186,7 +208,7 @@ export async function agregarEvaluacionCustom(clienteId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("client_evaluaciones_custom")
-    .insert({ client_id: clienteId, nombre: "", resultado: "" })
+    .insert({ client_id: clienteId, nombre: "", resultado: "", fecha: new Date().toISOString().slice(0, 10) })
     .select("*")
     .single<EvaluacionCustomEntry>();
   if (error) throw new Error(error.message);
@@ -197,7 +219,7 @@ export async function agregarEvaluacionCustom(clienteId: string) {
 export async function actualizarEvaluacionCustom(
   clienteId: string,
   id: string,
-  patch: Partial<Pick<EvaluacionCustomEntry, "nombre" | "resultado">>
+  patch: Partial<Pick<EvaluacionCustomEntry, "nombre" | "resultado" | "fecha">>
 ) {
   const supabase = await createClient();
   const { error } = await supabase.from("client_evaluaciones_custom").update(patch).eq("id", id);

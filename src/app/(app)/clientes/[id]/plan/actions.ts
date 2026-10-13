@@ -47,7 +47,14 @@ async function avisarSemanaProgramada(supabase: Awaited<ReturnType<typeof create
 // porque ahí es donde se decide si se clona o se arranca de nuevosDias().
 export async function crearSemana(
   clienteId: string,
-  semana: { id: string; numero: number; mesociclo: string; objetivo: string; dias: DiaPlan[] }
+  semana: {
+    id: string;
+    numero: number;
+    mesociclo: string;
+    objetivo: string;
+    duracion_semanas: number;
+    dias: DiaPlan[];
+  }
 ): Promise<PlanSemana> {
   const supabase = await createClient();
 
@@ -59,6 +66,7 @@ export async function crearSemana(
       numero: semana.numero,
       mesociclo: semana.mesociclo,
       objetivo: semana.objetivo,
+      duracion_semanas: semana.duracion_semanas,
       dias: semana.dias,
       // Nueva semana, todavía nada compartido — el cliente sigue sin ver
       // esto hasta que el profesional apriete "Compartir rutina".
@@ -93,12 +101,52 @@ export async function setSemanaActiva(clienteId: string, semanaId: string) {
   revalidarInicio();
 }
 
+// Borra una semana (ej. quedó una semana vacía por un corrimiento de
+// numeración) y renumera el resto 1..N para no dejar huecos. `clients.
+// semana_activa_id` tiene "on delete set null" — si se borra justo la
+// semana activa, se reasigna a la que quede con el número más alto para
+// que el cliente no se quede sin semana activa en su portal.
+export async function eliminarSemana(clienteId: string, semanaId: string) {
+  const supabase = await createClient();
+
+  const { data: restantes, error: errorLectura } = await supabase
+    .from("plan_semanas")
+    .select("id, numero")
+    .eq("client_id", clienteId)
+    .neq("id", semanaId)
+    .order("numero", { ascending: true })
+    .returns<{ id: string; numero: number }[]>();
+  if (errorLectura) throw new Error(errorLectura.message);
+
+  const { error } = await supabase.from("plan_semanas").delete().eq("id", semanaId).eq("client_id", clienteId);
+  if (error) throw new Error(error.message);
+
+  await Promise.all(
+    (restantes ?? []).map((s, i) =>
+      s.numero === i + 1 ? null : supabase.from("plan_semanas").update({ numero: i + 1 }).eq("id", s.id)
+    )
+  );
+
+  const { data: cliente } = await supabase
+    .from("clients")
+    .select("semana_activa_id")
+    .eq("id", clienteId)
+    .single<{ semana_activa_id: string | null }>();
+  if (!cliente?.semana_activa_id && restantes && restantes.length > 0) {
+    const ultima = restantes[restantes.length - 1];
+    await supabase.from("clients").update({ semana_activa_id: ultima.id }).eq("id", clienteId);
+  }
+
+  revalidatePath(`/clientes/${clienteId}/plan`);
+  revalidarInicio();
+}
+
 // Persiste mesociclo/objetivo y el árbol `dias` completo de una semana en un
 // solo update (ver nota del esquema: `dias` siempre se lee/escribe entero).
 export async function guardarSemana(
   clienteId: string,
   semanaId: string,
-  patch: { mesociclo: string; objetivo: string; dias: DiaPlan[] }
+  patch: { mesociclo: string; objetivo: string; duracion_semanas: number; dias: DiaPlan[] }
 ) {
   const supabase = await createClient();
   const { error } = await supabase

@@ -61,6 +61,20 @@ export const ALICIA_CAMPOS = [
 
 export const ESFERAS = ["Cráneo", "Tórax", "Pelvis", "Tobillo"] as const;
 
+// Enfoques estándar de mesociclo (fuerza) — valores por defecto, el
+// profesional puede escribir cualquier otro con "Otro (especificar)".
+// Duración sugerida típica 5-8 semanas (ver duracion_semanas en PlanSemana).
+export const ENFOQUES_PLAN = [
+  "Adaptación",
+  "Transición",
+  "Fuerza general + Hipertrofia",
+  "Fuerza general + Fuerza máxima (pre-plio)",
+  "Fuerza máxima + Plio + Hipertrofia",
+  "Puesta a punto",
+  "Tapering",
+  "Regeneración",
+] as const;
+
 /* Base de sugerencias FMS — qué evaluar a continuación cuando un movimiento
    puntúa 1 o 2, para distinguir si la limitación es de rango/movilidad real
    o de control motor/estabilidad. Texto clínico validado, copiar tal cual. */
