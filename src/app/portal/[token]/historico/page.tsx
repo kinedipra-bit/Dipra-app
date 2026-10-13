@@ -45,7 +45,7 @@ export default async function PortalHistoricoPage({ params }: { params: Promise<
 
   const admin = createAdminClient();
 
-  const [{ data: sesiones }, { data: semana }] = await Promise.all([
+  const [{ data: sesiones }, { data: semana }, { data: semanas }] = await Promise.all([
     admin
       .from("sesiones")
       .select("*")
@@ -59,7 +59,33 @@ export default async function PortalHistoricoPage({ params }: { params: Promise<
           .eq("id", cliente.semana_activa_id)
           .single<Pick<PlanSemana, "mesociclo" | "objetivo">>()
       : Promise.resolve({ data: null }),
+    admin
+      .from("plan_semanas")
+      .select("numero, mesociclo, dias, created_at")
+      .eq("client_id", cliente.id)
+      .order("created_at", { ascending: true })
+      .returns<Pick<PlanSemana, "numero" | "mesociclo" | "dias" | "created_at">[]>(),
   ]);
+
+  // Volumen por semana planificada: a cada plan_semanas le corresponde la
+  // ventana de fechas desde que se creó hasta que se creó la siguiente (o
+  // hasta hoy, para la última) — mismo criterio de acotado por fecha que
+  // SesionesPorDia (semanaCreatedAt), así una sesión no se cuenta en la
+  // semana equivocada si se reusó la misma etiqueta de día.
+  const porSemana = (semanas ?? []).map((s, i) => {
+    const desde = s.created_at.slice(0, 10);
+    const hasta = semanas![i + 1]?.created_at.slice(0, 10);
+    const sesionesVentana = (sesiones ?? []).filter(
+      (ses) => ses.fecha >= desde && (!hasta || ses.fecha < hasta)
+    );
+    const volumen = sesionesVentana.reduce(
+      (sum, ses) => sum + ses.ejercicios.reduce((sSum, ex) => sSum + volumenEjercicioSesion(ex), 0),
+      0
+    );
+    const diasEntrenados = new Set(sesionesVentana.map((ses) => ses.dia_plan_label)).size;
+    return { numero: s.numero, mesociclo: s.mesociclo, diasTotales: s.dias.length, diasEntrenados, volumen };
+  });
+  const maxVolumenSemana = Math.max(1, ...porSemana.map((s) => s.volumen));
 
   // Agrupa por mes calendario (YYYY-MM), más reciente primero.
   const porMes = new Map<string, Sesion[]>();
@@ -77,6 +103,42 @@ export default async function PortalHistoricoPage({ params }: { params: Promise<
         <p className="dp-muted -mt-1 text-xs">
           Ahora: {semana.mesociclo || "sin mesociclo"} {semana.objetivo && `— ${semana.objetivo}`}
         </p>
+      )}
+
+      {porSemana.some((s) => s.volumen > 0) && (
+        <section className="dp-scope-dark rounded-2xl p-5 shadow-sm">
+          <h2 className="dp-text-brand mb-1 font-[family-name:var(--font-display)] font-semibold">
+            Progresión semanal — volumen
+          </h2>
+          <p className="dp-muted mb-4 text-xs">
+            Kilos totales movidos por semana planificada — sirve para ver si vas subiendo de carga dentro de
+            un mismo ciclo.
+          </p>
+          <div className="flex items-end gap-3 overflow-x-auto pb-1">
+            {porSemana.map((s) => (
+              <div key={s.numero} className="flex w-16 shrink-0 flex-col items-center gap-1.5">
+                <div className="flex h-28 w-full items-end overflow-hidden rounded-lg bg-white/5">
+                  {s.volumen > 0 && (
+                    <div
+                      title={`${s.volumen.toLocaleString("es-CL")} kg vol.`}
+                      className={`w-full rounded-t-lg ${
+                        s.diasTotales > 0 && s.diasEntrenados >= s.diasTotales ? "dp-bg-brand" : "dp-bg-amber"
+                      }`}
+                      style={{ height: `${(s.volumen / maxVolumenSemana) * 100}%` }}
+                    />
+                  )}
+                </div>
+                <span className="dp-body text-[11px] font-medium">Sem. {s.numero}</span>
+                <span className="dp-muted font-mono text-[10px]">
+                  {s.diasEntrenados}/{s.diasTotales} días
+                </span>
+                <span className="dp-ink font-mono text-[10px] font-semibold">
+                  {s.volumen > 0 ? s.volumen.toLocaleString("es-CL") : "—"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {meses.length === 0 ? (
