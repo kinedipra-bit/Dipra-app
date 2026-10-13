@@ -7,7 +7,19 @@ import type { DiaPlan, EjercicioPlan } from "@/lib/dipra/types";
 import { updateComentarioClienteKine } from "./actions";
 import { BloqueFocuseable } from "../BloqueFocuseable";
 
-export function PortalTareasView({ token, dias: diasIniciales }: { token: string; dias: DiaPlan[] }) {
+export function PortalTareasView({
+  token,
+  dias: diasIniciales,
+  indicacionesTexto,
+  indicacionesPdfUrl,
+  indicacionesPdfNombre,
+}: {
+  token: string;
+  dias: DiaPlan[];
+  indicacionesTexto: string;
+  indicacionesPdfUrl: string | null;
+  indicacionesPdfNombre: string | null;
+}) {
   const [dias, setDias] = useState(diasIniciales);
   const [, startTransition] = useTransition();
   const [bloqueActivoId, setBloqueActivoId] = useState<string | null>(null);
@@ -40,6 +52,23 @@ export function PortalTareasView({ token, dias: diasIniciales }: { token: string
       <p className="dp-muted -mt-1 text-xs">
         Ejercicios y tareas de kinesiología/rehabilitación — aparte de tu rutina de fuerza.
       </p>
+
+      {(indicacionesTexto || indicacionesPdfUrl) && (
+        <section className="dp-scope-dark rounded-2xl p-5 shadow-sm">
+          <h2 className="dp-text-brand font-[family-name:var(--font-display)] font-semibold">Indicaciones</h2>
+          {indicacionesTexto && <p className="dp-body mt-1 text-sm whitespace-pre-wrap">{indicacionesTexto}</p>}
+          {indicacionesPdfUrl && (
+            <a
+              href={indicacionesPdfUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="dp-text-brand mt-2 inline-block text-sm font-medium underline"
+            >
+              📄 Ver PDF{indicacionesPdfNombre ? `: ${indicacionesPdfNombre}` : ""}
+            </a>
+          )}
+        </section>
+      )}
 
       {dias.map((dia) => (
         <section key={dia.id} className="dp-scope-dark rounded-2xl p-5 shadow-sm">

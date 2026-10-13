@@ -2,8 +2,16 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { blockTemplate } from "@/lib/dipra/constants";
+import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import type { BloquePlan, DiaPlan, EjercicioBiblioteca, EjercicioPlan, PlanKine } from "@/lib/dipra/types";
-import { compartirPlanKine, guardarPlanKine, obtenerDiasFuerza } from "./actions";
+import {
+  actualizarIndicacionesTexto,
+  compartirPlanKine,
+  eliminarIndicacionesPdf,
+  guardarPlanKine,
+  obtenerDiasFuerza,
+  subirIndicacionesPdf,
+} from "./actions";
 import { ExerciseRow, EXERCISE_ROW_GRID_EDITABLE } from "../plan/ExerciseRow";
 import { ResumenDia } from "../plan/ResumenDia";
 import { guardarEnBiblioteca } from "../plan/actions";
@@ -51,6 +59,102 @@ function nuevoDia(numero: number): DiaPlan {
   return { id: crypto.randomUUID(), label: `Sesión ${numero}`, foco: "", bloques: blockTemplate() };
 }
 
+// Notas del profesional para el cliente (ej. "si te duele al saltar,
+// suspendé esa actividad por ahora") + un PDF opcional — independiente del
+// borrador/compartir de los días, se guarda y se ve de inmediato en el
+// portal. Aparte del componente principal para no duplicar el bloque en
+// las dos ramas de render (sin días todavía / con días).
+function IndicacionesSection({
+  texto,
+  onTextoChange,
+  onGuardar,
+  guardando,
+  savedAt,
+  pdfNombre,
+  pdfUrl,
+  subiendoPdf,
+  onSubirPdf,
+  onQuitarPdf,
+}: {
+  texto: string;
+  onTextoChange: (v: string) => void;
+  onGuardar: () => void;
+  guardando: boolean;
+  savedAt: number | null;
+  pdfNombre: string | null;
+  pdfUrl: string | null;
+  subiendoPdf: boolean;
+  onSubirPdf: (file: File) => void;
+  onQuitarPdf: () => void;
+}) {
+  return (
+    <div className="dp-surface flex flex-col gap-3 rounded-2xl p-4 shadow-sm">
+      <h3 className="dp-text-heading text-sm font-medium">Indicaciones para el cliente</h3>
+      <p className="dp-muted text-xs">
+        Ej: &quot;si te duele al saltar, suspendé esa actividad por ahora y priorizá las de bajo impacto&quot;. Se
+        ve de inmediato en su portal — no hace falta &quot;Compartir&quot;.
+      </p>
+      <textarea
+        value={texto}
+        onChange={(e) => onTextoChange(e.target.value)}
+        rows={3}
+        placeholder="Escribí acá las indicaciones generales para este cliente…"
+        className="rounded-lg border border-black/10 px-3 py-2 text-sm outline-none focus:dp-border-brand"
+      />
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={onGuardar}
+          disabled={guardando}
+          className="dp-bg-brand rounded-lg px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+        >
+          {guardando ? "Guardando…" : "Guardar indicaciones"}
+        </button>
+        {savedAt && !guardando && <span className="dp-muted text-xs">Guardado.</span>}
+      </div>
+      <div className="flex flex-wrap items-center gap-3 border-t border-black/5 pt-3">
+        {pdfNombre ? (
+          <>
+            {pdfUrl && (
+              <a
+                href={pdfUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="dp-text-brand text-sm font-medium hover:underline"
+              >
+                📄 {pdfNombre}
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={onQuitarPdf}
+              disabled={subiendoPdf}
+              className="dp-alert text-xs hover:underline disabled:opacity-50"
+            >
+              Quitar PDF
+            </button>
+          </>
+        ) : (
+          <label className="dp-text-brand cursor-pointer text-xs font-medium hover:underline">
+            {subiendoPdf ? "Subiendo…" : "+ Subir PDF (máx. 4 MB)"}
+            <input
+              type="file"
+              accept="application/pdf"
+              className="hidden"
+              disabled={subiendoPdf}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onSubirPdf(file);
+                e.target.value = "";
+              }}
+            />
+          </label>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /**
  * Plan de kinesiología/rehabilitación — pestaña "Tareas". Independiente del
  * plan de fuerza y sin el concepto de semanas: un solo set de días en curso
@@ -62,10 +166,12 @@ export function KinePlanView({
   clienteId,
   planInicial,
   bibliotecaInicial,
+  indicacionesPdfUrl,
 }: {
   clienteId: string;
   planInicial: PlanKine;
   bibliotecaInicial: EjercicioBiblioteca[];
+  indicacionesPdfUrl: string | null;
 }) {
   const [plan, setPlan] = useState(planInicial);
   const [dias, setDias] = useState<DiaPlan[]>(planInicial.dias);
@@ -77,9 +183,14 @@ export function KinePlanView({
   const [diasFuerza, setDiasFuerza] = useState<DiaPlan[]>([]);
   const [diaFuerzaElegido, setDiaFuerzaElegido] = useState("");
   const [diaFuenteCopiaId, setDiaFuenteCopiaId] = useState("");
+  const [indicacionesTexto, setIndicacionesTexto] = useState(planInicial.indicaciones_texto);
+  const [pdfUrl, setPdfUrl] = useState(indicacionesPdfUrl);
+  const [indicacionesSavedAt, setIndicacionesSavedAt] = useState<number | null>(null);
 
   const [guardando, startGuardar] = useTransition();
   const [compartiendo, startCompartir] = useTransition();
+  const [guardandoIndicaciones, startGuardarIndicaciones] = useTransition();
+  const [subiendoPdf, startSubirPdf] = useTransition();
 
   const dia = dias[diaIdx];
 
@@ -195,46 +306,99 @@ export function KinePlanView({
     });
   };
 
+  const guardarIndicaciones = () => {
+    startGuardarIndicaciones(async () => {
+      await actualizarIndicacionesTexto(clienteId, indicacionesTexto);
+      setPlan((prev) => ({ ...prev, indicaciones_texto: indicacionesTexto }));
+      setIndicacionesSavedAt(Date.now());
+    });
+  };
+
+  const subirPdf = (file: File) => {
+    if (file.type !== "application/pdf") {
+      window.alert("Solo se puede subir un PDF.");
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      window.alert("El PDF no puede pesar más de 4 MB.");
+      return;
+    }
+    const formData = new FormData();
+    formData.append("pdf", file);
+    startSubirPdf(async () => {
+      await subirIndicacionesPdf(clienteId, formData);
+      const path = `${clienteId}/indicaciones.pdf`;
+      const url = createBrowserClient().storage.from("indicaciones").getPublicUrl(path).data.publicUrl;
+      setPlan((prev) => ({ ...prev, indicaciones_pdf_path: path, indicaciones_pdf_nombre: file.name }));
+      setPdfUrl(url);
+    });
+  };
+
+  const quitarPdf = () => {
+    if (!plan.indicaciones_pdf_path) return;
+    if (!window.confirm("¿Eliminar el PDF de indicaciones?")) return;
+    startSubirPdf(async () => {
+      await eliminarIndicacionesPdf(clienteId, plan.indicaciones_pdf_path!);
+      setPlan((prev) => ({ ...prev, indicaciones_pdf_path: null, indicaciones_pdf_nombre: null }));
+      setPdfUrl(null);
+    });
+  };
+
   if (dias.length === 0) {
     return (
-      <div className="dp-surface flex flex-col items-center gap-3 rounded-2xl p-8 text-center shadow-sm">
-        <p className="dp-muted text-sm">
-          Todavía no hay tareas/ejercicios de kine cargados para este cliente.
-        </p>
-        <button
-          type="button"
-          onClick={addDia}
-          className="dp-bg-brand rounded-lg px-4 py-2 text-sm font-medium text-white"
-        >
-          + Agregar primera sesión
-        </button>
-        {diasFuerza.length > 0 && (
-          <>
-            <p className="dp-muted text-xs">o empezá de un día de su plan de fuerza</p>
-            <div className="flex items-center gap-2">
-              <select
-                value={diaFuerzaElegido}
-                onChange={(e) => setDiaFuerzaElegido(e.target.value)}
-                className="rounded-lg border border-black/10 px-2 py-1.5 text-sm outline-none focus:dp-border-brand"
-              >
-                <option value="">Elegí un día…</option>
-                {diasFuerza.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={copiarDesdeFuerza}
-                disabled={!diaFuerzaElegido}
-                className="dp-text-brand rounded-lg border border-dashed border-black/15 px-2.5 py-1.5 text-xs font-medium disabled:opacity-40"
-              >
-                Copiar
-              </button>
-            </div>
-          </>
-        )}
+      <div className="flex flex-col gap-5">
+        <IndicacionesSection
+          texto={indicacionesTexto}
+          onTextoChange={setIndicacionesTexto}
+          onGuardar={guardarIndicaciones}
+          guardando={guardandoIndicaciones}
+          savedAt={indicacionesSavedAt}
+          pdfNombre={plan.indicaciones_pdf_nombre}
+          pdfUrl={pdfUrl}
+          subiendoPdf={subiendoPdf}
+          onSubirPdf={subirPdf}
+          onQuitarPdf={quitarPdf}
+        />
+
+        <div className="dp-surface flex flex-col items-center gap-3 rounded-2xl p-8 text-center shadow-sm">
+          <p className="dp-muted text-sm">
+            Todavía no hay tareas/ejercicios de kine cargados para este cliente.
+          </p>
+          <button
+            type="button"
+            onClick={addDia}
+            className="dp-bg-brand rounded-lg px-4 py-2 text-sm font-medium text-white"
+          >
+            + Agregar primera sesión
+          </button>
+          {diasFuerza.length > 0 && (
+            <>
+              <p className="dp-muted text-xs">o empezá de un día de su plan de fuerza</p>
+              <div className="flex items-center gap-2">
+                <select
+                  value={diaFuerzaElegido}
+                  onChange={(e) => setDiaFuerzaElegido(e.target.value)}
+                  className="rounded-lg border border-black/10 px-2 py-1.5 text-sm outline-none focus:dp-border-brand"
+                >
+                  <option value="">Elegí un día…</option>
+                  {diasFuerza.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={copiarDesdeFuerza}
+                  disabled={!diaFuerzaElegido}
+                  className="dp-text-brand rounded-lg border border-dashed border-black/15 px-2.5 py-1.5 text-xs font-medium disabled:opacity-40"
+                >
+                  Copiar
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     );
   }
@@ -245,6 +409,19 @@ export function KinePlanView({
         Plan de kinesiología/rehabilitación — independiente de la rutina de fuerza. El cliente lo ve en la pestaña
         &quot;Tareas&quot; de su portal, recién cuando lo compartís.
       </p>
+
+      <IndicacionesSection
+        texto={indicacionesTexto}
+        onTextoChange={setIndicacionesTexto}
+        onGuardar={guardarIndicaciones}
+        guardando={guardandoIndicaciones}
+        savedAt={indicacionesSavedAt}
+        pdfNombre={plan.indicaciones_pdf_nombre}
+        pdfUrl={pdfUrl}
+        subiendoPdf={subiendoPdf}
+        onSubirPdf={subirPdf}
+        onQuitarPdf={quitarPdf}
+      />
 
       {plan.cambios_sin_compartir && (
         <div className="dp-bg-amber-soft flex flex-wrap items-center justify-between gap-2 rounded-2xl px-4 py-3">
