@@ -25,12 +25,14 @@ export function EvaluacionesCustomSection({
     });
   };
 
-  const setCampo = (id: string, patch: Partial<Pick<EvaluacionCustomEntry, "nombre" | "resultado">>) =>
-    setItems((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+  const setCampo = (
+    id: string,
+    patch: Partial<Pick<EvaluacionCustomEntry, "nombre" | "resultado" | "fecha">>
+  ) => setItems((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
 
   const guardarCampo = (
     id: string,
-    patch: Partial<Pick<EvaluacionCustomEntry, "nombre" | "resultado">>
+    patch: Partial<Pick<EvaluacionCustomEntry, "nombre" | "resultado" | "fecha">>
   ) => {
     startTransition(async () => {
       await actualizarEvaluacionCustom(clienteId, id, patch);
@@ -71,6 +73,13 @@ export function EvaluacionesCustomSection({
       <div className="flex flex-col gap-2">
         {items.map((e) => (
           <div key={e.id} className="flex items-start gap-2">
+            <input
+              type="date"
+              value={e.fecha}
+              onChange={(ev) => setCampo(e.id, { fecha: ev.target.value })}
+              onBlur={(ev) => guardarCampo(e.id, { fecha: ev.target.value })}
+              className="w-32 shrink-0 rounded-lg border border-black/10 px-2 py-1.5 font-mono text-xs outline-none focus:dp-border-brand"
+            />
             <input
               value={e.nombre}
               onChange={(ev) => setCampo(e.id, { nombre: ev.target.value })}
