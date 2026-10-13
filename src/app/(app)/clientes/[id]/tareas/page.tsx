@@ -12,5 +12,16 @@ export default async function TareasPage({ params }: { params: Promise<{ id: str
     supabase.from("biblioteca_ejercicios").select("id, nombre, link").order("nombre").returns<EjercicioBiblioteca[]>(),
   ]);
 
-  return <KinePlanView clienteId={id} planInicial={plan} bibliotecaInicial={biblioteca ?? []} />;
+  const indicacionesPdfUrl = plan.indicaciones_pdf_path
+    ? supabase.storage.from("indicaciones").getPublicUrl(plan.indicaciones_pdf_path).data.publicUrl
+    : null;
+
+  return (
+    <KinePlanView
+      clienteId={id}
+      planInicial={plan}
+      bibliotecaInicial={biblioteca ?? []}
+      indicacionesPdfUrl={indicacionesPdfUrl}
+    />
+  );
 }

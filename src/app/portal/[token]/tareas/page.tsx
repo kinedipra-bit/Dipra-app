@@ -25,13 +25,29 @@ export default async function PortalTareasPage({ params }: { params: Promise<{ t
   const admin = createAdminClient();
   const { data: plan } = await admin
     .from("plan_kine")
-    .select("dias_publicado")
+    .select("dias_publicado, indicaciones_texto, indicaciones_pdf_path, indicaciones_pdf_nombre")
     .eq("client_id", cliente.id)
-    .maybeSingle<Pick<PlanKine, "dias_publicado">>();
+    .maybeSingle<
+      Pick<PlanKine, "dias_publicado" | "indicaciones_texto" | "indicaciones_pdf_path" | "indicaciones_pdf_nombre">
+    >();
 
-  if (!plan?.dias_publicado || plan.dias_publicado.length === 0) {
+  const indicacionesPdfUrl = plan?.indicaciones_pdf_path
+    ? admin.storage.from("indicaciones").getPublicUrl(plan.indicaciones_pdf_path).data.publicUrl
+    : null;
+  const hayDias = !!plan?.dias_publicado && plan.dias_publicado.length > 0;
+  const hayIndicaciones = !!(plan?.indicaciones_texto || indicacionesPdfUrl);
+
+  if (!hayDias && !hayIndicaciones) {
     return <p className="dp-muted text-sm">Todavía no tenés tareas de kinesiología asignadas.</p>;
   }
 
-  return <PortalTareasView token={token} dias={plan.dias_publicado} />;
+  return (
+    <PortalTareasView
+      token={token}
+      dias={plan?.dias_publicado ?? []}
+      indicacionesTexto={plan?.indicaciones_texto ?? ""}
+      indicacionesPdfUrl={indicacionesPdfUrl}
+      indicacionesPdfNombre={plan?.indicaciones_pdf_nombre ?? null}
+    />
+  );
 }

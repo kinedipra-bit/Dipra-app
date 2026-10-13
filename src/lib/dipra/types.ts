@@ -255,6 +255,12 @@ export interface PlanKine {
   dias_publicado: DiaPlan[] | null;
   publicado_at: string | null;
   cambios_sin_compartir: boolean;
+  // Indicaciones para el cliente (ej. "si te duele al saltar, suspendé esa
+  // actividad") — independiente del mecanismo de compartir de `dias`, se ve
+  // de inmediato en el portal.
+  indicaciones_texto: string;
+  indicaciones_pdf_path: string | null;
+  indicaciones_pdf_nombre: string | null;
   created_at: string;
   updated_at: string;
 }

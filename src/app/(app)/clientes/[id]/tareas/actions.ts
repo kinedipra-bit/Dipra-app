@@ -103,3 +103,52 @@ export async function compartirPlanKine(clienteId: string) {
   revalidatePath(`/clientes/${clienteId}/tareas`);
   await avisarTareasProgramadas(supabase, clienteId);
 }
+
+// Indicaciones para el cliente (texto + PDF opcional) — independiente del
+// borrador/compartir de `dias`: se guarda y se ve de inmediato en el
+// portal, no hace falta "Compartir" (es contenido informativo, no el plan
+// de ejercicios en sí).
+export async function actualizarIndicacionesTexto(clienteId: string, texto: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("plan_kine")
+    .update({ indicaciones_texto: texto })
+    .eq("client_id", clienteId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/clientes/${clienteId}/tareas`);
+}
+
+const INDICACIONES_PDF_MAX_BYTES = 4 * 1024 * 1024;
+
+export async function subirIndicacionesPdf(clienteId: string, formData: FormData) {
+  const file = formData.get("pdf");
+  if (!(file instanceof File) || file.size === 0) throw new Error("No se seleccionó ningún archivo.");
+  if (file.type !== "application/pdf") throw new Error("Solo se puede subir un PDF.");
+  if (file.size > INDICACIONES_PDF_MAX_BYTES) throw new Error("El PDF no puede pesar más de 4 MB.");
+
+  const supabase = await createClient();
+  const path = `${clienteId}/indicaciones.pdf`;
+  const { error: uploadError } = await supabase.storage
+    .from("indicaciones")
+    .upload(path, file, { upsert: true, contentType: "application/pdf" });
+  if (uploadError) throw new Error(uploadError.message);
+
+  const { error } = await supabase
+    .from("plan_kine")
+    .update({ indicaciones_pdf_path: path, indicaciones_pdf_nombre: file.name })
+    .eq("client_id", clienteId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/clientes/${clienteId}/tareas`);
+}
+
+export async function eliminarIndicacionesPdf(clienteId: string, path: string) {
+  const supabase = await createClient();
+  await supabase.storage.from("indicaciones").remove([path]);
+
+  const { error } = await supabase
+    .from("plan_kine")
+    .update({ indicaciones_pdf_path: null, indicaciones_pdf_nombre: null })
+    .eq("client_id", clienteId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/clientes/${clienteId}/tareas`);
+}
