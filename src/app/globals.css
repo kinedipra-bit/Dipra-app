@@ -34,6 +34,8 @@ input[type="number"] {
   --dp-amber: #c9871d;
   --dp-alert: #d14343;
   --dp-lime: #a8cc3c;
+  --dp-blue: #2563eb;
+  --dp-purple: #7c3aed;
 
   --dp-sidebar-bg: #0e1b14;
   --dp-muted: #7a857f;
@@ -83,10 +85,18 @@ body {
 
 .dp-border-lime { border-color: var(--dp-lime); }
 
+.dp-text-blue { color: var(--dp-blue); }
+.dp-bg-blue { background-color: var(--dp-blue); }
+
+.dp-text-purple { color: var(--dp-purple); }
+.dp-bg-purple { background-color: var(--dp-purple); }
+
 /* Fondos suaves para distinguir tipo de cita en la grilla semanal de Agenda. */
 .dp-bg-brand-soft { background-color: rgba(30, 132, 73, 0.12); }
 .dp-bg-amber-soft { background-color: rgba(201, 135, 29, 0.14); }
 .dp-bg-lime-soft { background-color: rgba(168, 204, 60, 0.22); }
+.dp-bg-blue-soft { background-color: rgba(37, 99, 235, 0.12); }
+.dp-bg-purple-soft { background-color: rgba(124, 58, 237, 0.12); }
 
 .dp-muted { color: var(--dp-muted); }
 .dp-body { color: var(--dp-body); }

@@ -23,6 +23,16 @@ export const TIPOS_SESION = [
 // nota en el informe de migración.
 export const TIPOS_CITA = ["Kinesiología", "Rendimiento", "Evaluación", "Entrenamiento grupal"] as const;
 
+// Un color por tipo de cita (igual criterio que la planilla vieja de
+// Nicolás: Kine=verde, Personalizado=morado, Evaluación=naranja, Grupo
+// fuerza=azul) — lo usan tanto la grilla mensual de Agenda como CitaRow.
+export const TIPO_CITA_COLOR: Record<(typeof TIPOS_CITA)[number], string> = {
+  Kinesiología: "dp-bg-brand-soft",
+  Rendimiento: "dp-bg-purple-soft",
+  Evaluación: "dp-bg-amber-soft",
+  "Entrenamiento grupal": "dp-bg-blue-soft",
+};
+
 export const ESTADOS_CITA = ["pendiente", "confirmada", "alerta", "cancelada", "no_asistio"] as const;
 
 export const DAY_LABELS = ["Día 1", "Día 2", "Día 3", "Día 4"] as const;
