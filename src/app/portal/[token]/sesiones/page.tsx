@@ -5,6 +5,7 @@ import { enmascararCorreo } from "@/lib/dipra/portalPin";
 import type { PlanSemana } from "@/lib/dipra/types";
 import { obtenerClientePortal, sesionValidaPara } from "../acceso";
 import { PortalAcceso } from "../PortalAcceso";
+import { AyudaSeccion } from "../AyudaSeccion";
 import { PortalNuevaSesionForm } from "./PortalNuevaSesionForm";
 import { MiniCalendarioEntrenamiento } from "./MiniCalendarioEntrenamiento";
 import { obtenerDiasConfirmados } from "./actions";
@@ -44,6 +45,11 @@ export default async function PortalSesionesPage({ params }: { params: Promise<{
 
   return (
     <div className="flex flex-col gap-4">
+      <AyudaSeccion>
+        Acá registrás lo que hiciste de verdad después de entrenar: pesos, repeticiones y cómo te
+        sentiste. También podés marcar qué días pensás entrenar esta semana.
+      </AyudaSeccion>
+
       <MiniCalendarioEntrenamiento
         token={token}
         diasConfirmadosIniciales={diasConfirmados.map((d) => d.fecha)}

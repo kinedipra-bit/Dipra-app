@@ -4,6 +4,7 @@ import { enmascararCorreo } from "@/lib/dipra/portalPin";
 import type { PlanKine } from "@/lib/dipra/types";
 import { obtenerClientePortal, sesionValidaPara } from "../acceso";
 import { PortalAcceso } from "../PortalAcceso";
+import { AyudaSeccion } from "../AyudaSeccion";
 import { PortalTareasView } from "./PortalTareasView";
 
 export default async function PortalTareasPage({ params }: { params: Promise<{ token: string }> }) {
@@ -42,12 +43,18 @@ export default async function PortalTareasPage({ params }: { params: Promise<{ t
   }
 
   return (
-    <PortalTareasView
-      token={token}
-      dias={plan?.dias_publicado ?? []}
-      indicacionesTexto={plan?.indicaciones_texto ?? ""}
-      indicacionesPdfUrl={indicacionesPdfUrl}
-      indicacionesPdfNombre={plan?.indicaciones_pdf_nombre ?? null}
-    />
+    <div className="flex flex-col gap-4">
+      <AyudaSeccion>
+        Acá están las tareas y ejercicios de kinesiología que te dejó tu profesional para hacer por tu
+        cuenta, más cualquier indicación o PDF que te haya compartido.
+      </AyudaSeccion>
+      <PortalTareasView
+        token={token}
+        dias={plan?.dias_publicado ?? []}
+        indicacionesTexto={plan?.indicaciones_texto ?? ""}
+        indicacionesPdfUrl={indicacionesPdfUrl}
+        indicacionesPdfNombre={plan?.indicaciones_pdf_nombre ?? null}
+      />
+    </div>
   );
 }

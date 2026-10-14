@@ -5,6 +5,7 @@ import { enmascararCorreo } from "@/lib/dipra/portalPin";
 import type { PlanSemana, Sesion } from "@/lib/dipra/types";
 import { obtenerClientePortal, sesionValidaPara } from "../acceso";
 import { PortalAcceso } from "../PortalAcceso";
+import { AyudaSeccion } from "../AyudaSeccion";
 import { EliminarSesionButton } from "../sesiones/EliminarSesionButton";
 
 const MESES = [
@@ -98,6 +99,11 @@ export default async function PortalHistoricoPage({ params }: { params: Promise<
 
   return (
     <div className="flex flex-col gap-5">
+      <AyudaSeccion>
+        Acá queda el registro de todas tus sesiones pasadas, agrupadas por mes, y la progresión semana a
+        semana de cuánto peso fuiste moviendo.
+      </AyudaSeccion>
+
       {semana && (semana.mesociclo || semana.objetivo) && (
         <p className="dp-muted -mt-1 text-xs">
           Ahora: {semana.mesociclo || "sin mesociclo"} {semana.objetivo && `— ${semana.objetivo}`}

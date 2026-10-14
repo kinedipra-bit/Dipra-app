@@ -6,6 +6,7 @@ import { GRUPOS, type MetricKey } from "@/app/(app)/clientes/[id]/evolucion/metr
 import type { ComposicionCorporalEntry, PrHistorialEntry } from "@/lib/dipra/types";
 import { obtenerClientePortal, sesionValidaPara } from "../acceso";
 import { PortalAcceso } from "../PortalAcceso";
+import { AyudaSeccion } from "../AyudaSeccion";
 
 type NumericHist = Pick<PrHistorialEntry, MetricKey>;
 
@@ -54,6 +55,11 @@ export default async function PortalEvolucionPage({ params }: { params: Promise<
 
   return (
     <div className="flex flex-col gap-5">
+      <AyudaSeccion>
+        Acá ves cómo van cambiando con el tiempo tus mediciones de rendimiento (fuerza, saltos, etc.) y tu
+        composición corporal — es lo que tu profesional va cargando en cada evaluación.
+      </AyudaSeccion>
+
       <div className="dp-scope-dark rounded-2xl p-5 shadow-sm">
         <h2 className="dp-text-brand mb-1 font-[family-name:var(--font-display)] font-semibold">
           Composición corporal

@@ -4,6 +4,7 @@ import { enmascararCorreo } from "@/lib/dipra/portalPin";
 import type { PlanSemana, Sesion } from "@/lib/dipra/types";
 import { obtenerClientePortal, sesionValidaPara } from "../acceso";
 import { PortalAcceso } from "../PortalAcceso";
+import { AyudaSeccion } from "../AyudaSeccion";
 import { PortalPlanView } from "./PortalPlanView";
 
 export default async function PortalPlanPage({ params }: { params: Promise<{ token: string }> }) {
@@ -40,6 +41,12 @@ export default async function PortalPlanPage({ params }: { params: Promise<{ tok
   }
 
   return (
-    <PortalPlanView token={token} semana={{ ...semana, dias: semana.dias_publicado }} sesiones={sesiones ?? []} />
+    <div className="flex flex-col gap-4">
+      <AyudaSeccion>
+        Acá ves los ejercicios de tu rutina activa — es una vista previa de lo que te toca entrenar esta
+        semana (series, repeticiones y peso sugerido). La arma tu profesional, no se edita desde acá.
+      </AyudaSeccion>
+      <PortalPlanView token={token} semana={{ ...semana, dias: semana.dias_publicado }} sesiones={sesiones ?? []} />
+    </div>
   );
 }
