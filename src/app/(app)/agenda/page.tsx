@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Fragment } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { TIPOS_CITA } from "@/lib/dipra/constants";
+import { TIPOS_CITA, TIPO_CITA_COLOR } from "@/lib/dipra/constants";
 import type { Cita } from "@/lib/dipra/types";
 
 function toISODate(d: Date) {
@@ -30,17 +30,6 @@ function generarHoras(inicio: number, fin: number): string[] {
 }
 
 const DIAS_SEMANA = ["Lun", "Mar", "Mié", "Jue", "Vie"];
-
-// Color por tipo de cita — así de un vistazo se distingue un entrenamiento
-// grupal (varias personas a la misma hora) de una sesión individual
-// (kinesiología/rendimiento), igual que Nicolás lo maneja con colores en
-// su planilla.
-const TIPO_BG: Record<string, string> = {
-  Kinesiología: "dp-bg-amber-soft",
-  Rendimiento: "dp-bg-brand-soft",
-  Evaluación: "dp-bg-faint",
-  "Entrenamiento grupal": "dp-bg-lime-soft",
-};
 
 export default async function AgendaPage({
   searchParams,
@@ -136,7 +125,7 @@ export default async function AgendaPage({
                     {citasCelda.map((c) => (
                       <span
                         key={c.id}
-                        className={`dp-text-heading truncate rounded px-1 py-0.5 text-[10px] font-medium ${TIPO_BG[c.tipo] ?? "dp-bg-faint"}`}
+                        className={`dp-text-heading truncate rounded px-1 py-0.5 text-[10px] font-medium ${TIPO_CITA_COLOR[c.tipo as keyof typeof TIPO_CITA_COLOR] ?? "dp-bg-faint"}`}
                       >
                         {c.cliente_nombre}
                       </span>
@@ -152,7 +141,7 @@ export default async function AgendaPage({
       <div className="flex flex-wrap items-center gap-3 text-xs">
         {TIPOS_CITA.map((t) => (
           <span key={t} className="flex items-center gap-1.5">
-            <span className={`h-3 w-3 rounded ${TIPO_BG[t] ?? "dp-bg-faint"}`} />
+            <span className={`h-3 w-3 rounded ${TIPO_CITA_COLOR[t] ?? "dp-bg-faint"}`} />
             <span className="dp-muted">{t}</span>
           </span>
         ))}

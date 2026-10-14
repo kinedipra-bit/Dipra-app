@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Avatar } from "@/components/Avatar";
-import { ESTADOS_CITA } from "@/lib/dipra/constants";
+import { ESTADOS_CITA, TIPO_CITA_COLOR } from "@/lib/dipra/constants";
 import type { Cita } from "@/lib/dipra/types";
 import { actualizarEstadoCita, eliminarCita } from "./actions";
 
@@ -55,7 +55,12 @@ export function CitaRow({ cita, mostrarHora = true }: { cita: Cita; mostrarHora?
         ) : (
           <p className="dp-text-heading truncate text-sm font-medium">{cita.cliente_nombre}</p>
         )}
-        <p className="dp-muted text-xs">{cita.tipo}</p>
+        <p className="dp-muted flex items-center gap-1.5 text-xs">
+          <span
+            className={`h-2 w-2 shrink-0 rounded-full ${TIPO_CITA_COLOR[cita.tipo as keyof typeof TIPO_CITA_COLOR] ?? "dp-bg-faint"}`}
+          />
+          {cita.tipo}
+        </p>
       </div>
       <select
         value={estado}
