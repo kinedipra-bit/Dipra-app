@@ -13,6 +13,11 @@ export interface Cliente {
   categoria: string;
   ocupacion: string;
   objetivo: string;
+  // Cliente 100% remoto — solo planificación, Nicolás no lo atiende
+  // presencialmente. Es una marca manual, informativa (no la misma idea
+  // que esClienteRemoto en alertasProgramacion.ts, que infiere uso del
+  // portal a partir de sesiones registradas).
+  remoto: boolean;
   // Objetivo/motivo de consulta/anamnesis — texto libre de Evaluación,
   // distinto de `objetivo` (más corto, orientado a la meta de entrenamiento).
   motivo_consulta: string;
