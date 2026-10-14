@@ -1,16 +1,19 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Avatar } from "@/components/Avatar";
 import { alertasCliente, esClienteRemoto } from "@/lib/dipra/alertasProgramacion";
 import type { Cliente, PlanSemana, Sesion } from "@/lib/dipra/types";
+import { ClientesListView } from "./ClientesListView";
 
-type ClienteFila = Pick<Cliente, "id" | "nombre" | "iniciales" | "categoria" | "objetivo" | "semana_activa_id">;
+type ClienteFila = Pick<
+  Cliente,
+  "id" | "nombre" | "iniciales" | "categoria" | "objetivo" | "semana_activa_id" | "remoto"
+>;
 
 export default async function ClientesPage() {
   const supabase = await createClient();
   const { data: clientes } = await supabase
     .from("clients")
-    .select("id, nombre, iniciales, categoria, objetivo, semana_activa_id")
+    .select("id, nombre, iniciales, categoria, objetivo, semana_activa_id, remoto")
     .order("nombre")
     .returns<ClienteFila[]>();
 
@@ -60,37 +63,17 @@ export default async function ClientesPage() {
       {!clientes || clientes.length === 0 ? (
         <p className="dp-muted text-sm">Todavía no hay clientes cargados.</p>
       ) : (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-          {clientes.map((c) => {
-            const alertas = alertasPorCliente.get(c.id);
-            return (
-              <Link
-                key={c.id}
-                href={`/clientes/${c.id}/ficha`}
-                className="dp-surface flex items-start gap-3 rounded-2xl p-4 shadow-sm transition-shadow hover:shadow-md"
-              >
-                <Avatar iniciales={c.iniciales} />
-                <div className="min-w-0 flex-1">
-                  <p className="dp-text-heading truncate font-medium">{c.nombre}</p>
-                  <p className="dp-muted text-xs">{c.categoria || "Sin categoría"}</p>
-                  {c.objetivo && <p className="dp-body mt-1 line-clamp-2 text-xs">{c.objetivo}</p>}
-                  {alertas && (
-                    <div className="mt-2 flex flex-col gap-1">
-                      {alertas.map((a) => (
-                        <span
-                          key={a.tipo}
-                          className="dp-bg-alert-soft dp-alert w-fit rounded-full px-2 py-0.5 text-[10px] font-medium"
-                        >
-                          ⚠ {a.detalle}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+        <ClientesListView
+          clientes={clientes.map((c) => ({
+            id: c.id,
+            nombre: c.nombre,
+            iniciales: c.iniciales,
+            categoria: c.categoria,
+            objetivo: c.objetivo,
+            remoto: c.remoto,
+            alertas: alertasPorCliente.get(c.id),
+          }))}
+        />
       )}
     </div>
   );

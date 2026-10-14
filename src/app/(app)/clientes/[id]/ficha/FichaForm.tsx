@@ -19,6 +19,7 @@ export function FichaForm({ cliente, linkBoletasSii }: { cliente: Cliente; linkB
     ocupacion: cliente.ocupacion,
     objetivo: cliente.objetivo,
     fecha_nacimiento: cliente.fecha_nacimiento ?? "",
+    remoto: cliente.remoto,
   });
   const [pilares, setPilares] = useState(cliente.pilares);
   const [antecedentes, setAntecedentes] = useState(cliente.antecedentes);
@@ -126,6 +127,16 @@ export function FichaForm({ cliente, linkBoletasSii }: { cliente: Cliente; linkB
               value={datos.objetivo}
               onChange={(e) => setDatos({ ...datos, objetivo: e.target.value })}
             />
+          </label>
+          <label className="col-span-2 flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={datos.remoto}
+              onChange={(e) => setDatos({ ...datos, remoto: e.target.checked })}
+              className="h-4 w-4"
+            />
+            <span className="dp-body font-medium">Cliente 100% remoto</span>
+            <span className="dp-muted text-xs">— solo planificación, no lo atendés presencialmente</span>
           </label>
         </div>
 
