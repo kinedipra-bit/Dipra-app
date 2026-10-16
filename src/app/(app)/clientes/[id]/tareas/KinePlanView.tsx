@@ -236,6 +236,18 @@ export function KinePlanView({
     setDias((prev) => prev.map((d, i) => (i === idx ? { ...d, label } : d)));
   };
 
+  // Mismo criterio que Plan (fuerza): reordena dos días adyacentes sin
+  // pisar contenido — "Copiar día" no sirve para esto porque solo copia
+  // hacia el día actual, no intercambia.
+  const moverDia = (idx: number, delta: -1 | 1) => {
+    const destino = idx + delta;
+    if (destino < 0 || destino >= dias.length) return;
+    const nextDias = [...dias];
+    [nextDias[idx], nextDias[destino]] = [nextDias[destino], nextDias[idx]];
+    setDias(nextDias);
+    setDiaIdx(destino);
+  };
+
   // Copia los bloques de otro día de Tareas sobre el día actual — ej.
   // armaste el día 1 y te equivocaste en el día 2, sin volver a empezar de
   // cero. Pisa los bloques del día actual (con confirm si ya tenía algo).
@@ -484,21 +496,41 @@ export function KinePlanView({
           <div className="flex flex-wrap items-center gap-1.5">
             {dias.map((d, i) => (
               <div key={d.id} className={`flex items-center gap-0.5 rounded-lg ${i === diaIdx ? "dp-bg-ink" : "dp-bg-faint"}`}>
+                {i > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => moverDia(i, -1)}
+                    title={`Mover "${d.label}" antes de "${dias[i - 1].label}"`}
+                    className={`pl-1.5 text-xs ${i === diaIdx ? "text-white/70 hover:text-white" : "dp-muted hover:dp-text-brand"}`}
+                  >
+                    ◀
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setDiaIdx(i)}
-                  className={`rounded-lg py-1.5 pl-3 text-sm font-medium transition-colors ${
+                  className={`rounded-lg py-1.5 text-sm font-medium transition-colors ${
                     i === diaIdx ? "text-white" : "dp-body"
-                  } ${dias.length > 1 ? "pr-1" : "pr-3"}`}
+                  } ${i === 0 ? "pl-3" : "pl-1.5"} ${dias.length > 1 ? "pr-1" : "pr-3"}`}
                 >
                   {d.label}
                 </button>
+                {i < dias.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={() => moverDia(i, 1)}
+                    title={`Mover "${d.label}" después de "${dias[i + 1].label}"`}
+                    className={`text-xs ${i === diaIdx ? "text-white/70 hover:text-white" : "dp-muted hover:dp-text-brand"}`}
+                  >
+                    ▶
+                  </button>
+                )}
                 {dias.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeDia(i)}
                     title="Eliminar sesión"
-                    className={`pr-2 text-xs ${i === diaIdx ? "text-white/70 hover:text-white" : "dp-muted hover:dp-alert"}`}
+                    className={`pr-2 pl-1 text-xs ${i === diaIdx ? "text-white/70 hover:text-white" : "dp-muted hover:dp-alert"}`}
                   >
                     ✕
                   </button>
