@@ -429,9 +429,17 @@ export function PlanView({
   // label autogenerado es editable después vía renameDia.
   const addDia = () => {
     if (!semana) return;
+    // El número sugerido es el primer "Día N" libre, no `dias.length + 1` —
+    // si se borró "Día 1" y quedan 3 días, length+1 ofrecía "Día 4" (que ya
+    // existe) en vez de reaparecer "Día 1".
+    const usados = new Set(
+      semana.dias.map((d) => Number(d.label.match(/^Día (\d+)$/)?.[1])).filter((n) => !Number.isNaN(n))
+    );
+    let numero = 1;
+    while (usados.has(numero)) numero++;
     const nextDias: DiaPlan[] = [
       ...semana.dias,
-      { id: crypto.randomUUID(), label: `Día ${semana.dias.length + 1}`, foco: "", bloques: blockTemplate() },
+      { id: crypto.randomUUID(), label: `Día ${numero}`, foco: "", bloques: blockTemplate() },
     ];
     updateSemana({ ...semana, dias: nextDias });
     setDiaIdx(nextDias.length - 1);
