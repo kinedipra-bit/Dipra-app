@@ -28,7 +28,9 @@ export function EvolucionClient({
 
   const [pending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [metricasExtra, setMetricasExtra] = useState(metricasExtraIniciales);
+  const entradaEditando = editingId ? (hist.find((h) => h.id === editingId) ?? null) : null;
 
   const borrar = (id: string) => {
     if (!confirm("¿Eliminar este registro de mesociclo? Esta acción no se puede deshacer.")) return;
@@ -45,6 +47,9 @@ export function EvolucionClient({
         clienteId={clienteId}
         metricasExtraIniciales={metricasExtra}
         onMetricasExtraChange={setMetricasExtra}
+        entradaEditando={entradaEditando}
+        onEdicionGuardada={() => setEditingId(null)}
+        onCancelarEdicion={() => setEditingId(null)}
       />
 
       {hist.length === 0 ? (
@@ -65,6 +70,13 @@ export function EvolucionClient({
                 <span className="dp-muted font-mono">{fmtFecha(h.fecha)}</span>
                 <span className="dp-text-heading font-medium">{h.mesociclo}</span>
                 {h.objetivo && <span className="dp-text-brand">· {h.objetivo}</span>}
+                <button
+                  type="button"
+                  onClick={() => setEditingId(h.id)}
+                  className="dp-text-brand font-medium hover:underline"
+                >
+                  Editar
+                </button>
                 <button
                   type="button"
                   onClick={() => borrar(h.id)}

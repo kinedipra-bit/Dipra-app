@@ -46,6 +46,18 @@ export async function crearPrHistorial(clienteId: string, input: NuevaMedicionIn
   revalidar(clienteId);
 }
 
+// Corrige un registro ya cargado (ej. un error de tipeo) sin tener que
+// borrarlo y cargarlo de nuevo.
+export async function actualizarPrHistorial(clienteId: string, id: string, input: NuevaMedicionInput) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("client_pr_historial")
+    .update({ ...input, extra: input.extra ?? {} })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidar(clienteId);
+}
+
 export async function eliminarPrHistorial(clienteId: string, id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("client_pr_historial").delete().eq("id", id);
