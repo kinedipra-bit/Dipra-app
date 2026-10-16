@@ -281,6 +281,15 @@ export function KinePlanView({
     if (!dia) return;
     updateDia({ ...dia, bloques: dia.bloques.filter((_, i) => i !== bIdx) });
   };
+  // Mismo criterio que Plan (fuerza): reordena dos bloques adyacentes.
+  const moverBloque = (bIdx: number, delta: -1 | 1) => {
+    if (!dia) return;
+    const destino = bIdx + delta;
+    if (destino < 0 || destino >= dia.bloques.length) return;
+    const nextBloques = [...dia.bloques];
+    [nextBloques[bIdx], nextBloques[destino]] = [nextBloques[destino], nextBloques[bIdx]];
+    updateDia({ ...dia, bloques: nextBloques });
+  };
 
   const addExercise = (bIdx: number) => {
     if (!dia) return;
@@ -624,14 +633,36 @@ export function KinePlanView({
                           className="dp-ink border-none bg-transparent text-lg font-semibold tracking-wide uppercase outline-none focus:underline"
                           style={{ minWidth: 120 }}
                         />
-                        <button
-                          type="button"
-                          onClick={() => removeBloque(bIdx)}
-                          title="Eliminar bloque"
-                          className="dp-muted hover:dp-alert text-sm"
-                        >
-                          ✕
-                        </button>
+                        <div className="flex items-center gap-2">
+                          {bIdx > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => moverBloque(bIdx, -1)}
+                              title="Mover bloque hacia arriba"
+                              className="dp-muted hover:dp-text-brand text-sm"
+                            >
+                              ▲
+                            </button>
+                          )}
+                          {bIdx < dia.bloques.length - 1 && (
+                            <button
+                              type="button"
+                              onClick={() => moverBloque(bIdx, 1)}
+                              title="Mover bloque hacia abajo"
+                              className="dp-muted hover:dp-text-brand text-sm"
+                            >
+                              ▼
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeBloque(bIdx)}
+                            title="Eliminar bloque"
+                            className="dp-muted hover:dp-alert text-sm"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </div>
 
                       {b.exercises.length > 0 && (

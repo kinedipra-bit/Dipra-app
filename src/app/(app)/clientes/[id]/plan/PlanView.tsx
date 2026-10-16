@@ -404,6 +404,16 @@ export function PlanView({
     nextDia.bloques.splice(bIdx, 1);
     updateDia(nextDia);
   };
+  // Mismo criterio que moverDia — reordena dos bloques adyacentes del día
+  // (ej. el 5to quedaría mejor como 2do) sin tener que recrearlos.
+  const moverBloque = (bIdx: number, delta: -1 | 1) => {
+    if (!dia) return;
+    const destino = bIdx + delta;
+    if (destino < 0 || destino >= dia.bloques.length) return;
+    const nextDia = structuredClone(dia);
+    [nextDia.bloques[bIdx], nextDia.bloques[destino]] = [nextDia.bloques[destino], nextDia.bloques[bIdx]];
+    updateDia(nextDia);
+  };
   const setBloqueCualidad = (bIdx: number, cualidad: CualidadFuerza | "") => {
     if (!dia) return;
     const nextDia = structuredClone(dia);
@@ -948,6 +958,26 @@ export function PlanView({
                           />
                           <div className="flex items-center gap-2">
                             <span className="dp-muted font-mono text-xs">{vol.toLocaleString("es-CL")} kg vol.</span>
+                            {bIdx > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => moverBloque(bIdx, -1)}
+                                title="Mover bloque hacia arriba"
+                                className="dp-muted hover:dp-text-brand text-sm"
+                              >
+                                ▲
+                              </button>
+                            )}
+                            {bIdx < dia.bloques.length - 1 && (
+                              <button
+                                type="button"
+                                onClick={() => moverBloque(bIdx, 1)}
+                                title="Mover bloque hacia abajo"
+                                className="dp-muted hover:dp-text-brand text-sm"
+                              >
+                                ▼
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={() => removeBloque(bIdx)}
