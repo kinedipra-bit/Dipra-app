@@ -1,11 +1,31 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { crearMetricaExtra, crearPrHistorial, eliminarMetricaExtra, type NuevaMedicionInput } from "./actions";
+import { useEffect, useState, useTransition } from "react";
+import {
+  actualizarPrHistorial,
+  crearMetricaExtra,
+  crearPrHistorial,
+  eliminarMetricaExtra,
+  type NuevaMedicionInput,
+} from "./actions";
 import { GRUPOS, METRICS, nuevoDraft } from "./metricas";
-import type { MetricaExtra } from "@/lib/dipra/types";
+import type { MetricaExtra, PrHistorialEntry } from "@/lib/dipra/types";
 
 const inputClass = "rounded-lg border border-black/10 px-3 py-1.5 text-sm outline-none focus:dp-border-brand";
+
+// Convierte un registro ya guardado (números) al shape del draft del
+// formulario (strings, como lo escriben los <input type="number">).
+function draftDesdeEntry(entry: PrHistorialEntry) {
+  const draft = { ...nuevoDraft(), extra: {} as Record<string, string> };
+  draft.fecha = entry.fecha;
+  draft.mesociclo = entry.mesociclo;
+  draft.objetivo = entry.objetivo;
+  METRICS.forEach((m) => {
+    draft[m.key] = String(entry[m.key] ?? "");
+  });
+  draft.extra = Object.fromEntries(Object.entries(entry.extra ?? {}).map(([k, v]) => [k, String(v)]));
+  return draft;
+}
 
 /**
  * Formulario de carga de una nueva medición de rendimiento (fuerza, saltos,
@@ -23,11 +43,20 @@ export function NuevaMedicionForm({
   tituloBoton = "+ Nuevo registro de mesociclo",
   metricasExtraIniciales = [],
   onMetricasExtraChange,
+  entradaEditando = null,
+  onEdicionGuardada,
+  onCancelarEdicion,
 }: {
   clienteId: string;
   tituloBoton?: string;
   metricasExtraIniciales?: MetricaExtra[];
   onMetricasExtraChange?: (metricas: MetricaExtra[]) => void;
+  // Si viene seteada, el formulario se abre precargado con ese registro y
+  // "Guardar" actualiza en vez de crear uno nuevo — así se puede corregir
+  // un error de tipeo sin borrar y volver a cargar todo.
+  entradaEditando?: PrHistorialEntry | null;
+  onEdicionGuardada?: () => void;
+  onCancelarEdicion?: () => void;
 }) {
   const [showAdd, setShowAdd] = useState(false);
   const [draft, setDraft] = useState({ ...nuevoDraft(), extra: {} as Record<string, string> });
@@ -37,6 +66,15 @@ export function NuevaMedicionForm({
   const [alcanceNuevoEjercicio, setAlcanceNuevoEjercicio] = useState<"cliente" | "general">("cliente");
   const [pending, startTransition] = useTransition();
   const [creandoEjercicio, startCrearEjercicio] = useTransition();
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (entradaEditando) {
+      setDraft(draftDesdeEntry(entradaEditando));
+      setShowAdd(true);
+    }
+  }, [entradaEditando]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const actualizarMetricasExtra = (next: MetricaExtra[]) => {
     setMetricasExtra(next);
@@ -94,23 +132,40 @@ export function NuevaMedicionForm({
       entrada[m.key] = Number(draft[m.key]) || 0;
     });
     startTransition(async () => {
-      await crearPrHistorial(clienteId, entrada);
+      if (entradaEditando) {
+        await actualizarPrHistorial(clienteId, entradaEditando.id, entrada);
+        onEdicionGuardada?.();
+      } else {
+        await crearPrHistorial(clienteId, entrada);
+      }
       setDraft({ ...nuevoDraft(), extra: {} });
       setShowAdd(false);
     });
   };
 
+  const cancelar = () => {
+    setDraft({ ...nuevoDraft(), extra: {} });
+    setShowAdd(false);
+    onCancelarEdicion?.();
+  };
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => setShowAdd((v) => !v)}
-          className="dp-bg-brand rounded-xl px-3.5 py-2 text-sm font-medium text-white"
-        >
-          {tituloBoton}
-        </button>
-      </div>
+      {entradaEditando ? (
+        <p className="dp-text-amber text-sm font-medium">
+          ✎ Editando el registro del {entradaEditando.fecha} — {entradaEditando.mesociclo}
+        </p>
+      ) : (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setShowAdd((v) => !v)}
+            className="dp-bg-brand rounded-xl px-3.5 py-2 text-sm font-medium text-white"
+          >
+            {tituloBoton}
+          </button>
+        </div>
+      )}
 
       {showAdd && (
         <div className="dp-surface flex flex-col gap-3 rounded-2xl p-4 shadow-sm">
@@ -240,14 +295,21 @@ export function NuevaMedicionForm({
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={agregar}
-            disabled={!draft.mesociclo.trim() || pending}
-            className="dp-bg-brand w-fit rounded-xl px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
-          >
-            {pending ? "Guardando…" : "Guardar registro"}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={agregar}
+              disabled={!draft.mesociclo.trim() || pending}
+              className="dp-bg-brand w-fit rounded-xl px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+            >
+              {pending ? "Guardando…" : entradaEditando ? "Guardar cambios" : "Guardar registro"}
+            </button>
+            {entradaEditando && (
+              <button type="button" onClick={cancelar} disabled={pending} className="dp-muted text-sm hover:underline">
+                Cancelar
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
