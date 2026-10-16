@@ -213,7 +213,15 @@ export function KinePlanView({
   };
 
   const addDia = () => {
-    const nextDias = [...dias, nuevoDia(dias.length + 1)];
+    // Igual criterio que Plan (fuerza): el número sugerido es el primer
+    // "Sesión N" libre, no dias.length+1 — si se borró "Sesión 1" no
+    // ofrece "Sesión 4" (ya usado) en vez de reaparecer "Sesión 1".
+    const usados = new Set(
+      dias.map((d) => Number(d.label.match(/^Sesión (\d+)$/)?.[1])).filter((n) => !Number.isNaN(n))
+    );
+    let numero = 1;
+    while (usados.has(numero)) numero++;
+    const nextDias = [...dias, nuevoDia(numero)];
     setDias(nextDias);
     setDiaIdx(nextDias.length - 1);
   };
