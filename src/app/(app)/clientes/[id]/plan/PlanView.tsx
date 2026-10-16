@@ -461,6 +461,20 @@ export function PlanView({
     updateSemana({ ...semana, dias: nextDias });
   };
 
+  // Reordena dos días adyacentes (cambia su posición, cada uno se lleva su
+  // propio nombre y contenido) — antes la única forma de "intercambiar" dos
+  // días era "Copiar día", que pisa el destino y no mueve nada: terminabas
+  // con dos días iguales y tenías que rehacer todo a mano.
+  const moverDia = (idx: number, delta: -1 | 1) => {
+    if (!semana) return;
+    const destino = idx + delta;
+    if (destino < 0 || destino >= semana.dias.length) return;
+    const nextDias = [...semana.dias];
+    [nextDias[idx], nextDias[destino]] = [nextDias[destino], nextDias[idx]];
+    updateSemana({ ...semana, dias: nextDias });
+    setDiaIdx(destino);
+  };
+
   // Copia los bloques de otro día de la MISMA semana sobre el día actual —
   // ej. planificaste el día 1, te equivocaste en el día 2 y no querés
   // volver a armarlo de cero. Pisa los bloques del día actual (con confirm
@@ -825,21 +839,41 @@ export function PlanView({
                 key={d.id}
                 className={`flex items-center gap-0.5 rounded-lg ${i === diaIdx ? "dp-bg-ink" : "dp-bg-faint"}`}
               >
+                {i > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => moverDia(i, -1)}
+                    title={`Mover "${d.label}" antes de "${semana.dias[i - 1].label}"`}
+                    className={`pl-1.5 text-xs ${i === diaIdx ? "text-white/70 hover:text-white" : "dp-muted hover:dp-text-brand"}`}
+                  >
+                    ◀
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setDiaIdx(i)}
-                  className={`rounded-lg py-1.5 pl-3 text-sm font-medium transition-colors ${
+                  className={`rounded-lg py-1.5 text-sm font-medium transition-colors ${
                     i === diaIdx ? "text-white" : "dp-body"
-                  } ${semana.dias.length > 1 ? "pr-1" : "pr-3"}`}
+                  } ${i === 0 ? "pl-3" : "pl-1.5"} ${semana.dias.length > 1 ? "pr-1" : "pr-3"}`}
                 >
                   {d.label}
                 </button>
+                {i < semana.dias.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={() => moverDia(i, 1)}
+                    title={`Mover "${d.label}" después de "${semana.dias[i + 1].label}"`}
+                    className={`text-xs ${i === diaIdx ? "text-white/70 hover:text-white" : "dp-muted hover:dp-text-brand"}`}
+                  >
+                    ▶
+                  </button>
+                )}
                 {semana.dias.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeDia(i)}
                     title="Eliminar día"
-                    className={`pr-2 text-xs ${i === diaIdx ? "text-white/70 hover:text-white" : "dp-muted hover:dp-alert"}`}
+                    className={`pr-2 pl-1 text-xs ${i === diaIdx ? "text-white/70 hover:text-white" : "dp-muted hover:dp-alert"}`}
                   >
                     ✕
                   </button>
