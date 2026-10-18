@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { ExerciseRow } from "@/app/(app)/clientes/[id]/plan/ExerciseRow";
 import { calcVolumenBloque } from "@/lib/dipra/calc";
 import type { DiaPlan, EjercicioPlan } from "@/lib/dipra/types";
-import { updateComentarioClienteKine } from "./actions";
+import { desmarcarTareaHecha, marcarTareaHecha, updateComentarioClienteKine } from "./actions";
 import { BloqueFocuseable } from "../BloqueFocuseable";
 
 export function PortalTareasView({
@@ -13,16 +13,34 @@ export function PortalTareasView({
   indicacionesTexto,
   indicacionesPdfUrl,
   indicacionesPdfNombre,
+  diasHechosHoyIniciales,
 }: {
   token: string;
   dias: DiaPlan[];
   indicacionesTexto: string;
   indicacionesPdfUrl: string | null;
   indicacionesPdfNombre: string | null;
+  diasHechosHoyIniciales: string[];
 }) {
   const [dias, setDias] = useState(diasIniciales);
   const [, startTransition] = useTransition();
   const [bloqueActivoId, setBloqueActivoId] = useState<string | null>(null);
+  const [hechosHoy, setHechosHoy] = useState<Set<string>>(new Set(diasHechosHoyIniciales));
+  const [marcando, startMarcar] = useTransition();
+
+  const toggleHecho = (diaId: string, diaLabel: string) => {
+    const yaHecho = hechosHoy.has(diaId);
+    setHechosHoy((prev) => {
+      const next = new Set(prev);
+      if (yaHecho) next.delete(diaId);
+      else next.add(diaId);
+      return next;
+    });
+    startMarcar(async () => {
+      if (yaHecho) await desmarcarTareaHecha(token, diaId);
+      else await marcarTareaHecha(token, diaId, diaLabel);
+    });
+  };
 
   const setEjercicio = (diaId: string, bloqueId: string, next: EjercicioPlan) => {
     setDias((prev) =>
@@ -72,7 +90,19 @@ export function PortalTareasView({
 
       {dias.map((dia) => (
         <section key={dia.id} className="dp-scope-dark rounded-2xl p-5 shadow-sm">
-          <h2 className="dp-text-brand font-[family-name:var(--font-display)] font-semibold">{dia.label}</h2>
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="dp-text-brand font-[family-name:var(--font-display)] font-semibold">{dia.label}</h2>
+            <button
+              type="button"
+              onClick={() => toggleHecho(dia.id, dia.label)}
+              disabled={marcando}
+              className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium disabled:opacity-50 ${
+                hechosHoy.has(dia.id) ? "dp-bg-brand text-white" : "dp-bg-white-10 dp-body"
+              }`}
+            >
+              {hechosHoy.has(dia.id) ? "✓ Hecho hoy" : "Marcar como hecho hoy"}
+            </button>
+          </div>
           {dia.foco && <p className="dp-muted mb-3 text-sm">{dia.foco}</p>}
 
           {dia.bloques.map((bloque) => (

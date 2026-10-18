@@ -464,6 +464,17 @@ export interface DiaEntrenamiento {
   created_at: string;
 }
 
+// Marca de "lo hice" de un día de Tareas (kinesiología) — ver migración
+// 0024, separada de `sesiones` (que es de la rutina de fuerza).
+export interface TareaCheckin {
+  id: string;
+  client_id: string;
+  dia_id: string;
+  dia_label: string;
+  fecha: string;
+  created_at: string;
+}
+
 // Suscripción de notificaciones push (Web Push) de un dispositivo del
 // portal de un cliente — ver src/lib/push.ts.
 export interface PushSubscriptionRow {

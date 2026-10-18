@@ -1,7 +1,12 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { DiaPlan, PlanKine } from "@/lib/dipra/types";
+import type { DiaPlan, PlanKine, TareaCheckin } from "@/lib/dipra/types";
+
+function hoyISO() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date());
+}
 
 function aplicarComentario(
   dias: DiaPlan[],
@@ -61,4 +66,53 @@ export async function updateComentarioClienteKine(
     .update({ dias: nextDias, ...(nextDiasPublicado ? { dias_publicado: nextDiasPublicado } : {}) })
     .eq("client_id", cliente.id);
   if (error) throw new Error(error.message);
+}
+
+// Marca "lo hice hoy" para un día de Tareas — separado de las sesiones de
+// fuerza, así el profesional puede ver si las tareas de kine también se
+// están cumpliendo.
+export async function marcarTareaHecha(token: string, diaId: string, diaLabel: string) {
+  const admin = createAdminClient();
+  const { data: cliente } = await admin.from("clients").select("id").eq("portal_token", token).single();
+  if (!cliente) throw new Error("Link inválido");
+
+  const { error } = await admin
+    .from("client_tareas_checkins")
+    .upsert(
+      { client_id: cliente.id, dia_id: diaId, dia_label: diaLabel, fecha: hoyISO() },
+      { onConflict: "client_id,dia_id,fecha" }
+    );
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/portal/${token}/tareas`);
+  revalidatePath(`/clientes/${cliente.id}/tareas`);
+}
+
+export async function desmarcarTareaHecha(token: string, diaId: string) {
+  const admin = createAdminClient();
+  const { data: cliente } = await admin.from("clients").select("id").eq("portal_token", token).single();
+  if (!cliente) throw new Error("Link inválido");
+
+  const { error } = await admin
+    .from("client_tareas_checkins")
+    .delete()
+    .eq("client_id", cliente.id)
+    .eq("dia_id", diaId)
+    .eq("fecha", hoyISO());
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/portal/${token}/tareas`);
+  revalidatePath(`/clientes/${cliente.id}/tareas`);
+}
+
+export async function obtenerCheckinsTareas(clienteId: string, desde: string): Promise<TareaCheckin[]> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("client_tareas_checkins")
+    .select("*")
+    .eq("client_id", clienteId)
+    .gte("fecha", desde)
+    .order("fecha", { ascending: false })
+    .returns<TareaCheckin[]>();
+  return data ?? [];
 }
