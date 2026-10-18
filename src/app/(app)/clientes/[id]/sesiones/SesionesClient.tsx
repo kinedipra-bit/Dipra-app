@@ -459,6 +459,9 @@ export function SesionesClient({
                       {s.dia_plan_label ? ` · ${s.dia_plan_label}` : ""}
                     </p>
                     <p className="dp-muted truncate text-xs">{s.comentarios || "Sin comentarios"}</p>
+                    <p className="dp-muted text-[10px]">
+                      {s.registrada_por_cliente ? "Registrada por el cliente (portal)" : "Registrada por vos"}
+                    </p>
                   </div>
                   {s.registrada_por_cliente && !s.revisada && (
                     <span className="dp-alert shrink-0 text-xs font-medium">⚠ Sin revisar</span>
