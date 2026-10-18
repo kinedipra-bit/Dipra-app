@@ -42,6 +42,7 @@ export function PortalAcceso({
 
   const entrar = () => {
     setError(null);
+    if (pin.length !== 4) return setError("El PIN debe tener 4 dígitos.");
     startTransition(async () => {
       const res = await iniciarSesionPin(token, pin);
       if (!res.ok) setError(res.error);
@@ -84,6 +85,7 @@ export function PortalAcceso({
             </div>
             <input
               inputMode="numeric"
+              autoComplete="off"
               value={pin}
               onChange={(e) => setPin(soloDigitos(e.target.value))}
               placeholder="PIN"
@@ -92,6 +94,7 @@ export function PortalAcceso({
             />
             <input
               inputMode="numeric"
+              autoComplete="off"
               value={pin2}
               onChange={(e) => setPin2(soloDigitos(e.target.value))}
               placeholder="Repetí el PIN"
@@ -116,6 +119,7 @@ export function PortalAcceso({
             </div>
             <input
               inputMode="numeric"
+              autoComplete="off"
               value={pin}
               onChange={(e) => setPin(soloDigitos(e.target.value))}
               placeholder="PIN"
@@ -125,7 +129,7 @@ export function PortalAcceso({
             <button
               type="button"
               onClick={entrar}
-              disabled={pending || pin.length !== 4}
+              disabled={pending}
               className="dp-bg-brand rounded-lg py-2 font-medium text-white disabled:opacity-50"
             >
               {pending ? "Entrando…" : "Entrar"}
@@ -184,6 +188,7 @@ export function PortalAcceso({
             </div>
             <input
               inputMode="numeric"
+              autoComplete="off"
               value={pin}
               onChange={(e) => setPin(soloDigitos(e.target.value))}
               placeholder="Nuevo PIN"
@@ -192,6 +197,7 @@ export function PortalAcceso({
             />
             <input
               inputMode="numeric"
+              autoComplete="off"
               value={pin2}
               onChange={(e) => setPin2(soloDigitos(e.target.value))}
               placeholder="Repetí el nuevo PIN"
