@@ -3,7 +3,8 @@
 import { useEffect, useState, useTransition } from "react";
 import { blockTemplate } from "@/lib/dipra/constants";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
-import type { BloquePlan, DiaPlan, EjercicioBiblioteca, EjercicioPlan, PlanKine } from "@/lib/dipra/types";
+import type { BloquePlan, DiaPlan, EjercicioBiblioteca, EjercicioPlan, PlanKine, TareaCheckin } from "@/lib/dipra/types";
+import { TareasCheckinsDia } from "./TareasCheckinsDia";
 import {
   actualizarIndicacionesTexto,
   compartirPlanKine,
@@ -167,11 +168,13 @@ export function KinePlanView({
   planInicial,
   bibliotecaInicial,
   indicacionesPdfUrl,
+  checkins,
 }: {
   clienteId: string;
   planInicial: PlanKine;
   bibliotecaInicial: EjercicioBiblioteca[];
   indicacionesPdfUrl: string | null;
+  checkins: TareaCheckin[];
 }) {
   const [plan, setPlan] = useState(planInicial);
   const [dias, setDias] = useState<DiaPlan[]>(planInicial.dias);
@@ -621,6 +624,8 @@ export function KinePlanView({
                 placeholder="Foco (ej. Movilidad de tobillo / Control motor rodilla)"
                 className="mb-4 w-full rounded-lg border border-black/10 px-3 py-1.5 text-sm outline-none focus:dp-border-brand"
               />
+
+              <TareasCheckinsDia checkins={checkins} diaId={dia.id} />
 
               <div className="flex flex-col gap-3">
                 {dia.bloques.map((b, bIdx) => (

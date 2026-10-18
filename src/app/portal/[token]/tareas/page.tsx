@@ -7,6 +7,10 @@ import { PortalAcceso } from "../PortalAcceso";
 import { AyudaSeccion } from "../AyudaSeccion";
 import { PortalTareasView } from "./PortalTareasView";
 
+function hoyISO() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date());
+}
+
 export default async function PortalTareasPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const cliente = await obtenerClientePortal(token);
@@ -24,13 +28,16 @@ export default async function PortalTareasPage({ params }: { params: Promise<{ t
   }
 
   const admin = createAdminClient();
-  const { data: plan } = await admin
-    .from("plan_kine")
-    .select("dias_publicado, indicaciones_texto, indicaciones_pdf_path, indicaciones_pdf_nombre")
-    .eq("client_id", cliente.id)
-    .maybeSingle<
-      Pick<PlanKine, "dias_publicado" | "indicaciones_texto" | "indicaciones_pdf_path" | "indicaciones_pdf_nombre">
-    >();
+  const [{ data: plan }, { data: checkinsHoy }] = await Promise.all([
+    admin
+      .from("plan_kine")
+      .select("dias_publicado, indicaciones_texto, indicaciones_pdf_path, indicaciones_pdf_nombre")
+      .eq("client_id", cliente.id)
+      .maybeSingle<
+        Pick<PlanKine, "dias_publicado" | "indicaciones_texto" | "indicaciones_pdf_path" | "indicaciones_pdf_nombre">
+      >(),
+    admin.from("client_tareas_checkins").select("dia_id").eq("client_id", cliente.id).eq("fecha", hoyISO()),
+  ]);
 
   const indicacionesPdfUrl = plan?.indicaciones_pdf_path
     ? admin.storage.from("indicaciones").getPublicUrl(plan.indicaciones_pdf_path).data.publicUrl
@@ -54,6 +61,7 @@ export default async function PortalTareasPage({ params }: { params: Promise<{ t
         indicacionesTexto={plan?.indicaciones_texto ?? ""}
         indicacionesPdfUrl={indicacionesPdfUrl}
         indicacionesPdfNombre={plan?.indicaciones_pdf_nombre ?? null}
+        diasHechosHoyIniciales={(checkinsHoy ?? []).map((c) => c.dia_id)}
       />
     </div>
   );
