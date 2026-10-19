@@ -31,6 +31,12 @@ create table public.feriados (
 alter table public.feriados enable row level security;
 create policy "feriados_all_authenticated" on public.feriados for all to authenticated using (true) with check (true);
 
+-- Las citas ya cargadas con el set de 4 categorías anterior (aproximado,
+-- sin haber visto la planilla real) pasan a las 6 reales.
+update public.citas set tipo = 'Kine' where tipo = 'Kinesiología';
+update public.citas set tipo = 'Personalizado' where tipo = 'Rendimiento';
+update public.citas set tipo = 'Grupo Fuerza' where tipo = 'Entrenamiento grupal';
+
 insert into public.feriados (fecha, nombre) values
   ('2026-01-01', 'Año Nuevo'),
   ('2026-04-03', 'Viernes Santo'),
