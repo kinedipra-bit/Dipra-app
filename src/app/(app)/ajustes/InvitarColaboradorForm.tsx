@@ -16,16 +16,13 @@ export function InvitarColaboradorForm() {
       return;
     }
     startTransition(async () => {
-      try {
-        await invitarProfesional(correo);
-        setMensaje({ tipo: "ok", texto: `Invitación enviada a ${correo}.` });
-        setEmail("");
-      } catch (e) {
-        setMensaje({
-          tipo: "error",
-          texto: e instanceof Error ? e.message : "No se pudo enviar la invitación.",
-        });
+      const resultado = await invitarProfesional(correo);
+      if (resultado.error) {
+        setMensaje({ tipo: "error", texto: resultado.error });
+        return;
       }
+      setMensaje({ tipo: "ok", texto: `Invitación enviada a ${correo}.` });
+      setEmail("");
     });
   };
 
