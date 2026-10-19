@@ -23,6 +23,41 @@ export async function invitarProfesional(email: string): Promise<{ error?: strin
   return {};
 }
 
+export async function listarColaboradores() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from("professionals")
+    .select("id, full_name, email")
+    .order("email")
+    .returns<{ id: string; full_name: string; email: string }[]>();
+  return data ?? [];
+}
+
+export async function cambiarContrasenaColaborador(
+  colaboradorId: string,
+  nuevaContrasena: string
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "No hay sesión activa" };
+
+  if (nuevaContrasena.length < 6) return { error: "La contraseña debe tener al menos 6 caracteres" };
+
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(colaboradorId, {
+    password: nuevaContrasena,
+  });
+  if (error) return { error: error.message };
+  return {};
+}
+
 export async function updateLinkBoletasSii(link: string) {
   const supabase = await createClient();
   const {
