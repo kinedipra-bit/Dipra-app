@@ -342,6 +342,12 @@ export interface EjercicioSesion {
   // escribió). Opcional porque las sesiones cargadas por el profesional no
   // lo usan.
   comentario?: string;
+  // true si se agregó durante la sesión (no venía del día del plan
+  // elegido) — ej. el profesional, presente con el cliente, decide sumar
+  // un ejercicio que no estaba planificado. Sin equivalente en el plan:
+  // seriesPlan/repsPlan/kgPlan quedan en 0 y `nombre` se edita a mano en
+  // vez de venir fijo del plan.
+  extra?: boolean;
 }
 
 export interface Sesion {

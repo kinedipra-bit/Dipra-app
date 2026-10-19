@@ -101,6 +101,53 @@ export function SesionesClient({
     setDraft({ ...draft, ejercicios: next });
   };
 
+  // Ejercicio sumado durante la sesión, sin equivalente en el plan — ej. el
+  // profesional decide exigir un poco más y agrega algo que no estaba
+  // programado. `bloqueTitle` indica a qué bloque extra se suma — si no se
+  // pasa, continúa el último bloque extra si el array ya termina en uno
+  // (mismo criterio de agrupación que agruparPorBloque), o arranca uno
+  // nuevo si no hay ninguno todavía.
+  const agregarEjercicioExtra = (bloqueTitle?: string) => {
+    if (!draft) return;
+    const ultimo = draft.ejercicios[draft.ejercicios.length - 1];
+    const titulo = bloqueTitle ?? (ultimo?.extra ? ultimo.bloqueTitle! : "Nuevo bloque");
+    const nuevo: EjercicioSesion = {
+      id: crypto.randomUUID(),
+      nombre: "",
+      seriesPlan: 0,
+      repsPlan: 0,
+      kgPlan: 0,
+      seriesReal: 1,
+      repsReal: 0,
+      kgReal: 0,
+      rpe: "",
+      bloqueTitle: titulo,
+      extra: true,
+    };
+    setDraft({ ...draft, ejercicios: [...draft.ejercicios, nuevo] });
+  };
+
+  // Siempre arranca un bloque nuevo (a diferencia de agregarEjercicioExtra
+  // sin argumentos, que continúa el último si corresponde).
+  const agregarBloqueExtra = () => agregarEjercicioExtra("Nuevo bloque");
+
+  const quitarEjercicioExtra = (idx: number) => {
+    if (!draft) return;
+    setDraft({ ...draft, ejercicios: draft.ejercicios.filter((_, i) => i !== idx) });
+  };
+
+  // Renombra el bloque de TODOS los ejercicios extra que forman ese grupo
+  // visual (ver agruparPorBloque) — cada EjercicioSesion guarda su propio
+  // bloqueTitle, así que renombrar "el bloque" es actualizarlo en cada uno.
+  const renombrarBloqueExtra = (idxs: number[], nuevoTitulo: string) => {
+    if (!draft) return;
+    const next = [...draft.ejercicios];
+    idxs.forEach((i) => {
+      next[i] = { ...next[i], bloqueTitle: nuevoTitulo };
+    });
+    setDraft({ ...draft, ejercicios: next });
+  };
+
   const guardar = () => {
     if (!draft) return;
     startTransition(async () => {
@@ -233,11 +280,30 @@ export function SesionesClient({
           )}
         </div>
 
-        {draft.dia_plan_label && (
+        {!draft.dia_plan_label && draft.ejercicios.length === 0 && (
+          <button
+            type="button"
+            onClick={agregarBloqueExtra}
+            className="dp-text-brand w-fit text-xs font-medium hover:underline"
+          >
+            + Agregar bloque (sin elegir un día del plan)
+          </button>
+        )}
+
+        {(draft.dia_plan_label || draft.ejercicios.length > 0) && (
           <div>
-            <p className="dp-text-heading mb-2 text-xs font-semibold uppercase tracking-wide">
-              Ejecución real vs. planificado
-            </p>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="dp-text-heading text-xs font-semibold uppercase tracking-wide">
+                Ejecución real vs. planificado
+              </p>
+              <button
+                type="button"
+                onClick={agregarBloqueExtra}
+                className="dp-text-brand text-xs font-medium hover:underline"
+              >
+                + Agregar bloque
+              </button>
+            </div>
             <div
               className="dp-muted grid gap-2 pb-1 text-[10px] font-medium uppercase tracking-wide"
               style={{ gridTemplateColumns: "1.4fr 0.9fr 0.5fr 0.5fr 0.9fr 0.4fr" }}
@@ -252,10 +318,24 @@ export function SesionesClient({
             <div className="flex flex-col gap-3">
               {agruparPorBloque(draft.ejercicios).map((grupo, gIdx) => (
                 <div key={gIdx}>
-                  {grupo.bloqueTitle && (
-                    <p className="dp-text-brand mb-1 text-base font-semibold tracking-wide uppercase">
-                      {grupo.bloqueTitle}
-                    </p>
+                  {grupo.items.every(({ ejercicio }) => ejercicio.extra) ? (
+                    <input
+                      type="text"
+                      value={grupo.bloqueTitle}
+                      onChange={(e) =>
+                        renombrarBloqueExtra(
+                          grupo.items.map(({ idx }) => idx),
+                          e.target.value
+                        )
+                      }
+                      className="dp-text-brand mb-1 w-full border-0 border-b border-dashed border-current bg-transparent text-base font-semibold tracking-wide uppercase outline-none"
+                    />
+                  ) : (
+                    grupo.bloqueTitle && (
+                      <p className="dp-text-brand mb-1 text-base font-semibold tracking-wide uppercase">
+                        {grupo.bloqueTitle}
+                      </p>
+                    )
                   )}
                   <div className="divide-y divide-black/5">
                     {grupo.items.map(({ ejercicio: ex, idx }) => {
@@ -296,7 +376,25 @@ export function SesionesClient({
                           style={{ gridTemplateColumns: "1.4fr 0.9fr 0.5fr 0.5fr 0.9fr 0.4fr" }}
                         >
                           <div className="min-w-0">
-                            {embedUrl ? (
+                            {ex.extra ? (
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  type="text"
+                                  value={ex.nombre}
+                                  onChange={(e) => updateEjercicio(idx, { nombre: e.target.value })}
+                                  placeholder="Nombre del ejercicio"
+                                  className="w-full rounded-md border border-black/10 px-1.5 py-0.5 text-sm outline-none focus:dp-border-brand"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => quitarEjercicioExtra(idx)}
+                                  title="Quitar ejercicio"
+                                  className="dp-alert shrink-0 text-xs"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ) : embedUrl ? (
                               <button
                                 type="button"
                                 onClick={() => setVideoAbiertoId(videoAbierto ? null : ex.id)}
@@ -328,8 +426,9 @@ export function SesionesClient({
                             )}
                           </div>
                           <span className="dp-muted font-mono text-xs">
-                            {ex.seriesPlan}×{ex.repsPlan}
-                            {ex.unilateral ? " c/u" : ""}×{kgPlanTexto}kg{ex.pesoCadaUno ? " c/u" : ""}
+                            {ex.extra
+                              ? "—"
+                              : `${ex.seriesPlan}×${ex.repsPlan}${ex.unilateral ? " c/u" : ""}×${kgPlanTexto}kg${ex.pesoCadaUno ? " c/u" : ""}`}
                           </span>
                           <input
                             type="number"
@@ -401,6 +500,15 @@ export function SesionesClient({
                       );
                     })}
                   </div>
+                  {grupo.items.every(({ ejercicio }) => ejercicio.extra) && (
+                    <button
+                      type="button"
+                      onClick={() => agregarEjercicioExtra(grupo.bloqueTitle)}
+                      className="dp-text-brand mt-1 text-xs hover:underline"
+                    >
+                      + ejercicio en este bloque
+                    </button>
+                  )}
                 </div>
               ))}
               {draft.ejercicios.length === 0 && (
@@ -598,7 +706,8 @@ export function SesionesClient({
                                   <div key={ex.id} className="flex items-center justify-between py-1.5 text-sm">
                                     <span className="dp-text-heading">{ex.nombre}</span>
                                     <span className="dp-muted font-mono text-xs">
-                                      plan {ex.seriesPlan}×{ex.repsPlan}×{kgPlanTexto}kg → real {ex.seriesReal}×
+                                      {ex.extra ? "agregado en la sesión" : `plan ${ex.seriesPlan}×${ex.repsPlan}×${kgPlanTexto}kg`}
+                                      {" → "}real {ex.seriesReal}×
                                       {repsRealTexto}×{kgRealTexto}kg{rpeTexto ? ` · RPE ${rpeTexto}` : ""}
                                     </span>
                                   </div>
