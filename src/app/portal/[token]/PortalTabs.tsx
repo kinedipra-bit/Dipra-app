@@ -4,19 +4,20 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { segment: "plan", label: "Mi rutina" },
-  { segment: "tareas", label: "Tareas" },
-  { segment: "sesiones", label: "Mis sesiones" },
-  { segment: "historico", label: "Histórico" },
-  { segment: "evolucion", label: "Mi progreso" },
+  { segment: "plan", label: "Mi rutina", requiereRutinaFuerza: true },
+  { segment: "tareas", label: "Tareas", requiereRutinaFuerza: false },
+  { segment: "sesiones", label: "Mis sesiones", requiereRutinaFuerza: true },
+  { segment: "historico", label: "Histórico", requiereRutinaFuerza: false },
+  { segment: "evolucion", label: "Mi progreso", requiereRutinaFuerza: false },
 ];
 
-export function PortalTabs({ token }: { token: string }) {
+export function PortalTabs({ token, tieneRutinaFuerza }: { token: string; tieneRutinaFuerza: boolean }) {
   const pathname = usePathname();
+  const tabs = TABS.filter((tab) => !tab.requiereRutinaFuerza || tieneRutinaFuerza);
 
   return (
     <nav className="flex gap-1 border-b border-black/5">
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const href = `/portal/${token}/${tab.segment}`;
         const active = pathname?.startsWith(href);
         return (

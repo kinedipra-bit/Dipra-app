@@ -60,7 +60,7 @@ export default async function PortalLayout({
           </div>
         </div>
 
-        {autenticado && <PortalTabs token={token} />}
+        {autenticado && <PortalTabs token={token} tieneRutinaFuerza={cliente.tieneRutinaFuerza} />}
 
         <div>{children}</div>
       </div>
