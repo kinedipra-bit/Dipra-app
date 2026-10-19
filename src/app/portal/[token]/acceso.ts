@@ -8,6 +8,11 @@ export const SESSION_DIAS = 180;
 export type ClientePortal = Pick<Cliente, "id" | "nombre" | "correo" | "semana_activa_id"> & {
   pinHash: string | null;
   bloqueadoHasta: string | null;
+  // true si hay una rutina de fuerza efectivamente compartida (semana
+  // activa con dias_publicado no vacío) — mientras no la comparta, el
+  // cliente es "solo kine": no tiene sentido mostrarle "Mi rutina" ni
+  // "Mis sesiones" (ambas del lado fuerza) en la navegación del portal.
+  tieneRutinaFuerza: boolean;
 };
 
 // Trae al cliente por su portal_token + su fila de auth del portal (tabla
@@ -22,13 +27,29 @@ export async function obtenerClientePortal(token: string): Promise<ClientePortal
     .single<Pick<Cliente, "id" | "nombre" | "correo" | "semana_activa_id">>();
   if (!cliente) return null;
 
-  const { data: auth } = await admin
-    .from("client_portal_auth")
-    .select("pin_hash, bloqueado_hasta")
-    .eq("client_id", cliente.id)
-    .maybeSingle<{ pin_hash: string | null; bloqueado_hasta: string | null }>();
+  const [{ data: auth }, tieneRutinaFuerza] = await Promise.all([
+    admin
+      .from("client_portal_auth")
+      .select("pin_hash, bloqueado_hasta")
+      .eq("client_id", cliente.id)
+      .maybeSingle<{ pin_hash: string | null; bloqueado_hasta: string | null }>(),
+    (async () => {
+      if (!cliente.semana_activa_id) return false;
+      const { data: semana } = await admin
+        .from("plan_semanas")
+        .select("dias_publicado")
+        .eq("id", cliente.semana_activa_id)
+        .maybeSingle<{ dias_publicado: unknown[] | null }>();
+      return !!semana?.dias_publicado && semana.dias_publicado.length > 0;
+    })(),
+  ]);
 
-  return { ...cliente, pinHash: auth?.pin_hash ?? null, bloqueadoHasta: auth?.bloqueado_hasta ?? null };
+  return {
+    ...cliente,
+    pinHash: auth?.pin_hash ?? null,
+    bloqueadoHasta: auth?.bloqueado_hasta ?? null,
+    tieneRutinaFuerza,
+  };
 }
 
 // Sesión activa = cookie con un id de portal_sessions vigente Y que
