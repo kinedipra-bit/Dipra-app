@@ -14,8 +14,11 @@ export async function invitarProfesional(email: string) {
   const correo = email.trim().toLowerCase();
   if (!correo) throw new Error("Ingresá un email");
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://dipra-app.vercel.app";
   const admin = createAdminClient();
-  const { error } = await admin.auth.admin.inviteUserByEmail(correo);
+  const { error } = await admin.auth.admin.inviteUserByEmail(correo, {
+    redirectTo: `${siteUrl}/auth/set-password`,
+  });
   if (error) throw new Error(error.message);
 }
 

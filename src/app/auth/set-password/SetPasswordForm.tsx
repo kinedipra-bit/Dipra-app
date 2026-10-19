@@ -1,31 +1,67 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { definirContrasena } from "./actions";
+import { useEffect, useState, useTransition } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 export function SetPasswordForm() {
   const router = useRouter();
+  const [supabase] = useState(() => createClient());
+  const [verificando, setVerificando] = useState(true);
+  const [sesionValida, setSesionValida] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmar, setConfirmar] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  useEffect(() => {
+    // El link del mail de invitación trae la sesión en el fragmento de la
+    // URL (#access_token=...) — el cliente de Supabase la detecta y la
+    // guarda sola al cargar la página, no hay nada que pedirle a mano acá.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSesionValida(!!session);
+      setVerificando(false);
+    });
+  }, [supabase]);
+
   const enviar = () => {
     setError(null);
-    if (password.length < 6) return setError("La contraseña debe tener al menos 6 caracteres.");
-    if (password !== confirmar) return setError("Las contraseñas no coinciden.");
+    if (password.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+    if (password !== confirmar) {
+      setError("Las contraseñas no coinciden.");
+      return;
+    }
 
     startTransition(async () => {
-      try {
-        await definirContrasena(password);
-        router.push("/");
-        router.refresh();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "No se pudo guardar la contraseña.");
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) {
+        setError(error.message);
+        return;
       }
+      router.push("/");
+      router.refresh();
     });
   };
+
+  if (verificando) {
+    return (
+      <div className="dp-surface rounded-2xl p-6 text-center shadow-sm">
+        <p className="dp-muted text-sm">Verificando tu link…</p>
+      </div>
+    );
+  }
+
+  if (!sesionValida) {
+    return (
+      <div className="dp-surface flex flex-col gap-2 rounded-2xl p-6 text-center shadow-sm">
+        <p className="dp-alert text-sm font-medium">El link no es válido o ya venció.</p>
+        <p className="dp-muted text-xs">Pedile a tu profesional que te invite de nuevo desde Ajustes.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="dp-surface flex flex-col gap-4 rounded-2xl p-6 shadow-sm">
