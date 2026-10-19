@@ -1,15 +1,10 @@
 import Image from "next/image";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { SetPasswordForm } from "./SetPasswordForm";
 
-export default async function SetPasswordPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
+// Sin chequeo de sesión server-side a propósito: el link de invitación trae
+// la sesión en el fragmento (#access_token=...) de la URL, que solo el
+// navegador puede leer — SetPasswordForm la detecta del lado del cliente.
+export default function SetPasswordPage() {
   return (
     <div className="flex min-h-screen items-center justify-center dp-bg-app px-4">
       <div className="w-full max-w-sm">
