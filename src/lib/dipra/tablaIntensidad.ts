@@ -61,7 +61,6 @@ export const TABLA_INTENSIDAD: Record<CualidadFuerza, FilaIntensidad> = {
     porcentaje1RM: "≤67%",
     seriesPorEjercicio: "2-3",
     setsSemana: [6, 10],
-    notaSetsSemana: "sin un estándar claro",
     descanso: "<30s",
   },
   "Potencia (Esfuerzo Único)": {
@@ -206,6 +205,44 @@ export function resumenSetsPorCualidad(dias: DiaPlan[]): ResumenCualidad[] {
   return resultado.sort(
     (a, b) => a.grupoMuscular.localeCompare(b.grupoMuscular) || a.cualidad.localeCompare(b.cualidad)
   );
+}
+
+// Contactos semanales de pliometría. A diferencia del resto de cualidades,
+// la NSCA da el estándar en contactos por SESIÓN según nivel (ver
+// PLIOMETRIA_NSCA), no un rango semanal fijo — así que acá no se compara
+// contra un rango, solo se suma lo realmente programado en la semana
+// (reps × series, duplicando si el ejercicio es unilateral, igual criterio
+// que volumenEjercicio) para que el profesional lo cruce a ojo con la
+// referencia por sesión.
+function contactosEjercicio(e: EjercicioPlan): number {
+  const repsSeries = (e.repsSeries ?? []).map((r) => Number(r) || 0);
+  const repsActivo = repsSeries.some((r) => r > 0);
+  const factor = e.unilateral ? 2 : 1;
+
+  if (!repsActivo) {
+    return (Number(e.series) || 0) * (Number(e.reps) || 0) * factor;
+  }
+
+  const seriesCount = Math.max(Number(e.series) || 0, repsSeries.length);
+  let total = 0;
+  for (let i = 0; i < seriesCount; i++) {
+    total += (repsSeries[i] ?? 0) * factor;
+  }
+  return total;
+}
+
+export function contactosPliometriaSemana(dias: DiaPlan[]): number {
+  let total = 0;
+  dias.forEach((dia) => {
+    dia.bloques.forEach((b) => {
+      b.exercises.forEach((e) => {
+        const { cualidad } = etiquetaEfectiva(b, e);
+        if (cualidad !== "Pliometría") return;
+        total += contactosEjercicio(e);
+      });
+    });
+  });
+  return total;
 }
 
 export interface AlertaDescanso {

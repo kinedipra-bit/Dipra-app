@@ -1,4 +1,9 @@
-import { alertasDescanso, resumenSetsPorCualidad, type CitaParaDescanso } from "@/lib/dipra/tablaIntensidad";
+import {
+  alertasDescanso,
+  contactosPliometriaSemana,
+  resumenSetsPorCualidad,
+  type CitaParaDescanso,
+} from "@/lib/dipra/tablaIntensidad";
 import type { DiaPlan } from "@/lib/dipra/types";
 import { TablaReferenciaNSCA } from "./TablaReferenciaNSCA";
 
@@ -26,6 +31,7 @@ function formatFechaHora(iso: string) {
 export function ResumenProgramacion({ dias, citas }: { dias: DiaPlan[]; citas: CitaParaDescanso[] }) {
   const resumen = resumenSetsPorCualidad(dias);
   const alertas = alertasDescanso(dias, citas);
+  const contactosPliometria = contactosPliometriaSemana(dias);
 
   return (
     <div className="dp-surface rounded-2xl p-5 shadow-sm">
@@ -60,6 +66,17 @@ export function ResumenProgramacion({ dias, citas }: { dias: DiaPlan[]; citas: C
           </div>
         ))}
       </div>
+
+      {contactosPliometria > 0 && (
+        <div className="mt-2 flex items-center justify-between gap-3 border-t border-black/5 pt-2 text-sm">
+          <span className="dp-body">
+            Pliometría <span className="dp-muted">· contactos totales esta semana</span>
+          </span>
+          <span className="dp-muted rounded-full px-2 py-0.5 font-mono text-xs font-medium">
+            {contactosPliometria} contactos
+          </span>
+        </div>
+      )}
 
       {alertas.length > 0 && (
         <div className="mt-3 flex flex-col gap-1.5 border-t border-black/5 pt-3">
