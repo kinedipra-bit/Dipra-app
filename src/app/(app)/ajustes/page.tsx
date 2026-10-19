@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AjustesForm } from "./AjustesForm";
+import { InvitarColaboradorForm } from "./InvitarColaboradorForm";
 
 export default async function AjustesPage() {
   const supabase = await createClient();
@@ -18,6 +19,7 @@ export default async function AjustesPage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="font-[family-name:var(--font-display)] text-xl font-semibold dp-text-heading">Ajustes</h1>
+      <InvitarColaboradorForm />
       <AjustesForm initialLinkBoletasSii={professional?.link_boletas_sii ?? null} />
     </div>
   );
