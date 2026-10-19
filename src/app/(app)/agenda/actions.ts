@@ -61,7 +61,7 @@ export async function crearCitaGrupal(input: {
     cliente_nombre: m.clients?.nombre ?? "",
     fecha: input.fecha,
     hora: input.hora,
-    tipo: "Entrenamiento grupal",
+    tipo: "Grupo Fuerza",
     estado: input.estado,
     grupo_id: input.grupoId,
   }));
@@ -100,7 +100,7 @@ export async function contarSesionesKinesiologia(clienteId: string): Promise<num
     .from("citas")
     .select("id", { count: "exact", head: true })
     .eq("client_id", clienteId)
-    .eq("tipo", "Kinesiología")
+    .eq("tipo", "Kine")
     .neq("estado", "cancelada");
   return count ?? 0;
 }

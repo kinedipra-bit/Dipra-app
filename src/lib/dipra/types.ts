@@ -381,6 +381,24 @@ export interface Cita {
   grupo_id?: string | null;
 }
 
+// Horario semanal recurrente de un cliente — plantilla que "Generar citas"
+// usa para crear las citas reales (ver supabase/migrations/0025).
+export interface HorarioCliente {
+  id: string;
+  client_id: string;
+  // 0=lunes .. 4=viernes.
+  dia_semana: number;
+  hora: string;
+  tipo: string;
+  activo: boolean;
+  created_at: string;
+}
+
+export interface Feriado {
+  fecha: string;
+  nombre: string;
+}
+
 // Entrenamiento grupal — roster fijo (hasta 8 personas) con su propia
 // planificación, como un "cliente virtual" para el módulo de Plan. Cada
 // miembro conserva su ficha individual intacta: las evaluaciones grupales

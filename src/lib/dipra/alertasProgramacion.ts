@@ -75,7 +75,7 @@ type SesionParaSeguimiento = Pick<Sesion, "client_id" | "fecha">;
 // Solo estos tipos de cita esperan una sesión cargada — "Evaluación" se
 // registra por otro lado (pestaña de evaluación/evolución), no en
 // `sesiones`, así que nunca tendría "seguimiento" aunque se haya hecho.
-const TIPOS_CON_SEGUIMIENTO = ["Kinesiología", "Rendimiento", "Entrenamiento grupal"];
+const TIPOS_CON_SEGUIMIENTO = ["Kine", "Personalizado", "Grupo Fuerza"];
 
 /**
  * Citas ya pasadas (de kinesiología o entrenamiento) que nadie marcó como
