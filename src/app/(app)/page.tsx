@@ -5,7 +5,7 @@ import { diasHastaCumpleanos } from "@/lib/dipra/cumpleanos";
 import type { Cita, Cliente, PlanSemana, Sesion } from "@/lib/dipra/types";
 
 function labelTipoCita(tipo: string) {
-  return tipo === "Entrenamiento grupal" ? "grupal" : tipo.toLowerCase();
+  return tipo === "Grupo Fuerza" ? "grupal" : tipo.toLowerCase();
 }
 
 export default async function InicioPage() {

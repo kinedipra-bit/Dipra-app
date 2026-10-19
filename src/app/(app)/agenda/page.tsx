@@ -71,12 +71,17 @@ export default async function AgendaPage({
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold dp-text-heading">Agenda</h1>
-        <Link
-          href={`/agenda/nueva?fecha=${fechaRef}`}
-          className="dp-bg-brand rounded-lg px-4 py-2 text-sm font-medium text-white"
-        >
-          + Agendar sesión
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/agenda/horarios" className="dp-text-brand text-sm font-medium hover:underline">
+            📅 Horarios
+          </Link>
+          <Link
+            href={`/agenda/nueva?fecha=${fechaRef}`}
+            className="dp-bg-brand rounded-lg px-4 py-2 text-sm font-medium text-white"
+          >
+            + Agendar sesión
+          </Link>
+        </div>
       </div>
 
       <div className="dp-surface flex items-center justify-between rounded-2xl p-3 shadow-sm">

@@ -54,14 +54,14 @@ export function NuevaCitaForm({
   }, [nombreCliente, clientes]);
   const clienteIdEfectivo = clienteElegido?.id ?? "";
 
-  const mostrarDiaPlan = tipo === "Rendimiento" && !sinFicha;
-  const mostrarContadorKine = tipo === "Kinesiología" && !sinFicha;
+  const mostrarDiaPlan = tipo === "Personalizado" && !sinFicha;
+  const mostrarContadorKine = tipo === "Kine" && !sinFicha;
 
   // Al cambiar de cliente, trae los días de su semana activa para el
-  // selector "Día del plan" — solo tiene sentido para "Rendimiento" (los
+  // selector "Día del plan" — solo tiene sentido para "Personalizado" (los
   // demás tipos no siguen un día puntual del plan).
   useEffect(() => {
-    if (!clienteIdEfectivo || tipo !== "Rendimiento" || sinFicha) return;
+    if (!clienteIdEfectivo || tipo !== "Personalizado" || sinFicha) return;
     let cancelado = false;
     obtenerDiasPlan(clienteIdEfectivo).then((dias) => {
       if (cancelado) return;
@@ -76,7 +76,7 @@ export function NuevaCitaForm({
   // Cuántas sesiones de kinesiología lleva ya agendadas este cliente, para
   // mostrar "sería la sesión N° X" sin tener que contarlas a mano.
   useEffect(() => {
-    if (!clienteIdEfectivo || tipo !== "Kinesiología" || sinFicha) return;
+    if (!clienteIdEfectivo || tipo !== "Kine" || sinFicha) return;
     let cancelado = false;
     contarSesionesKinesiologia(clienteIdEfectivo).then((n) => {
       if (!cancelado) setSesionesKine(n);

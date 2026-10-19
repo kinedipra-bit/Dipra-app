@@ -1,0 +1,78 @@
+// Horario de la semana del 19-23 de octubre de 2026, extraído una sola vez
+// del Excel "Nueva Agenda 2025" (colores + nombres) que usaba Estefanía —
+// sirve de carga inicial para /agenda/horarios/importar. Los nombres son
+// los del Excel (solo primer nombre a veces); se confirman uno a uno
+// contra la base real de clientes en esa pantalla, nunca se asumen acá.
+export interface EntradaExcel {
+  diaSemana: number;
+  hora: string;
+  nombreExcel: string;
+  tipo: string;
+}
+
+export const HORARIO_EXCEL: EntradaExcel[] = [
+  { diaSemana: 0, hora: "09:00", nombreExcel: "Andrea", tipo: "Grupo Fuerza" },
+  { diaSemana: 0, hora: "09:00", nombreExcel: "Ceci", tipo: "Grupo Fuerza" },
+  { diaSemana: 0, hora: "09:00", nombreExcel: "Xime", tipo: "Grupo Fuerza" },
+  { diaSemana: 0, hora: "09:30", nombreExcel: "Keka", tipo: "Grupo Fuerza" },
+  { diaSemana: 0, hora: "10:00", nombreExcel: "Elsa", tipo: "Grupo Fuerza" },
+  { diaSemana: 0, hora: "10:00", nombreExcel: "Laura", tipo: "Grupo Fuerza" },
+  { diaSemana: 0, hora: "10:00", nombreExcel: "Sandra", tipo: "Grupo Fuerza" },
+  { diaSemana: 0, hora: "10:30", nombreExcel: "Roxana", tipo: "Grupo Fuerza" },
+  { diaSemana: 0, hora: "17:00", nombreExcel: "Andre", tipo: "Online" },
+  { diaSemana: 0, hora: "18:00", nombreExcel: "Karina", tipo: "Personalizado" },
+  { diaSemana: 0, hora: "19:00", nombreExcel: "Angela", tipo: "Grupo Fuerza" },
+  { diaSemana: 0, hora: "19:00", nombreExcel: "Kathia", tipo: "Grupo Fuerza" },
+  { diaSemana: 0, hora: "19:00", nombreExcel: "Maribel", tipo: "Grupo Fuerza" },
+  { diaSemana: 1, hora: "07:30", nombreExcel: "Emilia", tipo: "Personalizado" },
+  { diaSemana: 1, hora: "07:30", nombreExcel: "Ika", tipo: "Personalizado" },
+  { diaSemana: 1, hora: "09:00", nombreExcel: "Seba", tipo: "Personalizado" },
+  { diaSemana: 1, hora: "10:00", nombreExcel: "Alejandra", tipo: "Grupo Fuerza" },
+  { diaSemana: 1, hora: "10:00", nombreExcel: "Laura V", tipo: "Grupo Fuerza" },
+  { diaSemana: 1, hora: "11:00", nombreExcel: "Jaime", tipo: "Kine" },
+  { diaSemana: 1, hora: "18:00", nombreExcel: "Ale", tipo: "Grupo Fuerza" },
+  { diaSemana: 1, hora: "18:00", nombreExcel: "Dani", tipo: "Grupo Fuerza" },
+  { diaSemana: 1, hora: "18:00", nombreExcel: "Juan", tipo: "Grupo Fuerza" },
+  { diaSemana: 1, hora: "19:00", nombreExcel: "Aida", tipo: "Grupo Fuerza" },
+  { diaSemana: 1, hora: "19:00", nombreExcel: "Gabriel", tipo: "Grupo Fuerza" },
+  { diaSemana: 1, hora: "19:00", nombreExcel: "Maxi", tipo: "Grupo Fuerza" },
+  { diaSemana: 2, hora: "08:00", nombreExcel: "Karina", tipo: "Personalizado" },
+  { diaSemana: 2, hora: "09:00", nombreExcel: "Andrea", tipo: "Grupo Fuerza" },
+  { diaSemana: 2, hora: "09:00", nombreExcel: "Ceci", tipo: "Grupo Fuerza" },
+  { diaSemana: 2, hora: "09:00", nombreExcel: "Xime", tipo: "Grupo Fuerza" },
+  { diaSemana: 2, hora: "09:30", nombreExcel: "Keka", tipo: "Grupo Fuerza" },
+  { diaSemana: 2, hora: "10:00", nombreExcel: "Elsa", tipo: "Grupo Fuerza" },
+  { diaSemana: 2, hora: "10:00", nombreExcel: "Roxana", tipo: "Grupo Fuerza" },
+  { diaSemana: 2, hora: "10:00", nombreExcel: "Sandra", tipo: "Grupo Fuerza" },
+  { diaSemana: 2, hora: "10:30", nombreExcel: "Laura", tipo: "Grupo Fuerza" },
+  { diaSemana: 2, hora: "18:00", nombreExcel: "Karin", tipo: "Online" },
+  { diaSemana: 2, hora: "19:00", nombreExcel: "Angela", tipo: "Grupo Fuerza" },
+  { diaSemana: 2, hora: "19:00", nombreExcel: "Maribel", tipo: "Grupo Fuerza" },
+  { diaSemana: 2, hora: "19:00", nombreExcel: "Ruth", tipo: "Grupo Fuerza" },
+  { diaSemana: 2, hora: "19:30", nombreExcel: "Kathia", tipo: "Grupo Fuerza" },
+  { diaSemana: 3, hora: "07:30", nombreExcel: "Ika", tipo: "Personalizado" },
+  { diaSemana: 3, hora: "09:00", nombreExcel: "Seba", tipo: "Personalizado" },
+  { diaSemana: 3, hora: "10:00", nombreExcel: "Alejandra", tipo: "Grupo Fuerza" },
+  { diaSemana: 3, hora: "10:00", nombreExcel: "Laura V", tipo: "Grupo Fuerza" },
+  { diaSemana: 3, hora: "11:00", nombreExcel: "Lucy", tipo: "Kine" },
+  { diaSemana: 3, hora: "17:00", nombreExcel: "Andre", tipo: "Online" },
+  { diaSemana: 3, hora: "18:00", nombreExcel: "Ale", tipo: "Grupo Fuerza" },
+  { diaSemana: 3, hora: "18:00", nombreExcel: "Dani", tipo: "Grupo Fuerza" },
+  { diaSemana: 3, hora: "18:00", nombreExcel: "Juan", tipo: "Grupo Fuerza" },
+  { diaSemana: 3, hora: "19:00", nombreExcel: "Aida", tipo: "Grupo Fuerza" },
+  { diaSemana: 3, hora: "19:00", nombreExcel: "Gabriel", tipo: "Grupo Fuerza" },
+  { diaSemana: 3, hora: "19:00", nombreExcel: "Maxi", tipo: "Grupo Fuerza" },
+  { diaSemana: 4, hora: "08:00", nombreExcel: "Karina", tipo: "Personalizado" },
+  { diaSemana: 4, hora: "09:00", nombreExcel: "Andrea", tipo: "Grupo Fuerza" },
+  { diaSemana: 4, hora: "09:00", nombreExcel: "Ceci", tipo: "Grupo Fuerza" },
+  { diaSemana: 4, hora: "09:00", nombreExcel: "Xime", tipo: "Grupo Fuerza" },
+  { diaSemana: 4, hora: "10:00", nombreExcel: "Elsa", tipo: "Grupo Fuerza" },
+  { diaSemana: 4, hora: "10:00", nombreExcel: "Roxana", tipo: "Grupo Fuerza" },
+  { diaSemana: 4, hora: "10:00", nombreExcel: "Sandra", tipo: "Grupo Fuerza" },
+  { diaSemana: 4, hora: "10:30", nombreExcel: "Marcela", tipo: "Grupo Fuerza" },
+  { diaSemana: 4, hora: "11:00", nombreExcel: "Roberto", tipo: "Kine" },
+  { diaSemana: 4, hora: "17:00", nombreExcel: "Constanza", tipo: "Kine" },
+  { diaSemana: 4, hora: "18:00", nombreExcel: "Angelo", tipo: "Personalizado" },
+  { diaSemana: 4, hora: "19:00", nombreExcel: "Kathia", tipo: "Grupo Fuerza" },
+  { diaSemana: 4, hora: "19:00", nombreExcel: "Ruth", tipo: "Grupo Fuerza" },
+];

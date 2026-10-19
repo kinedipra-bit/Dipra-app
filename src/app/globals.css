@@ -36,6 +36,8 @@ input[type="number"] {
   --dp-lime: #a8cc3c;
   --dp-blue: #2563eb;
   --dp-purple: #7c3aed;
+  --dp-yellow: #c9a227;
+  --dp-pink: #d1477a;
 
   --dp-sidebar-bg: #0e1b14;
   --dp-muted: #7a857f;
@@ -91,12 +93,20 @@ body {
 .dp-text-purple { color: var(--dp-purple); }
 .dp-bg-purple { background-color: var(--dp-purple); }
 
+.dp-text-yellow { color: var(--dp-yellow); }
+.dp-bg-yellow { background-color: var(--dp-yellow); }
+
+.dp-text-pink { color: var(--dp-pink); }
+.dp-bg-pink { background-color: var(--dp-pink); }
+
 /* Fondos suaves para distinguir tipo de cita en la grilla semanal de Agenda. */
 .dp-bg-brand-soft { background-color: rgba(30, 132, 73, 0.12); }
 .dp-bg-amber-soft { background-color: rgba(201, 135, 29, 0.14); }
 .dp-bg-lime-soft { background-color: rgba(168, 204, 60, 0.22); }
 .dp-bg-blue-soft { background-color: rgba(37, 99, 235, 0.12); }
 .dp-bg-purple-soft { background-color: rgba(124, 58, 237, 0.12); }
+.dp-bg-yellow-soft { background-color: rgba(201, 162, 39, 0.16); }
+.dp-bg-pink-soft { background-color: rgba(209, 71, 122, 0.12); }
 
 .dp-muted { color: var(--dp-muted); }
 .dp-body { color: var(--dp-body); }
