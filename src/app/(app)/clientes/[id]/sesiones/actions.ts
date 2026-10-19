@@ -45,3 +45,27 @@ export async function marcarSesionRevisada(clienteId: string, sesionId: string) 
   if (error) throw new Error(error.message);
   revalidar(clienteId);
 }
+
+// Corrige tipo y/o autoría de una sesión ya cargada — ej. una sesión que el
+// profesional registró él mismo pero quedó marcada "por el cliente" (o al
+// revés), o un tipo mal elegido al cargarla. Si pasa a "por vos", también
+// queda como revisada (no tiene sentido que el profesional se marque a sí
+// mismo el aviso de "sin revisar").
+export async function actualizarTipoYAutoriaSesion(
+  clienteId: string,
+  sesionId: string,
+  tipo: string,
+  registradaPorCliente: boolean
+) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("sesiones")
+    .update({
+      tipo,
+      registrada_por_cliente: registradaPorCliente,
+      revisada: registradaPorCliente ? false : true,
+    })
+    .eq("id", sesionId);
+  if (error) throw new Error(error.message);
+  revalidar(clienteId);
+}

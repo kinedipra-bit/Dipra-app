@@ -6,7 +6,13 @@ import { agruparPorBloque, ejerciciosDesdeDia } from "@/lib/dipra/agruparEjercic
 import { PILARES_KEYS, TIPOS_SESION, emptySesionPilares } from "@/lib/dipra/constants";
 import { youtubeEmbedUrl } from "@/lib/youtube";
 import type { DiaEntrenamiento, DiaPlan, EjercicioSesion, Sesion } from "@/lib/dipra/types";
-import { crearSesion, eliminarSesion, marcarSesionRevisada, type NuevaSesionInput } from "./actions";
+import {
+  actualizarTipoYAutoriaSesion,
+  crearSesion,
+  eliminarSesion,
+  marcarSesionRevisada,
+  type NuevaSesionInput,
+} from "./actions";
 import { EscalaUnoADiez } from "./EscalaUnoADiez";
 
 const inputClass = "rounded-lg border border-black/10 px-3 py-2 text-sm outline-none focus:dp-border-brand";
@@ -65,6 +71,9 @@ export function SesionesClient({
   const [pending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [videoAbiertoId, setVideoAbiertoId] = useState<string | null>(null);
+  const [editandoMetaId, setEditandoMetaId] = useState<string | null>(null);
+  const [metaTipo, setMetaTipo] = useState("");
+  const [metaPorCliente, setMetaPorCliente] = useState(false);
 
   const sesiones = [...sesionesIniciales].sort((a, b) => b.fecha.localeCompare(a.fecha));
 
@@ -113,6 +122,19 @@ export function SesionesClient({
   const revisarSesion = (id: string) => {
     startTransition(async () => {
       await marcarSesionRevisada(clienteId, id);
+    });
+  };
+
+  const abrirEdicionMeta = (s: Sesion) => {
+    setEditandoMetaId(s.id);
+    setMetaTipo(s.tipo || TIPOS_SESION[0]);
+    setMetaPorCliente(s.registrada_por_cliente);
+  };
+
+  const guardarMeta = (id: string) => {
+    startTransition(async () => {
+      await actualizarTipoYAutoriaSesion(clienteId, id, metaTipo, metaPorCliente);
+      setEditandoMetaId(null);
     });
   };
 
@@ -473,6 +495,55 @@ export function SesionesClient({
                 </button>
                 {expanded && (
                   <div className="flex flex-col gap-3 border-t border-black/5 px-4 pb-4 pt-3">
+                    {editandoMetaId === s.id ? (
+                      <div className="dp-bg-faint flex flex-wrap items-end gap-3 rounded-lg p-3">
+                        <label className="flex flex-col gap-1 text-sm">
+                          <span className="dp-body font-medium">Tipo de sesión</span>
+                          <select
+                            value={metaTipo}
+                            onChange={(e) => setMetaTipo(e.target.value)}
+                            className={inputClass}
+                          >
+                            {TIPOS_SESION.map((t) => (
+                              <option key={t} value={t}>
+                                {t}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="dp-body flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={metaPorCliente}
+                            onChange={(e) => setMetaPorCliente(e.target.checked)}
+                          />
+                          Registrada por el cliente (portal)
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => guardarMeta(s.id)}
+                          disabled={pending}
+                          className="dp-bg-brand rounded-lg px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+                        >
+                          {pending ? "Guardando…" : "Guardar"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditandoMetaId(null)}
+                          className="dp-muted text-xs hover:underline"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => abrirEdicionMeta(s)}
+                        className="dp-text-brand w-fit text-xs hover:underline"
+                      >
+                        Editar tipo / autoría
+                      </button>
+                    )}
                     <div className="grid grid-cols-5 gap-2">
                       {PILARES_KEYS.map((p) => {
                         const val = s.pilares[p.key];
