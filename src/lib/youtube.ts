@@ -18,9 +18,26 @@ export function youtubeEmbedUrl(link: string): string | null {
     // loop=1 + playlist=<mismo id> es el truco que pide la API de YouTube
     // para loopear un solo video — sin playlist, loop=1 no hace nada. Así
     // un clip corto se repite solo, sin que el atleta tenga que buscar el
-    // botón de play de nuevo cada vez que termina.
-    return `https://www.youtube.com/embed/${id}?loop=1&playlist=${id}`;
+    // botón de play de nuevo cada vez que termina. autoplay=1 (con mute=1,
+    // obligatorio para que el navegador lo permita) arranca el clip solo en
+    // vez de dejarlo pausado con el ícono de play tapando la imagen;
+    // playsinline=1 evita que en iPhone se vaya a pantalla completa en su
+    // propio reproductor.
+    return `https://www.youtube.com/embed/${id}?loop=1&playlist=${id}&autoplay=1&mute=1&playsinline=1`;
   } catch {
     return null;
+  }
+}
+
+// Los Shorts son verticales (9:16) — mostrarlos en un marco horizontal
+// (16:9, el de un video normal) los deja chicos con franjas negras a los
+// costados. Se usa para elegir el aspect ratio del contenedor del video.
+export function esYoutubeVertical(link: string): boolean {
+  if (!link) return false;
+  try {
+    const url = new URL(link);
+    return url.pathname.startsWith("/shorts/");
+  } catch {
+    return false;
   }
 }
