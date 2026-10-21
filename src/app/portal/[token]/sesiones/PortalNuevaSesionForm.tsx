@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { PILARES_KEYS, emptySesionPilares } from "@/lib/dipra/constants";
 import { agruparPorBloque, ejerciciosDesdeDia } from "@/lib/dipra/agruparEjercicios";
 import { EscalaUnoADiez } from "@/app/(app)/clientes/[id]/sesiones/EscalaUnoADiez";
-import { youtubeEmbedUrl } from "@/lib/youtube";
+import { esYoutubeVertical, youtubeEmbedUrl } from "@/lib/youtube";
 import { tonoEscalaPilar } from "@/lib/dipra/calc";
 import type { DiaPlan, EjercicioSesion } from "@/lib/dipra/types";
 import { crearSesionPortal } from "./actions";
@@ -320,12 +320,12 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
                       const videoAbierto = videoAbiertoId === ex.id;
                       return (
                         <div key={ex.id} className="py-2">
-                          <div className="flex items-center justify-between gap-2">
+                          <div className="flex flex-col gap-0.5">
                             {embedUrl ? (
                               <button
                                 type="button"
                                 onClick={() => setVideoAbiertoId(videoAbierto ? null : ex.id)}
-                                className="dp-text-brand flex items-center gap-1 truncate text-left text-sm font-medium underline decoration-dotted"
+                                className="dp-text-brand flex items-center gap-1 text-left text-sm font-medium underline decoration-dotted"
                               >
                                 <span aria-hidden>▶</span> {ex.nombre}
                               </button>
@@ -334,7 +334,7 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
                                 href={ex.link}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="dp-text-brand truncate text-sm font-medium underline"
+                                className="dp-text-brand text-sm font-medium underline"
                               >
                                 {ex.nombre}
                               </a>
@@ -347,7 +347,11 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
                             </span>
                           </div>
                           {videoAbierto && embedUrl && (
-                            <div className="mt-2 aspect-video w-full max-w-md overflow-hidden rounded-lg">
+                            <div
+                              className={`mt-2 overflow-hidden rounded-lg ${
+                                esYoutubeVertical(ex.link ?? "") ? "aspect-[9/16] w-full max-w-[280px]" : "aspect-video w-full"
+                              }`}
+                            >
                               <iframe
                                 src={embedUrl}
                                 title={`Video de ${ex.nombre}`}
@@ -367,61 +371,69 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
                               {ex.notaReps}
                             </p>
                           )}
-                          <div className="mt-1 flex flex-wrap items-center gap-2">
-                            <span className="dp-muted text-[10px]">Series</span>
-                            <input
-                              type="number"
-                              value={ex.seriesReal}
-                              onChange={(e) => actualizarEjercicio(idx, { seriesReal: Number(e.target.value) })}
-                              style={{ width: 40 }}
-                              className={inputClass}
-                            />
-                            <span className="dp-muted text-[10px]">Reps por serie</span>
-                            {Array.from({ length: Math.max(ex.seriesReal, 1) }).map((_, i) => (
+                          <div className="mt-1 flex flex-col gap-1.5">
+                            <div className="flex items-center gap-2">
+                              <span className="dp-muted w-24 shrink-0 text-[10px]">Series</span>
                               <input
-                                key={i}
                                 type="number"
-                                value={ex.repsSeriesReal?.[i] ?? ex.repsReal}
-                                onChange={(e) => cambiarRepsReal(i, e.target.value)}
+                                value={ex.seriesReal}
+                                onChange={(e) => actualizarEjercicio(idx, { seriesReal: Number(e.target.value) })}
                                 style={{ width: 40 }}
                                 className={inputClass}
                               />
-                            ))}
-                            <span className="dp-muted text-[10px]">Kg</span>
-                            {pesosRealActivo ? (
-                              Array.from({ length: Math.max(ex.seriesReal, pesosPlan.length, 1) }).map((_, i) => (
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="dp-muted w-24 shrink-0 text-[10px]">Reps por serie</span>
+                              {Array.from({ length: Math.max(ex.seriesReal, 1) }).map((_, i) => (
                                 <input
                                   key={i}
                                   type="number"
-                                  value={ex.pesosSeriesReal?.[i] ?? ex.kgReal ?? 0}
-                                  onChange={(e) => cambiarPesoReal(i, e.target.value)}
-                                  style={{ width: 48 }}
+                                  value={ex.repsSeriesReal?.[i] ?? ex.repsReal}
+                                  onChange={(e) => cambiarRepsReal(i, e.target.value)}
+                                  style={{ width: 40 }}
                                   className={inputClass}
                                 />
-                              ))
-                            ) : (
-                              <input
-                                type="number"
-                                value={ex.kgReal}
-                                onChange={(e) => actualizarEjercicio(idx, { kgReal: Number(e.target.value) })}
-                                style={{ width: 56 }}
-                                className={inputClass}
-                              />
-                            )}
-                            <span className="dp-muted text-[10px]">RPE por serie</span>
-                            {Array.from({ length: Math.max(ex.seriesReal, 1) }).map((_, i) => (
-                              <input
-                                key={i}
-                                type="number"
-                                min={0}
-                                max={10}
-                                value={ex.rpeSeries?.[i] ?? ""}
-                                onChange={(e) => cambiarRpeReal(i, e.target.value)}
-                                placeholder="—"
-                                style={{ width: 40 }}
-                                className={inputClass}
-                              />
-                            ))}
+                              ))}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="dp-muted w-24 shrink-0 text-[10px]">Kg</span>
+                              {pesosRealActivo ? (
+                                Array.from({ length: Math.max(ex.seriesReal, pesosPlan.length, 1) }).map((_, i) => (
+                                  <input
+                                    key={i}
+                                    type="number"
+                                    value={ex.pesosSeriesReal?.[i] ?? ex.kgReal ?? 0}
+                                    onChange={(e) => cambiarPesoReal(i, e.target.value)}
+                                    style={{ width: 48 }}
+                                    className={inputClass}
+                                  />
+                                ))
+                              ) : (
+                                <input
+                                  type="number"
+                                  value={ex.kgReal}
+                                  onChange={(e) => actualizarEjercicio(idx, { kgReal: Number(e.target.value) })}
+                                  style={{ width: 56 }}
+                                  className={inputClass}
+                                />
+                              )}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="dp-muted w-24 shrink-0 text-[10px]">RPE por serie</span>
+                              {Array.from({ length: Math.max(ex.seriesReal, 1) }).map((_, i) => (
+                                <input
+                                  key={i}
+                                  type="number"
+                                  min={0}
+                                  max={10}
+                                  value={ex.rpeSeries?.[i] ?? ""}
+                                  onChange={(e) => cambiarRpeReal(i, e.target.value)}
+                                  placeholder="—"
+                                  style={{ width: 40 }}
+                                  className={inputClass}
+                                />
+                              ))}
+                            </div>
                           </div>
                           <input
                             value={ex.comentario ?? ""}

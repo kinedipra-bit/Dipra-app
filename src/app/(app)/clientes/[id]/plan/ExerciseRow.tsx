@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { cargaTipoEfectivo, volumenEjercicio, type CargaTipo } from "@/lib/dipra/calc";
-import { youtubeEmbedUrl } from "@/lib/youtube";
+import { esYoutubeVertical, youtubeEmbedUrl } from "@/lib/youtube";
 import { CUALIDADES, GRUPOS_MUSCULARES } from "@/lib/dipra/tablaIntensidad";
 import type { CualidadFuerza, EjercicioPlan, EjercicioBiblioteca, GrupoMuscular } from "@/lib/dipra/types";
 
@@ -335,7 +335,11 @@ export function ExerciseRow({
       </div>
 
       {videoAbierto && embedUrl && (
-        <div className="mt-2 aspect-video w-full max-w-md overflow-hidden rounded-lg">
+        <div
+          className={`mt-2 overflow-hidden rounded-lg ${
+            esYoutubeVertical(ex.link) ? "aspect-[9/16] w-full max-w-[280px]" : "aspect-video w-full"
+          }`}
+        >
           <iframe
             src={embedUrl}
             title={`Video de ${ex.nombre}`}

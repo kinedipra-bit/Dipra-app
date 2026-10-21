@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { tonoEscalaPilar } from "@/lib/dipra/calc";
 import { agruparPorBloque, ejerciciosDesdeDia } from "@/lib/dipra/agruparEjercicios";
 import { PILARES_KEYS, TIPOS_SESION, emptySesionPilares } from "@/lib/dipra/constants";
-import { youtubeEmbedUrl } from "@/lib/youtube";
+import { esYoutubeVertical, youtubeEmbedUrl } from "@/lib/youtube";
 import type { DiaEntrenamiento, DiaPlan, EjercicioSesion, Sesion } from "@/lib/dipra/types";
 import {
   actualizarTipoYAutoriaSesion,
@@ -486,7 +486,11 @@ export function SesionesClient({
                           </div>
                         </div>
                         {videoAbierto && embedUrl && (
-                          <div className="mt-2 aspect-video w-full max-w-md overflow-hidden rounded-lg">
+                          <div
+                            className={`mt-2 overflow-hidden rounded-lg ${
+                              esYoutubeVertical(ex.link ?? "") ? "aspect-[9/16] w-full max-w-[280px]" : "aspect-video w-full"
+                            }`}
+                          >
                             <iframe
                               src={embedUrl}
                               title={`Video de ${ex.nombre}`}
