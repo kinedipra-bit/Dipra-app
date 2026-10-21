@@ -8,6 +8,7 @@ import { esYoutubeVertical, youtubeEmbedUrl } from "@/lib/youtube";
 import type { DiaEntrenamiento, DiaPlan, EjercicioSesion, Sesion } from "@/lib/dipra/types";
 import {
   actualizarTipoYAutoriaSesion,
+  copiarSesionAPlanFuerza,
   copiarSesionATareas,
   crearSesion,
   eliminarSesion,
@@ -75,8 +76,9 @@ export function SesionesClient({
   const [editandoMetaId, setEditandoMetaId] = useState<string | null>(null);
   const [metaTipo, setMetaTipo] = useState("");
   const [metaPorCliente, setMetaPorCliente] = useState(false);
-  const [copiandoATareas, startCopiaTareas] = useTransition();
-  const [mensajeCopiaTareas, setMensajeCopiaTareas] = useState<string | null>(null);
+  const [copiandoA, setCopiandoA] = useState<"tareas" | "plan" | null>(null);
+  const [, startCopia] = useTransition();
+  const [mensajeCopia, setMensajeCopia] = useState<string | null>(null);
 
   const sesiones = [...sesionesIniciales].sort((a, b) => b.fecha.localeCompare(a.fecha));
 
@@ -177,19 +179,25 @@ export function SesionesClient({
 
   // Esta pantalla nunca se comparte con el cliente (es solo un registro
   // para el profesional) — si lo que se cargó acá es en realidad una
-  // sesión planificada de antemano (ej. kine, sin un día del plan de
-  // fuerza al que atarla), hace falta este puente para que termine en
-  // Tareas, donde si se puede compartir.
-  const copiarATareas = () => {
+  // sesión planificada de antemano (ej. kine, o una rutina de fuerza que
+  // gustó y se quiere dejar fija), hace falta este puente para que termine
+  // en Tareas o Plan, que son los que sí se pueden compartir.
+  const copiarA = (destino: "tareas" | "plan") => {
     if (!draft || draft.ejercicios.length === 0) return;
-    setMensajeCopiaTareas(null);
-    startCopiaTareas(async () => {
-      const resultado = await copiarSesionATareas(clienteId, draft.ejercicios);
-      setMensajeCopiaTareas(
+    setMensajeCopia(null);
+    setCopiandoA(destino);
+    startCopia(async () => {
+      const resultado =
+        destino === "tareas"
+          ? await copiarSesionATareas(clienteId, draft.ejercicios)
+          : await copiarSesionAPlanFuerza(clienteId, draft.ejercicios);
+      const destinoLabel = destino === "tareas" ? "Tareas" : "Plan";
+      setMensajeCopia(
         resultado.error
           ? resultado.error
-          : `Se agregó a Tareas como "${resultado.label}" — entrá a Tareas para revisarla y compartirla.`
+          : `Se agregó a ${destinoLabel} como "${resultado.label}" — entrá a ${destinoLabel} para revisarla y compartirla.`
       );
+      setCopiandoA(null);
     });
   };
 
@@ -413,22 +421,31 @@ export function SesionesClient({
                         >
                           <div className="min-w-0">
                             {ex.extra ? (
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-1.5">
+                                  <input
+                                    type="text"
+                                    value={ex.nombre}
+                                    onChange={(e) => updateEjercicio(idx, { nombre: e.target.value })}
+                                    placeholder="Nombre del ejercicio"
+                                    className="w-full rounded-md border border-black/10 px-1.5 py-0.5 text-sm outline-none focus:dp-border-brand"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => quitarEjercicioExtra(idx)}
+                                    title="Quitar ejercicio"
+                                    className="dp-alert shrink-0 text-xs"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
                                 <input
                                   type="text"
-                                  value={ex.nombre}
-                                  onChange={(e) => updateEjercicio(idx, { nombre: e.target.value })}
-                                  placeholder="Nombre del ejercicio"
-                                  className="w-full rounded-md border border-black/10 px-1.5 py-0.5 text-sm outline-none focus:dp-border-brand"
+                                  value={ex.link ?? ""}
+                                  onChange={(e) => updateEjercicio(idx, { link: e.target.value })}
+                                  placeholder="Link del video (opcional)"
+                                  className="dp-muted w-full rounded-md border border-black/10 px-1.5 py-0.5 text-xs outline-none focus:dp-border-brand"
                                 />
-                                <button
-                                  type="button"
-                                  onClick={() => quitarEjercicioExtra(idx)}
-                                  title="Quitar ejercicio"
-                                  className="dp-alert shrink-0 text-xs"
-                                >
-                                  ✕
-                                </button>
                               </div>
                             ) : embedUrl ? (
                               <button
@@ -578,16 +595,26 @@ export function SesionesClient({
             {pending ? "Guardando…" : "Guardar sesión"}
           </button>
           {draft.ejercicios.length > 0 && (
-            <button
-              type="button"
-              onClick={copiarATareas}
-              disabled={copiandoATareas}
-              className="dp-text-brand w-fit rounded-xl border border-dashed border-current px-4 py-2 text-sm font-medium disabled:opacity-50"
-            >
-              {copiandoATareas ? "Copiando…" : "Copiar a Tareas"}
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => copiarA("tareas")}
+                disabled={copiandoA !== null}
+                className="dp-text-brand w-fit rounded-xl border border-dashed border-current px-4 py-2 text-sm font-medium disabled:opacity-50"
+              >
+                {copiandoA === "tareas" ? "Copiando…" : "Copiar a Tareas"}
+              </button>
+              <button
+                type="button"
+                onClick={() => copiarA("plan")}
+                disabled={copiandoA !== null}
+                className="dp-text-brand w-fit rounded-xl border border-dashed border-current px-4 py-2 text-sm font-medium disabled:opacity-50"
+              >
+                {copiandoA === "plan" ? "Copiando…" : "Copiar a Plan (fuerza)"}
+              </button>
+            </>
           )}
-          {mensajeCopiaTareas && <span className="dp-muted text-xs">{mensajeCopiaTareas}</span>}
+          {mensajeCopia && <span className="dp-muted text-xs">{mensajeCopia}</span>}
         </div>
       </div>
     );

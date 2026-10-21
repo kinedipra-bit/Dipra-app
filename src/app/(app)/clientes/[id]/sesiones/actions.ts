@@ -112,6 +112,59 @@ export async function copiarSesionATareas(
   return { label: nuevaSesion.label };
 }
 
+// Mismo puente que copiarSesionATareas pero hacia la semana ACTIVA del plan
+// de fuerza — ej. una rutina armada acá en Sesiones que terminó gustando y
+// se quiere dejar de "Día 2". Mismo criterio de numeración que "+ Agregar
+// día" en Plan (primer "Día N" libre).
+export async function copiarSesionAPlanFuerza(
+  clienteId: string,
+  ejercicios: EjercicioSesion[]
+): Promise<{ error?: string; label?: string }> {
+  if (ejercicios.length === 0) return { error: "No hay ejercicios para copiar." };
+
+  const supabase = await createClient();
+  const { data: cliente } = await supabase
+    .from("clients")
+    .select("semana_activa_id")
+    .eq("id", clienteId)
+    .single<{ semana_activa_id: string | null }>();
+  if (!cliente?.semana_activa_id) {
+    return {
+      error: "Este cliente todavía no tiene una semana de plan de fuerza activa — creá una primero en Plan.",
+    };
+  }
+
+  const { data: semana, error: errorLectura } = await supabase
+    .from("plan_semanas")
+    .select("dias")
+    .eq("id", cliente.semana_activa_id)
+    .single<{ dias: DiaPlan[] }>();
+  if (errorLectura || !semana) return { error: errorLectura?.message ?? "No se encontró la semana activa." };
+
+  const usados = new Set(
+    semana.dias.map((d) => Number(d.label.match(/^Día (\d+)$/)?.[1])).filter((n) => !Number.isNaN(n))
+  );
+  let numero = 1;
+  while (usados.has(numero)) numero++;
+
+  const bloques: BloquePlan[] = agruparPorBloque(ejercicios).map((grupo) => ({
+    id: crypto.randomUUID(),
+    title: grupo.bloqueTitle || "Bloque",
+    exercises: grupo.items.map(({ ejercicio }) => ejercicioPlanDesdeSesion(ejercicio)),
+  }));
+
+  const nuevoDia: DiaPlan = { id: crypto.randomUUID(), label: `Día ${numero}`, foco: "", bloques };
+
+  const { error } = await supabase
+    .from("plan_semanas")
+    .update({ dias: [...semana.dias, nuevoDia], cambios_sin_compartir: true })
+    .eq("id", cliente.semana_activa_id);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/clientes/${clienteId}/plan`);
+  return { label: nuevoDia.label };
+}
+
 // Corrige tipo y/o autoría de una sesión ya cargada — ej. una sesión que el
 // profesional registró él mismo pero quedó marcada "por el cliente" (o al
 // revés), o un tipo mal elegido al cargarla. Si pasa a "por vos", también
