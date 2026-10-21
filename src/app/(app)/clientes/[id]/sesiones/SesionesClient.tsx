@@ -8,6 +8,7 @@ import { esYoutubeVertical, youtubeEmbedUrl } from "@/lib/youtube";
 import type { DiaEntrenamiento, DiaPlan, EjercicioSesion, Sesion } from "@/lib/dipra/types";
 import {
   actualizarTipoYAutoriaSesion,
+  copiarSesionATareas,
   crearSesion,
   eliminarSesion,
   marcarSesionRevisada,
@@ -74,6 +75,8 @@ export function SesionesClient({
   const [editandoMetaId, setEditandoMetaId] = useState<string | null>(null);
   const [metaTipo, setMetaTipo] = useState("");
   const [metaPorCliente, setMetaPorCliente] = useState(false);
+  const [copiandoATareas, startCopiaTareas] = useTransition();
+  const [mensajeCopiaTareas, setMensajeCopiaTareas] = useState<string | null>(null);
 
   const sesiones = [...sesionesIniciales].sort((a, b) => b.fecha.localeCompare(a.fecha));
 
@@ -154,6 +157,24 @@ export function SesionesClient({
       await crearSesion(clienteId, draft);
       setDraft(null);
       setModo("list");
+    });
+  };
+
+  // Esta pantalla nunca se comparte con el cliente (es solo un registro
+  // para el profesional) — si lo que se cargó acá es en realidad una
+  // sesión planificada de antemano (ej. kine, sin un día del plan de
+  // fuerza al que atarla), hace falta este puente para que termine en
+  // Tareas, donde si se puede compartir.
+  const copiarATareas = () => {
+    if (!draft || draft.ejercicios.length === 0) return;
+    setMensajeCopiaTareas(null);
+    startCopiaTareas(async () => {
+      const resultado = await copiarSesionATareas(clienteId, draft.ejercicios);
+      setMensajeCopiaTareas(
+        resultado.error
+          ? resultado.error
+          : `Se agregó a Tareas como "${resultado.label}" — entrá a Tareas para revisarla y compartirla.`
+      );
     });
   };
 
@@ -532,14 +553,27 @@ export function SesionesClient({
           />
         </label>
 
-        <button
-          type="button"
-          onClick={guardar}
-          disabled={pending}
-          className="dp-bg-brand w-fit rounded-xl px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {pending ? "Guardando…" : "Guardar sesión"}
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={guardar}
+            disabled={pending}
+            className="dp-bg-brand w-fit rounded-xl px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          >
+            {pending ? "Guardando…" : "Guardar sesión"}
+          </button>
+          {draft.ejercicios.length > 0 && (
+            <button
+              type="button"
+              onClick={copiarATareas}
+              disabled={copiandoATareas}
+              className="dp-text-brand w-fit rounded-xl border border-dashed border-current px-4 py-2 text-sm font-medium disabled:opacity-50"
+            >
+              {copiandoATareas ? "Copiando…" : "Copiar a Tareas"}
+            </button>
+          )}
+          {mensajeCopiaTareas && <span className="dp-muted text-xs">{mensajeCopiaTareas}</span>}
+        </div>
       </div>
     );
   }
