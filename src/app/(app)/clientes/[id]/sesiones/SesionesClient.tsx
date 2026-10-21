@@ -5,7 +5,24 @@ import { tonoEscalaPilar } from "@/lib/dipra/calc";
 import { agruparPorBloque, ejerciciosDesdeDia } from "@/lib/dipra/agruparEjercicios";
 import { PILARES_KEYS, TIPOS_SESION, emptySesionPilares } from "@/lib/dipra/constants";
 import { esYoutubeVertical, youtubeEmbedUrl } from "@/lib/youtube";
-import type { DiaEntrenamiento, DiaPlan, EjercicioSesion, Sesion } from "@/lib/dipra/types";
+import {
+  CUALIDADES,
+  GRUPOS_MUSCULARES,
+  TABLA_INTENSIDAD,
+  aplicarDescansoSugerido,
+  descansoDisponible,
+} from "@/lib/dipra/tablaIntensidad";
+import type {
+  BloquePlan,
+  CualidadFuerza,
+  DiaEntrenamiento,
+  DiaPlan,
+  EjercicioBiblioteca,
+  EjercicioPlan,
+  EjercicioSesion,
+  GrupoMuscular,
+  Sesion,
+} from "@/lib/dipra/types";
 import {
   actualizarTipoYAutoriaSesion,
   copiarSesionAPlanFuerza,
@@ -15,6 +32,8 @@ import {
   marcarSesionRevisada,
   type NuevaSesionInput,
 } from "./actions";
+import { guardarEnBiblioteca } from "../plan/actions";
+import { ExerciseRow, EXERCISE_ROW_GRID_EDITABLE } from "../plan/ExerciseRow";
 import { EscalaUnoADiez } from "./EscalaUnoADiez";
 
 const inputClass = "rounded-lg border border-black/10 px-3 py-2 text-sm outline-none focus:dp-border-brand";
@@ -29,6 +48,52 @@ function nuevoDraft(esPrimeraSesion: boolean): NuevaSesionInput {
     pilares: emptySesionPilares(),
     comentarios: "",
     ejercicios: [],
+  };
+}
+
+function nuevoEjercicioExtra(): EjercicioPlan {
+  return {
+    id: crypto.randomUUID(),
+    nombre: "",
+    series: 3,
+    reps: 10,
+    kg: 0,
+    link: "",
+    rpe: "",
+    rir: "",
+    tut: "",
+    descanso: "",
+    comentarioCliente: "",
+  };
+}
+
+// Convierte lo planificado en "Ejercicios planificados en esta sesión"
+// (mismo formato que Plan/Tareas) a lo que se guarda en el registro de la
+// sesión — se usan los valores cargados como si fueran lo realmente hecho
+// (seriesReal/repsReal/kgReal), ya que es lo único que tiene sentido acá:
+// esta pantalla no tiene el concepto de "planificado vs. real" para algo
+// que no viene de un día del plan.
+function ejercicioSesionDesdePlan(ex: EjercicioPlan, bloqueTitle: string): EjercicioSesion {
+  return {
+    id: crypto.randomUUID(),
+    nombre: ex.nombre,
+    seriesPlan: 0,
+    repsPlan: 0,
+    kgPlan: 0,
+    seriesReal: ex.series,
+    repsReal: ex.reps,
+    kgReal: ex.kg,
+    pesosSeriesReal: ex.pesosSeries,
+    repsSeriesReal: ex.repsSeries,
+    unilateral: ex.unilateral,
+    pesoCadaUno: ex.pesoCadaUno,
+    tipoCarga: ex.tipoCarga,
+    tiempoSerie: ex.tiempoSerie,
+    link: ex.link,
+    notaReps: ex.notaReps,
+    rpe: ex.rpe,
+    bloqueTitle,
+    extra: true,
   };
 }
 
@@ -61,14 +126,22 @@ export function SesionesClient({
   sesionesIniciales,
   diasPlan,
   diasConfirmados,
+  bibliotecaInicial,
 }: {
   clienteId: string;
   sesionesIniciales: Sesion[];
   diasPlan: DiaPlan[];
   diasConfirmados: DiaEntrenamiento[];
+  bibliotecaInicial: EjercicioBiblioteca[];
 }) {
   const [modo, setModo] = useState<"list" | "form">("list");
   const [draft, setDraft] = useState<NuevaSesionInput | null>(null);
+  // Ejercicios que el profesional planifica acá mismo (no vienen de un día
+  // del plan) — mismo formato que Plan/Tareas (ver "Ejercicios planificados
+  // en esta sesión" más abajo), para poder copiarlos después sin perder
+  // nada (link, carga, RPE/RIR/tempo/descanso, etc.).
+  const [bloquesExtra, setBloquesExtra] = useState<BloquePlan[]>([]);
+  const [biblioteca, setBiblioteca] = useState<EjercicioBiblioteca[]>(bibliotecaInicial);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -84,11 +157,13 @@ export function SesionesClient({
 
   const iniciarNueva = () => {
     setDraft(nuevoDraft(sesiones.length === 0));
+    setBloquesExtra([]);
     setModo("form");
   };
 
   const cancelar = () => {
     setDraft(null);
+    setBloquesExtra([]);
     setModo("list");
   };
 
@@ -106,91 +181,99 @@ export function SesionesClient({
     setDraft({ ...draft, ejercicios: next });
   };
 
-  // Ejercicio sumado durante la sesión, sin equivalente en el plan — ej. el
-  // profesional decide exigir un poco más y agrega algo que no estaba
-  // programado. `bloqueTitle` indica a qué bloque extra se suma — si no se
-  // pasa, continúa el último bloque extra si el array ya termina en uno
-  // (mismo criterio de agrupación que agruparPorBloque), o arranca uno
-  // nuevo si no hay ninguno todavía.
-  const agregarEjercicioExtra = (bloqueTitle?: string) => {
-    if (!draft) return;
-    const ultimo = draft.ejercicios[draft.ejercicios.length - 1];
-    const titulo = bloqueTitle ?? (ultimo?.extra ? ultimo.bloqueTitle! : "Nuevo bloque");
-    const nuevo: EjercicioSesion = {
-      id: crypto.randomUUID(),
-      nombre: "",
-      seriesPlan: 0,
-      repsPlan: 0,
-      kgPlan: 0,
-      seriesReal: 1,
-      repsReal: 0,
-      kgReal: 0,
-      rpe: "",
-      bloqueTitle: titulo,
-      extra: true,
-    };
-    setDraft({ ...draft, ejercicios: [...draft.ejercicios, nuevo] });
+  // "Ejercicios planificados en esta sesión" — mismo CRUD que PlanView,
+  // pero sobre un array plano local (bloquesExtra) en vez del árbol
+  // dia.bloques: acá no hay "día" ni "semana", es solo lo que se está
+  // armando para esta sesión puntual.
+  const guardarEjercicioEnBiblioteca = async (ex: { nombre: string; link: string }) => {
+    const creado = await guardarEnBiblioteca(ex.nombre, ex.link);
+    setBiblioteca((prev) => [...prev, creado].sort((a, b) => a.nombre.localeCompare(b.nombre)));
   };
 
-  // Siempre arranca un bloque nuevo (a diferencia de agregarEjercicioExtra
-  // sin argumentos, que continúa el último si corresponde) — el título
-  // tiene que ser distinto al de cualquier bloque extra ya creado, si no
-  // dos clics seguidos en "+ Agregar bloque" quedan agrupados juntos (misma
-  // etiqueta = mismo bloque, ver agruparPorBloque) y da la sensación de que
-  // el botón no hizo nada / agregó un ejercicio suelto en vez de un bloque.
-  const agregarBloqueExtra = () => {
-    if (!draft) return;
-    const usados = new Set(
-      draft.ejercicios
-        .map((e) => e.bloqueTitle?.match(/^Nuevo bloque(?: (\d+))?$/))
-        .filter((m): m is RegExpMatchArray => !!m)
-        .map((m) => (m[1] ? Number(m[1]) : 1))
-    );
-    let n = 1;
-    while (usados.has(n)) n++;
-    agregarEjercicioExtra(n === 1 ? "Nuevo bloque" : `Nuevo bloque ${n}`);
+  const addBloqueExtra = () => {
+    setBloquesExtra((prev) => [...prev, { id: crypto.randomUUID(), title: "Nuevo bloque", exercises: [] }]);
   };
 
-  const quitarEjercicioExtra = (idx: number) => {
-    if (!draft) return;
-    setDraft({ ...draft, ejercicios: draft.ejercicios.filter((_, i) => i !== idx) });
+  const removeBloqueExtra = (bIdx: number) => {
+    setBloquesExtra((prev) => prev.filter((_, i) => i !== bIdx));
   };
 
-  // Renombra el bloque de TODOS los ejercicios extra que forman ese grupo
-  // visual (ver agruparPorBloque) — cada EjercicioSesion guarda su propio
-  // bloqueTitle, así que renombrar "el bloque" es actualizarlo en cada uno.
-  const renombrarBloqueExtra = (idxs: number[], nuevoTitulo: string) => {
-    if (!draft) return;
-    const next = [...draft.ejercicios];
-    idxs.forEach((i) => {
-      next[i] = { ...next[i], bloqueTitle: nuevoTitulo };
+  const moverBloqueExtra = (bIdx: number, delta: -1 | 1) => {
+    setBloquesExtra((prev) => {
+      const destino = bIdx + delta;
+      if (destino < 0 || destino >= prev.length) return prev;
+      const next = [...prev];
+      [next[bIdx], next[destino]] = [next[destino], next[bIdx]];
+      return next;
     });
-    setDraft({ ...draft, ejercicios: next });
   };
+
+  const renameBloqueExtra = (bIdx: number, title: string) => {
+    setBloquesExtra((prev) => prev.map((b, i) => (i === bIdx ? { ...b, title } : b)));
+  };
+
+  const setBloqueExtraCualidad = (bIdx: number, cualidad: CualidadFuerza | "") => {
+    setBloquesExtra((prev) => prev.map((b, i) => (i === bIdx ? { ...b, cualidad: cualidad || undefined } : b)));
+  };
+
+  const setBloqueExtraGrupoMuscular = (bIdx: number, grupoMuscular: GrupoMuscular | "") => {
+    setBloquesExtra((prev) =>
+      prev.map((b, i) => (i === bIdx ? { ...b, grupoMuscular: grupoMuscular || undefined } : b))
+    );
+  };
+
+  const aplicarDescansoExtra = (bIdx: number) => {
+    setBloquesExtra((prev) => prev.map((b, i) => (i === bIdx ? aplicarDescansoSugerido(b) : b)));
+  };
+
+  const addExerciseExtra = (bIdx: number) => {
+    setBloquesExtra((prev) =>
+      prev.map((b, i) => (i === bIdx ? { ...b, exercises: [...b.exercises, nuevoEjercicioExtra()] } : b))
+    );
+  };
+
+  const changeExerciseExtra = (bIdx: number, eIdx: number, nextEx: EjercicioPlan) => {
+    setBloquesExtra((prev) =>
+      prev.map((b, i) => (i === bIdx ? { ...b, exercises: b.exercises.map((e, j) => (j === eIdx ? nextEx : e)) } : b))
+    );
+  };
+
+  const removeExerciseExtra = (bIdx: number, eIdx: number) => {
+    setBloquesExtra((prev) =>
+      prev.map((b, i) => (i === bIdx ? { ...b, exercises: b.exercises.filter((_, j) => j !== eIdx) } : b))
+    );
+  };
+
+  const hayEjerciciosExtra = bloquesExtra.some((b) => b.exercises.length > 0);
 
   const guardar = () => {
     if (!draft) return;
+    const extrasComoSesion = bloquesExtra.flatMap((b) =>
+      b.exercises.map((e) => ejercicioSesionDesdePlan(e, b.title))
+    );
+    const input = { ...draft, ejercicios: [...draft.ejercicios, ...extrasComoSesion] };
     startTransition(async () => {
-      await crearSesion(clienteId, draft);
+      await crearSesion(clienteId, input);
       setDraft(null);
+      setBloquesExtra([]);
       setModo("list");
     });
   };
 
   // Esta pantalla nunca se comparte con el cliente (es solo un registro
-  // para el profesional) — si lo que se cargó acá es en realidad una
-  // sesión planificada de antemano (ej. kine, o una rutina de fuerza que
-  // gustó y se quiere dejar fija), hace falta este puente para que termine
-  // en Tareas o Plan, que son los que sí se pueden compartir.
+  // para el profesional) — si lo planificado acá (ver "Ejercicios
+  // planificados en esta sesión") es en realidad una rutina para dejar
+  // fija (kine o fuerza que gustó), hace falta este puente para que
+  // termine en Tareas o Plan, que son los que sí se pueden compartir.
   const copiarA = (destino: "tareas" | "plan") => {
-    if (!draft || draft.ejercicios.length === 0) return;
+    if (!hayEjerciciosExtra) return;
     setMensajeCopia(null);
     setCopiandoA(destino);
     startCopia(async () => {
       const resultado =
         destino === "tareas"
-          ? await copiarSesionATareas(clienteId, draft.ejercicios)
-          : await copiarSesionAPlanFuerza(clienteId, draft.ejercicios);
+          ? await copiarSesionATareas(clienteId, bloquesExtra)
+          : await copiarSesionAPlanFuerza(clienteId, bloquesExtra);
       const destinoLabel = destino === "tareas" ? "Tareas" : "Plan";
       setMensajeCopia(
         resultado.error
@@ -324,30 +407,11 @@ export function SesionesClient({
           )}
         </div>
 
-        {!draft.dia_plan_label && draft.ejercicios.length === 0 && (
-          <button
-            type="button"
-            onClick={agregarBloqueExtra}
-            className="dp-text-brand w-fit text-xs font-medium hover:underline"
-          >
-            + Agregar bloque (sin elegir un día del plan)
-          </button>
-        )}
-
-        {(draft.dia_plan_label || draft.ejercicios.length > 0) && (
+        {draft.dia_plan_label && (
           <div>
-            <div className="mb-2 flex items-center justify-between">
-              <p className="dp-text-heading text-xs font-semibold uppercase tracking-wide">
-                Ejecución real vs. planificado
-              </p>
-              <button
-                type="button"
-                onClick={agregarBloqueExtra}
-                className="dp-text-brand text-xs font-medium hover:underline"
-              >
-                + Agregar bloque
-              </button>
-            </div>
+            <p className="dp-text-heading mb-2 text-xs font-semibold uppercase tracking-wide">
+              Ejecución real vs. planificado
+            </p>
             <div
               className="dp-muted grid gap-2 pb-1 text-[10px] font-medium uppercase tracking-wide"
               style={{ gridTemplateColumns: "1.4fr 0.9fr 0.5fr 0.5fr 0.9fr 0.4fr" }}
@@ -362,24 +426,10 @@ export function SesionesClient({
             <div className="flex flex-col gap-3">
               {agruparPorBloque(draft.ejercicios).map((grupo, gIdx) => (
                 <div key={gIdx}>
-                  {grupo.items.every(({ ejercicio }) => ejercicio.extra) ? (
-                    <input
-                      type="text"
-                      value={grupo.bloqueTitle}
-                      onChange={(e) =>
-                        renombrarBloqueExtra(
-                          grupo.items.map(({ idx }) => idx),
-                          e.target.value
-                        )
-                      }
-                      className="dp-text-brand mb-1 w-full border-0 border-b border-dashed border-current bg-transparent text-base font-semibold tracking-wide uppercase outline-none"
-                    />
-                  ) : (
-                    grupo.bloqueTitle && (
-                      <p className="dp-text-brand mb-1 text-base font-semibold tracking-wide uppercase">
-                        {grupo.bloqueTitle}
-                      </p>
-                    )
+                  {grupo.bloqueTitle && (
+                    <p className="dp-text-brand mb-1 text-base font-semibold tracking-wide uppercase">
+                      {grupo.bloqueTitle}
+                    </p>
                   )}
                   <div className="divide-y divide-black/5">
                     {grupo.items.map(({ ejercicio: ex, idx }) => {
@@ -420,34 +470,7 @@ export function SesionesClient({
                           style={{ gridTemplateColumns: "1.4fr 0.9fr 0.5fr 0.5fr 0.9fr 0.4fr" }}
                         >
                           <div className="min-w-0">
-                            {ex.extra ? (
-                              <div className="flex flex-col gap-1">
-                                <div className="flex items-center gap-1.5">
-                                  <input
-                                    type="text"
-                                    value={ex.nombre}
-                                    onChange={(e) => updateEjercicio(idx, { nombre: e.target.value })}
-                                    placeholder="Nombre del ejercicio"
-                                    className="w-full rounded-md border border-black/10 px-1.5 py-0.5 text-sm outline-none focus:dp-border-brand"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => quitarEjercicioExtra(idx)}
-                                    title="Quitar ejercicio"
-                                    className="dp-alert shrink-0 text-xs"
-                                  >
-                                    ✕
-                                  </button>
-                                </div>
-                                <input
-                                  type="text"
-                                  value={ex.link ?? ""}
-                                  onChange={(e) => updateEjercicio(idx, { link: e.target.value })}
-                                  placeholder="Link del video (opcional)"
-                                  className="dp-muted w-full rounded-md border border-black/10 px-1.5 py-0.5 text-xs outline-none focus:dp-border-brand"
-                                />
-                              </div>
-                            ) : embedUrl ? (
+                            {embedUrl ? (
                               <button
                                 type="button"
                                 onClick={() => setVideoAbiertoId(videoAbierto ? null : ex.id)}
@@ -479,9 +502,8 @@ export function SesionesClient({
                             )}
                           </div>
                           <span className="dp-muted font-mono text-xs">
-                            {ex.extra
-                              ? "—"
-                              : `${ex.seriesPlan}×${ex.repsPlan}${ex.unilateral ? " c/u" : ""}×${kgPlanTexto}kg${ex.pesoCadaUno ? " c/u" : ""}`}
+                            {ex.seriesPlan}×{ex.repsPlan}
+                            {ex.unilateral ? " c/u" : ""}×{kgPlanTexto}kg{ex.pesoCadaUno ? " c/u" : ""}
                           </span>
                           <input
                             type="number"
@@ -557,15 +579,6 @@ export function SesionesClient({
                       );
                     })}
                   </div>
-                  {grupo.items.every(({ ejercicio }) => ejercicio.extra) && (
-                    <button
-                      type="button"
-                      onClick={() => agregarEjercicioExtra(grupo.bloqueTitle)}
-                      className="dp-text-brand mt-1 text-xs hover:underline"
-                    >
-                      + ejercicio en este bloque
-                    </button>
-                  )}
                 </div>
               ))}
               {draft.ejercicios.length === 0 && (
@@ -574,6 +587,157 @@ export function SesionesClient({
             </div>
           </div>
         )}
+
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <div>
+              <p className="dp-text-heading text-xs font-semibold uppercase tracking-wide">
+                Ejercicios planificados en esta sesión
+              </p>
+              <p className="dp-muted text-[11px]">
+                Mismo formato que Plan/Tareas — para dejarlos acá ya armados y poder copiarlos después.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={addBloqueExtra}
+              className="dp-text-brand shrink-0 text-xs font-medium hover:underline"
+            >
+              + Agregar bloque
+            </button>
+          </div>
+
+          {bloquesExtra.length === 0 ? (
+            <p className="dp-muted text-xs">Todavía no agregaste ningún bloque.</p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {bloquesExtra.map((b, bIdx) => (
+                <div key={b.id} className="dp-bg-faint dp-border-brand rounded-xl border-l-4 p-3">
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <input
+                      value={b.title}
+                      onChange={(e) => renameBloqueExtra(bIdx, e.target.value)}
+                      className="dp-ink border-none bg-transparent text-lg font-semibold tracking-wide uppercase outline-none focus:underline"
+                      style={{ minWidth: 120 }}
+                    />
+                    <div className="flex items-center gap-2">
+                      {bIdx > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => moverBloqueExtra(bIdx, -1)}
+                          title="Mover bloque hacia arriba"
+                          className="dp-muted hover:dp-text-brand text-sm"
+                        >
+                          ▲
+                        </button>
+                      )}
+                      {bIdx < bloquesExtra.length - 1 && (
+                        <button
+                          type="button"
+                          onClick={() => moverBloqueExtra(bIdx, 1)}
+                          title="Mover bloque hacia abajo"
+                          className="dp-muted hover:dp-text-brand text-sm"
+                        >
+                          ▼
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeBloqueExtra(bIdx)}
+                        title="Eliminar bloque"
+                        className="dp-muted hover:dp-alert text-sm"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                    <select
+                      value={b.grupoMuscular ?? ""}
+                      onChange={(e) => setBloqueExtraGrupoMuscular(bIdx, e.target.value as GrupoMuscular | "")}
+                      className="dp-body rounded-md border border-black/10 bg-white px-1.5 py-0.5 text-[11px] outline-none focus:dp-border-brand"
+                    >
+                      <option value="">Grupo muscular…</option>
+                      {GRUPOS_MUSCULARES.map((g) => (
+                        <option key={g} value={g}>
+                          {g}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={b.cualidad ?? ""}
+                      onChange={(e) => setBloqueExtraCualidad(bIdx, e.target.value as CualidadFuerza | "")}
+                      className="dp-body rounded-md border border-black/10 bg-white px-1.5 py-0.5 text-[11px] outline-none focus:dp-border-brand"
+                    >
+                      <option value="">Cualidad de fuerza…</option>
+                      {CUALIDADES.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                    {b.cualidad && TABLA_INTENSIDAD[b.cualidad] && (
+                      <>
+                        <span className="dp-muted font-mono text-[10px]">
+                          reps {TABLA_INTENSIDAD[b.cualidad].reps} · {TABLA_INTENSIDAD[b.cualidad].porcentaje1RM} ·
+                          series/ejerc. {TABLA_INTENSIDAD[b.cualidad].seriesPorEjercicio} · desc.{" "}
+                          {TABLA_INTENSIDAD[b.cualidad].descanso}
+                        </span>
+                        {descansoDisponible(b) && (
+                          <button
+                            type="button"
+                            onClick={() => aplicarDescansoExtra(bIdx)}
+                            className="dp-text-amber text-[10px] font-medium hover:underline"
+                          >
+                            Aplicar descanso sugerido
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  {b.exercises.length > 0 && (
+                    <div
+                      className="dp-muted grid gap-2 pb-1 text-[10px] font-medium tracking-wide uppercase"
+                      style={{ gridTemplateColumns: EXERCISE_ROW_GRID_EDITABLE }}
+                    >
+                      <span>Ejercicio</span>
+                      <span className="text-center">Ser.</span>
+                      <span className="text-center">Rep.</span>
+                      <span className="text-center">Kg</span>
+                      <span className="text-right">Vol.</span>
+                      <span />
+                    </div>
+                  )}
+
+                  <div className="divide-y divide-black/5">
+                    {b.exercises.map((ex, eIdx) => (
+                      <ExerciseRow
+                        key={ex.id}
+                        ex={ex}
+                        onChange={(next) => changeExerciseExtra(bIdx, eIdx, next)}
+                        onRemove={() => removeExerciseExtra(bIdx, eIdx)}
+                        biblioteca={biblioteca}
+                        onSaveToBiblioteca={guardarEjercicioEnBiblioteca}
+                        etiquetaBloque={{ grupoMuscular: b.grupoMuscular, cualidad: b.cualidad }}
+                        datalistId="sesiones-biblioteca-datalist"
+                      />
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => addExerciseExtra(bIdx)}
+                    className="dp-text-brand mt-2 flex items-center gap-1 text-xs font-medium hover:underline"
+                  >
+                    + Agregar ejercicio
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         <label className="flex flex-col gap-1 text-sm">
           <span className="dp-body font-medium">Comentarios post sesión — dolor · dificultad · ajuste de carga</span>
@@ -594,7 +758,7 @@ export function SesionesClient({
           >
             {pending ? "Guardando…" : "Guardar sesión"}
           </button>
-          {draft.ejercicios.length > 0 && (
+          {hayEjerciciosExtra && (
             <>
               <button
                 type="button"
