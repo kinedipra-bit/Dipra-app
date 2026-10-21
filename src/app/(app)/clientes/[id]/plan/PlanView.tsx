@@ -334,6 +334,15 @@ export function PlanView({
   // "Guardar cambios", "Compartir rutina" las dejaba afuera sin avisar: el
   // cliente seguía viendo la versión anterior aunque el profesional ya
   // hubiera tocado "Compartir". Ahora guarda primero, siempre.
+  //
+  // BUG que le pasó a Karin: compartir una semana que el profesional está
+  // viendo/editando pero que NO es la semana activa del cliente (ver nota
+  // de clienteVeSemanaId) dejaba el banner de "esto no es lo que ve tu
+  // cliente" como único aviso — fácil de pasar por alto, y el profesional
+  // se iba pensando que ya estaba compartido cuando el cliente seguía
+  // viendo otra semana entera. "Compartir" ahora SIEMPRE deja esta semana
+  // como la que ve el cliente, así no hay forma de que quede "compartida"
+  // sin ser la que el cliente realmente ve.
   const compartirRutina = () => {
     if (!semana) return;
     startCompartir(async () => {
@@ -344,6 +353,10 @@ export function PlanView({
         dias: semana.dias,
       });
       await compartirSemana(clienteId, semana.id);
+      if (clienteVeSemanaId !== semana.id) {
+        await marcarSemanaActiva(clienteId, semana.id);
+        setClienteVeSemanaId(semana.id);
+      }
       updateSemana({ ...semana, dias_publicado: semana.dias, cambios_sin_compartir: false });
       setSharedAt(Date.now());
     });
@@ -556,7 +569,8 @@ export function PlanView({
         <div className="dp-bg-faint flex flex-wrap items-center justify-between gap-2 rounded-2xl px-4 py-3">
           <p className="dp-body text-sm">
             👁 Estás viendo Semana {semana.numero}
-            {semana.mesociclo && ` (${semana.mesociclo})`} — el cliente sigue viendo otra semana en su portal.
+            {semana.mesociclo && ` (${semana.mesociclo})`} — el cliente sigue viendo otra semana en su portal. Si
+            tocás &quot;Compartir&quot;, esta pasa a ser la que ve.
           </p>
           <button
             type="button"
