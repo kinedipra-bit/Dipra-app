@@ -131,8 +131,23 @@ export function SesionesClient({
   };
 
   // Siempre arranca un bloque nuevo (a diferencia de agregarEjercicioExtra
-  // sin argumentos, que continúa el último si corresponde).
-  const agregarBloqueExtra = () => agregarEjercicioExtra("Nuevo bloque");
+  // sin argumentos, que continúa el último si corresponde) — el título
+  // tiene que ser distinto al de cualquier bloque extra ya creado, si no
+  // dos clics seguidos en "+ Agregar bloque" quedan agrupados juntos (misma
+  // etiqueta = mismo bloque, ver agruparPorBloque) y da la sensación de que
+  // el botón no hizo nada / agregó un ejercicio suelto en vez de un bloque.
+  const agregarBloqueExtra = () => {
+    if (!draft) return;
+    const usados = new Set(
+      draft.ejercicios
+        .map((e) => e.bloqueTitle?.match(/^Nuevo bloque(?: (\d+))?$/))
+        .filter((m): m is RegExpMatchArray => !!m)
+        .map((m) => (m[1] ? Number(m[1]) : 1))
+    );
+    let n = 1;
+    while (usados.has(n)) n++;
+    agregarEjercicioExtra(n === 1 ? "Nuevo bloque" : `Nuevo bloque ${n}`);
+  };
 
   const quitarEjercicioExtra = (idx: number) => {
     if (!draft) return;
