@@ -20,6 +20,7 @@ export function FichaForm({ cliente, linkBoletasSii }: { cliente: Cliente; linkB
     objetivo: cliente.objetivo,
     fecha_nacimiento: cliente.fecha_nacimiento ?? "",
     remoto: cliente.remoto,
+    portal_habilitado: cliente.portal_habilitado,
   });
   const [pilares, setPilares] = useState(cliente.pilares);
   const [antecedentes, setAntecedentes] = useState(cliente.antecedentes);
@@ -137,6 +138,19 @@ export function FichaForm({ cliente, linkBoletasSii }: { cliente: Cliente; linkB
             />
             <span className="dp-body font-medium">Cliente 100% remoto</span>
             <span className="dp-muted text-xs">— solo planificación, no lo atendés presencialmente</span>
+          </label>
+          <label className="col-span-2 flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={datos.portal_habilitado}
+              onChange={(e) => setDatos({ ...datos, portal_habilitado: e.target.checked })}
+              className="h-4 w-4"
+            />
+            <span className="dp-body font-medium">Este cliente usa el portal</span>
+            <span className="dp-muted text-xs">
+              — destildalo si entrena personalizado en persona y nunca le vas a compartir el plan; se
+              sacan los avisos de &quot;sin compartir&quot; en Plan y Tareas
+            </span>
           </label>
         </div>
 

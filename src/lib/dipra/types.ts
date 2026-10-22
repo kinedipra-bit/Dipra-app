@@ -18,6 +18,10 @@ export interface Cliente {
   // que esClienteRemoto en alertasProgramacion.ts, que infiere uso del
   // portal a partir de sesiones registradas).
   remoto: boolean;
+  // false = este cliente no usa el portal (entrena personalizado presencial,
+  // Nicolás nunca le comparte el plan) — apaga los avisos de "sin
+  // compartir"/"el cliente ve otra semana" en Plan y Tareas. Default true.
+  portal_habilitado: boolean;
   // Objetivo/motivo de consulta/anamnesis — texto libre de Evaluación,
   // distinto de `objetivo` (más corto, orientado a la meta de entrenamiento).
   motivo_consulta: string;
