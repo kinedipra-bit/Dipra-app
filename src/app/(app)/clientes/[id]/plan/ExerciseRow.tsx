@@ -100,7 +100,11 @@ export function ExerciseRow({
   // se toca el link, para no pisar uno pegado a mano.
   const handleNombreChange = (nombre: string) => {
     const esOtroEjercicio = nombre.trim().toLowerCase() !== ex.nombre.trim().toLowerCase();
-    const match = biblioteca.find((b) => b.nombre.toLowerCase() === nombre.toLowerCase());
+    // Comparación recortada (sin espacios de más al principio/final) —
+    // si no, un espacio de sobra al tipear (muy común copiando y pegando
+    // el nombre) hacía que no matcheara contra la biblioteca y se perdiera
+    // el autocompletado del link, aunque el nombre fuera "el mismo".
+    const match = biblioteca.find((b) => b.nombre.trim().toLowerCase() === nombre.trim().toLowerCase());
     if (match && (esOtroEjercicio || !ex.link)) {
       onChange({ ...ex, nombre, link: match.link });
     } else {
@@ -108,7 +112,9 @@ export function ExerciseRow({
     }
   };
 
-  const yaEnBiblioteca = biblioteca.some((b) => b.nombre.toLowerCase() === (ex.nombre || "").toLowerCase());
+  const yaEnBiblioteca = biblioteca.some(
+    (b) => b.nombre.trim().toLowerCase() === (ex.nombre || "").trim().toLowerCase()
+  );
   const puedeGuardar = !readOnly && !!ex.nombre?.trim() && !!ex.link?.trim() && !yaEnBiblioteca;
 
   const buscarEnYoutube = () => {
