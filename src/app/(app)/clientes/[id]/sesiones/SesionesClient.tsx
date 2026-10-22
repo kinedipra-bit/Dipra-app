@@ -588,6 +588,12 @@ export function SesionesClient({
           </div>
         )}
 
+        <datalist id="sesiones-biblioteca-datalist">
+          {biblioteca.map((b) => (
+            <option key={b.id} value={b.nombre} />
+          ))}
+        </datalist>
+
         <div>
           <div className="mb-2 flex items-center justify-between">
             <div>

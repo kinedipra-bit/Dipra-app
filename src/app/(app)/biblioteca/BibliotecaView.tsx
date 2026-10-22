@@ -23,6 +23,7 @@ export function BibliotecaView({ bibliotecaInicial }: { bibliotecaInicial: Ejerc
   const [nuevoLink, setNuevoLink] = useState("");
   const [creando, startCrear] = useTransition();
   const [eliminandoId, setEliminandoId] = useState<string | null>(null);
+  const [errorAgregar, setErrorAgregar] = useState<string | null>(null);
 
   const filtrados = biblioteca.filter((b) => b.nombre.toLowerCase().includes(q.toLowerCase()));
 
@@ -43,12 +44,17 @@ export function BibliotecaView({ bibliotecaInicial }: { bibliotecaInicial: Ejerc
 
   const agregar = () => {
     if (!nuevoNombre.trim()) return;
+    setErrorAgregar(null);
     startCrear(async () => {
-      const creado = await crearEjercicioBiblioteca(nuevoNombre, nuevoLink);
-      setBiblioteca((prev) => [...prev, creado].sort((a, b) => a.nombre.localeCompare(b.nombre)));
-      setNuevoNombre("");
-      setNuevoLink("");
-      setShowAdd(false);
+      try {
+        const creado = await crearEjercicioBiblioteca(nuevoNombre, nuevoLink);
+        setBiblioteca((prev) => [...prev, creado].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+        setNuevoNombre("");
+        setNuevoLink("");
+        setShowAdd(false);
+      } catch (e) {
+        setErrorAgregar(e instanceof Error ? e.message : "No se pudo agregar.");
+      }
     });
   };
 
@@ -75,33 +81,36 @@ export function BibliotecaView({ bibliotecaInicial }: { bibliotecaInicial: Ejerc
       </div>
 
       {showAdd && (
-        <div className="dp-surface flex items-end gap-3 rounded-2xl p-4 shadow-sm">
-          <div className="flex-1">
-            <label className="dp-body text-xs font-medium">Nombre</label>
-            <input
-              value={nuevoNombre}
-              onChange={(e) => setNuevoNombre(e.target.value)}
-              placeholder="Ej. Goblet squat"
-              className={`mt-1 w-full ${inputClass}`}
-            />
+        <div className="dp-surface flex flex-col gap-2 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-end gap-3">
+            <div className="flex-1">
+              <label className="dp-body text-xs font-medium">Nombre</label>
+              <input
+                value={nuevoNombre}
+                onChange={(e) => setNuevoNombre(e.target.value)}
+                placeholder="Ej. Goblet squat"
+                className={`mt-1 w-full ${inputClass}`}
+              />
+            </div>
+            <div className="flex-1">
+              <label className="dp-body text-xs font-medium">Link del video</label>
+              <input
+                value={nuevoLink}
+                onChange={(e) => setNuevoLink(e.target.value)}
+                placeholder="https://youtube.com/…"
+                className={`mt-1 w-full ${inputClass}`}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={agregar}
+              disabled={!nuevoNombre.trim() || creando}
+              className="dp-bg-brand rounded-lg px-4 py-1.5 font-medium text-white disabled:opacity-40"
+            >
+              {creando ? "Guardando…" : "Guardar"}
+            </button>
           </div>
-          <div className="flex-1">
-            <label className="dp-body text-xs font-medium">Link del video</label>
-            <input
-              value={nuevoLink}
-              onChange={(e) => setNuevoLink(e.target.value)}
-              placeholder="https://youtube.com/…"
-              className={`mt-1 w-full ${inputClass}`}
-            />
-          </div>
-          <button
-            type="button"
-            onClick={agregar}
-            disabled={!nuevoNombre.trim() || creando}
-            className="dp-bg-brand rounded-lg px-4 py-1.5 font-medium text-white disabled:opacity-40"
-          >
-            {creando ? "Guardando…" : "Guardar"}
-          </button>
+          {errorAgregar && <p className="dp-alert text-xs">{errorAgregar}</p>}
         </div>
       )}
 

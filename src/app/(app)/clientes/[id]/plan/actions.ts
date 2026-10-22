@@ -229,11 +229,45 @@ export async function eliminarPlantilla(clienteId: string, plantillaId: string) 
 // de /biblioteca, que es carpeta de otro agente en paralelo) para no cruzar
 // carpetas asignadas; igual revalida /biblioteca para que esa vista quede
 // al día si alguien la tiene abierta.
+// Idempotente a propósito: el botón "+ Guardar en biblioteca" de
+// ExerciseRow se oculta cuando el nombre ya está en la biblioteca, pero esa
+// comparación corre en el navegador con el estado que tenga cargado en ese
+// momento — un clic doble, o dos filas con el mismo ejercicio guardadas
+// casi al mismo tiempo desde pantallas distintas, podían terminar
+// insertando el mismo ejercicio dos veces (así se juntaron ~15 duplicados
+// en la biblioteca real). Antes de insertar, busca un nombre igual
+// (sin mayúsculas/espacios de más) y si ya existe actualiza su link en vez
+// de crear uno nuevo.
 export async function guardarEnBiblioteca(nombre: string, link: string): Promise<EjercicioBiblioteca> {
   const supabase = await createClient();
+  const nombreLimpio = nombre.trim();
+  const linkLimpio = link.trim();
+
+  const { data: existentes } = await supabase
+    .from("biblioteca_ejercicios")
+    .select("id, nombre, link")
+    .ilike("nombre", nombreLimpio)
+    .returns<EjercicioBiblioteca[]>();
+  const existente = existentes?.[0];
+
+  if (existente) {
+    if (existente.link !== linkLimpio) {
+      const { data, error } = await supabase
+        .from("biblioteca_ejercicios")
+        .update({ link: linkLimpio })
+        .eq("id", existente.id)
+        .select("id, nombre, link")
+        .single<EjercicioBiblioteca>();
+      if (error) throw new Error(error.message);
+      revalidatePath("/biblioteca");
+      return data;
+    }
+    return existente;
+  }
+
   const { data, error } = await supabase
     .from("biblioteca_ejercicios")
-    .insert({ nombre: nombre.trim(), link: link.trim() })
+    .insert({ nombre: nombreLimpio, link: linkLimpio })
     .select("id, nombre, link")
     .single<EjercicioBiblioteca>();
 
