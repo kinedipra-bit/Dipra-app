@@ -166,12 +166,16 @@ function IndicacionesSection({
 export function KinePlanView({
   clienteId,
   planInicial,
+  portalHabilitado,
   bibliotecaInicial,
   indicacionesPdfUrl,
   checkins,
 }: {
   clienteId: string;
   planInicial: PlanKine;
+  // false = cliente que nunca usa el portal (entrena personalizado
+  // presencial) — apaga el aviso de "sin compartir".
+  portalHabilitado: boolean;
   bibliotecaInicial: EjercicioBiblioteca[];
   indicacionesPdfUrl: string | null;
   checkins: TareaCheckin[];
@@ -455,7 +459,7 @@ export function KinePlanView({
         onQuitarPdf={quitarPdf}
       />
 
-      {plan.cambios_sin_compartir && (
+      {portalHabilitado && plan.cambios_sin_compartir && (
         <div className="dp-bg-amber-soft flex flex-wrap items-center justify-between gap-2 rounded-2xl px-4 py-3">
           <p className="dp-text-amber text-sm font-medium">⚠ El cliente todavía NO ve esta versión de Tareas.</p>
           <button

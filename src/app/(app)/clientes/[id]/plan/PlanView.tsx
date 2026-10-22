@@ -101,6 +101,7 @@ function limpiarComentariosCliente(dias: DiaPlan[]): DiaPlan[] {
 export function PlanView({
   clienteId,
   fms,
+  portalHabilitado,
   semanaActivaId: semanaActivaIdInicial,
   semanasIniciales,
   bibliotecaInicial,
@@ -110,6 +111,11 @@ export function PlanView({
 }: {
   clienteId: string;
   fms: FmsData | null | undefined;
+  // false = cliente que nunca usa el portal (entrena personalizado
+  // presencial) — apaga los avisos de "sin compartir"/"el cliente ve otra
+  // semana", que no tienen sentido para alguien a quien nunca se le
+  // comparte nada.
+  portalHabilitado: boolean;
   semanaActivaId: string | null;
   semanasIniciales: PlanSemana[];
   bibliotecaInicial: EjercicioBiblioteca[];
@@ -565,7 +571,7 @@ export function PlanView({
     <div className="flex flex-col gap-5">
       <FmsResumenPlan fms={fms} />
 
-      {semana.id !== clienteVeSemanaId && (
+      {portalHabilitado && semana.id !== clienteVeSemanaId && (
         <div className="dp-bg-faint flex flex-wrap items-center justify-between gap-2 rounded-2xl px-4 py-3">
           <p className="dp-body text-sm">
             👁 Estás viendo Semana {semana.numero}
@@ -583,7 +589,7 @@ export function PlanView({
         </div>
       )}
 
-      {semana.cambios_sin_compartir && (
+      {portalHabilitado && semana.cambios_sin_compartir && (
         <div className="dp-bg-amber-soft flex flex-wrap items-center justify-between gap-2 rounded-2xl px-4 py-3">
           <p className="dp-text-amber text-sm font-medium">
             ⚠ El cliente todavía NO ve esta versión de Semana {semana.numero}

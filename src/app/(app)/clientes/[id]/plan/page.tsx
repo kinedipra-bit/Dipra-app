@@ -38,6 +38,7 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
     <PlanView
       clienteId={cliente.id}
       fms={cliente.fms}
+      portalHabilitado={cliente.portal_habilitado}
       semanaActivaId={cliente.semana_activa_id}
       semanasIniciales={semanas ?? []}
       bibliotecaInicial={biblioteca ?? []}
