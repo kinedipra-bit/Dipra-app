@@ -97,6 +97,48 @@ function ejercicioSesionDesdePlan(ex: EjercicioPlan, bloqueTitle: string): Ejerc
   };
 }
 
+// Camino inverso a ejercicioSesionDesdePlan: una sesión YA REGISTRADA
+// (lo que el cliente hizo de verdad, seriesReal/repsReal/kgReal) pasa al
+// mismo formato BloquePlan/EjercicioPlan que "Ejercicios planificados en
+// esta sesión" — para poder arrancar la planificación de hoy a partir de
+// una sesión anterior en vez de empezar de cero, con todos los campos
+// editables igual que en Plan (no solo nombre y números).
+function ejercicioPlanDesdeSesionPasada(ex: EjercicioSesion): EjercicioPlan {
+  return {
+    id: crypto.randomUUID(),
+    nombre: ex.nombre,
+    series: ex.seriesReal,
+    reps: ex.repsReal,
+    kg: ex.kgReal,
+    pesosSeries: ex.pesosSeriesReal,
+    repsSeries: ex.repsSeriesReal,
+    notaReps: ex.notaReps,
+    tiempoSerie: ex.tiempoSerie,
+    tipoCarga: ex.tipoCarga,
+    unilateral: ex.unilateral,
+    pesoCadaUno: ex.pesoCadaUno,
+    link: ex.link ?? "",
+    rpe: typeof ex.rpe === "string" ? ex.rpe : "",
+    rir: "",
+    tut: "",
+    descanso: "",
+    comentarioCliente: "",
+  };
+}
+
+function bloquesDesdeSesionPasada(sesion: Sesion): BloquePlan[] {
+  return agruparPorBloque(sesion.ejercicios).map((grupo) => ({
+    id: crypto.randomUUID(),
+    title: grupo.bloqueTitle || "Bloque",
+    exercises: grupo.items.map(({ ejercicio }) => ejercicioPlanDesdeSesionPasada(ejercicio)),
+  }));
+}
+
+function fmtFechaCorta(f: string) {
+  const d = new Date(f + "T00:00:00");
+  return d.toLocaleDateString("es-CL", { day: "numeric", month: "short" }).replace(/\.$/, "");
+}
+
 // Solo el pilar "Estrés" trae la marca `invertido` (ver constants.ts) — el
 // resto del union type de PILARES_KEYS no tiene esa propiedad en absoluto.
 function pilarInvertido(p: (typeof PILARES_KEYS)[number]): boolean {
@@ -141,6 +183,7 @@ export function SesionesClient({
   // en esta sesión" más abajo), para poder copiarlos después sin perder
   // nada (link, carga, RPE/RIR/tempo/descanso, etc.).
   const [bloquesExtra, setBloquesExtra] = useState<BloquePlan[]>([]);
+  const [sesionFuenteId, setSesionFuenteId] = useState("");
   const [biblioteca, setBiblioteca] = useState<EjercicioBiblioteca[]>(bibliotecaInicial);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -154,16 +197,19 @@ export function SesionesClient({
   const [mensajeCopia, setMensajeCopia] = useState<string | null>(null);
 
   const sesiones = [...sesionesIniciales].sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const sesionesConEjercicios = sesiones.filter((s) => s.ejercicios.length > 0);
 
   const iniciarNueva = () => {
     setDraft(nuevoDraft(sesiones.length === 0));
     setBloquesExtra([]);
+    setSesionFuenteId("");
     setModo("form");
   };
 
   const cancelar = () => {
     setDraft(null);
     setBloquesExtra([]);
+    setSesionFuenteId("");
     setModo("list");
   };
 
@@ -192,6 +238,18 @@ export function SesionesClient({
 
   const addBloqueExtra = () => {
     setBloquesExtra((prev) => [...prev, { id: crypto.randomUUID(), title: "Nuevo bloque", exercises: [] }]);
+  };
+
+  // Arranca de lo que el cliente hizo de verdad en una sesión anterior, en
+  // vez de empezar de cero — útil para repetir/adaptar algo que ya
+  // funcionó. Suma los bloques al final de lo que ya había en vez de
+  // reemplazar, por si se está combinando con otra sesión o con bloques
+  // agregados a mano.
+  const copiarDeSesionAnterior = () => {
+    const fuente = sesiones.find((s) => s.id === sesionFuenteId);
+    if (!fuente || fuente.ejercicios.length === 0) return;
+    setBloquesExtra((prev) => [...prev, ...bloquesDesdeSesionPasada(fuente)]);
+    setSesionFuenteId("");
   };
 
   const removeBloqueExtra = (bIdx: number) => {
@@ -595,22 +653,50 @@ export function SesionesClient({
         </datalist>
 
         <div>
-          <div className="mb-2 flex items-center justify-between">
-            <div>
-              <p className="dp-text-heading text-xs font-semibold uppercase tracking-wide">
-                Ejercicios planificados en esta sesión
-              </p>
-              <p className="dp-muted text-[11px]">
-                Mismo formato que Plan/Tareas — para dejarlos acá ya armados y poder copiarlos después.
-              </p>
+          <div className="mb-2 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="dp-text-heading text-xs font-semibold uppercase tracking-wide">
+                  Ejercicios planificados en esta sesión
+                </p>
+                <p className="dp-muted text-[11px]">
+                  Mismo formato que Plan/Tareas — para dejarlos acá ya armados y poder copiarlos después.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={addBloqueExtra}
+                className="dp-text-brand shrink-0 text-xs font-medium hover:underline"
+              >
+                + Agregar bloque
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={addBloqueExtra}
-              className="dp-text-brand shrink-0 text-xs font-medium hover:underline"
-            >
-              + Agregar bloque
-            </button>
+
+            {sesionesConEjercicios.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={sesionFuenteId}
+                  onChange={(e) => setSesionFuenteId(e.target.value)}
+                  className="rounded-lg border border-black/10 px-2 py-1 text-xs outline-none focus:dp-border-brand"
+                >
+                  <option value="">Copiar de una sesión anterior…</option>
+                  {sesionesConEjercicios.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {fmtFechaCorta(s.fecha)} · {s.tipo || "Kinesiología"}
+                      {s.dia_plan_label ? ` · ${s.dia_plan_label}` : ""}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={copiarDeSesionAnterior}
+                  disabled={!sesionFuenteId}
+                  className="dp-text-brand rounded-lg border border-dashed border-current px-2.5 py-1 text-xs font-medium disabled:opacity-40"
+                >
+                  Copiar
+                </button>
+              </div>
+            )}
           </div>
 
           {bloquesExtra.length === 0 ? (
