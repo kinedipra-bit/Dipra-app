@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { enviarCorreoLinkPortal } from "@/lib/email";
+import { requireAdmin } from "@/lib/dipra/auth";
 
 export async function createCliente(formData: FormData) {
   const nombre = String(formData.get("nombre") ?? "").trim();
@@ -75,6 +76,7 @@ export async function enviarLinkPortal(clienteId: string): Promise<{ ok: true } 
 }
 
 export async function updateClienteFicha(clienteId: string, patch: Record<string, unknown>) {
+  await requireAdmin();
   const supabase = await createClient();
   const { error } = await supabase.from("clients").update(patch).eq("id", clienteId);
   if (error) throw new Error(error.message);

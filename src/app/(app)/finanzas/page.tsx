@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { ClienteServicio, Gasto, Pago, Servicio } from "@/lib/dipra/types";
+import { obtenerRolActual } from "@/lib/dipra/auth";
 import { FinanzasView } from "./FinanzasView";
 
 function limitesDelMes(hoy: Date) {
@@ -18,6 +20,7 @@ export type ClienteServicioConNombres = ClienteServicio & {
 export type PagoConCliente = Pago & { clienteNombre: string };
 
 export default async function FinanzasPage() {
+  if ((await obtenerRolActual()) !== "admin") redirect("/");
   const supabase = await createClient();
   const hoy = new Date();
   const { inicio, fin, periodo } = limitesDelMes(hoy);

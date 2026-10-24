@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/Avatar";
 import { calcularEdad, diasHastaCumpleanos } from "@/lib/dipra/cumpleanos";
+import { obtenerRolActual } from "@/lib/dipra/auth";
 import type { Cliente } from "@/lib/dipra/types";
 import { DeleteClienteButton } from "./DeleteClienteButton";
 import { ClienteTabs } from "./ClienteTabs";
@@ -19,7 +20,10 @@ export default async function ClienteLayout({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const { data: cliente } = await supabase.from("clients").select("*").eq("id", id).single<Cliente>();
+  const [{ data: cliente }, rol] = await Promise.all([
+    supabase.from("clients").select("*").eq("id", id).single<Cliente>(),
+    obtenerRolActual(),
+  ]);
 
   if (!cliente) notFound();
 
@@ -64,7 +68,7 @@ export default async function ClienteLayout({
         </div>
       </div>
 
-      <ClienteTabs clienteId={cliente.id} />
+      <ClienteTabs clienteId={cliente.id} esAdmin={rol === "admin"} />
 
       <div>{children}</div>
     </div>

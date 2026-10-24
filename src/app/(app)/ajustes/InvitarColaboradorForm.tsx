@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import type { RolProfesional } from "@/lib/dipra/auth";
 import { invitarProfesional } from "./actions";
 
 export function InvitarColaboradorForm() {
   const [email, setEmail] = useState("");
+  const [role, setRole] = useState<RolProfesional>("colaboradora");
   const [pending, startTransition] = useTransition();
   const [mensaje, setMensaje] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
 
@@ -16,7 +18,7 @@ export function InvitarColaboradorForm() {
       return;
     }
     startTransition(async () => {
-      const resultado = await invitarProfesional(correo);
+      const resultado = await invitarProfesional(correo, role);
       if (resultado.error) {
         setMensaje({ tipo: "error", texto: resultado.error });
         return;
@@ -31,19 +33,35 @@ export function InvitarColaboradorForm() {
       <h2 className="mb-1 font-medium dp-text-heading">Invitar colaborador/a</h2>
       <p className="dp-muted mb-3 text-xs">
         Le llega un mail con un link de un solo uso para que cree su propia contraseña y entre a la app —
-        no hace falta que vos crees nada en Supabase. Va a tener el mismo acceso que vos: ve y edita todos
-        los clientes, agenda y planes.
+        no hace falta que vos crees nada en Supabase.
       </p>
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="dp-body font-medium">Email de la persona a invitar</span>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="estefania@ejemplo.com"
-          className="rounded-lg border border-black/10 px-3 py-2 text-sm outline-none focus:dp-border-brand"
-        />
-      </label>
+      <div className="flex flex-wrap gap-3">
+        <label className="flex flex-1 flex-col gap-1 text-sm">
+          <span className="dp-body font-medium">Email de la persona a invitar</span>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="estefania@ejemplo.com"
+            className="rounded-lg border border-black/10 px-3 py-2 text-sm outline-none focus:dp-border-brand"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="dp-body font-medium">Rol</span>
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value as RolProfesional)}
+            className="rounded-lg border border-black/10 px-3 py-2 text-sm outline-none focus:dp-border-brand"
+          >
+            <option value="colaboradora">Colaboradora</option>
+            <option value="admin">Administrador/a</option>
+          </select>
+        </label>
+      </div>
+      <p className="dp-muted mt-2 text-xs">
+        Colaboradora: gestiona Plan, Tareas, Agenda, Sesiones y Evaluación — no puede editar la Ficha
+        clínica ni ver Finanzas o Ajustes. Administrador/a tiene el mismo acceso completo que vos.
+      </p>
       <div className="mt-4 flex items-center gap-3">
         <button
           type="button"

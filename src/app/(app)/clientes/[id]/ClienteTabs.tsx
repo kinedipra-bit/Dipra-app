@@ -10,15 +10,16 @@ const TABS = [
   { segment: "tareas", label: "Tareas" },
   { segment: "sesiones", label: "Sesiones" },
   { segment: "evolucion", label: "Evolución" },
-  { segment: "finanzas", label: "Finanzas" },
+  { segment: "finanzas", label: "Finanzas", soloAdmin: true },
 ];
 
-export function ClienteTabs({ clienteId }: { clienteId: string }) {
+export function ClienteTabs({ clienteId, esAdmin }: { clienteId: string; esAdmin: boolean }) {
   const pathname = usePathname();
+  const tabs = TABS.filter((tab) => !tab.soloAdmin || esAdmin);
 
   return (
     <nav className="flex gap-1 border-b border-black/5">
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const href = `/clientes/${clienteId}/${tab.segment}`;
         const active = pathname?.startsWith(href);
         return (

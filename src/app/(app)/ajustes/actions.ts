@@ -3,8 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdmin, type RolProfesional } from "@/lib/dipra/auth";
 
-export async function invitarProfesional(email: string): Promise<{ error?: string }> {
+export async function invitarProfesional(email: string, role: RolProfesional): Promise<{ error?: string }> {
+  await requireAdmin();
   const supabase = await createClient();
   const {
     data: { user },
@@ -16,10 +18,17 @@ export async function invitarProfesional(email: string): Promise<{ error?: strin
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://dipra-app.vercel.app";
   const admin = createAdminClient();
-  const { error } = await admin.auth.admin.inviteUserByEmail(correo, {
+  const { data, error } = await admin.auth.admin.inviteUserByEmail(correo, {
     redirectTo: `${siteUrl}/auth/set-password`,
   });
   if (error) return { error: error.message };
+
+  // El trigger handle_new_professional ya insertó la fila en professionals
+  // (con role='admin' por default de la columna) justo antes de que esto
+  // corra — acá se ajusta al rol elegido en el formulario de invitación.
+  if (role !== "admin" && data.user) {
+    await admin.from("professionals").update({ role }).eq("id", data.user.id);
+  }
   return {};
 }
 
@@ -32,9 +41,9 @@ export async function listarColaboradores() {
 
   const { data } = await supabase
     .from("professionals")
-    .select("id, full_name, email")
+    .select("id, full_name, email, role")
     .order("email")
-    .returns<{ id: string; full_name: string; email: string }[]>();
+    .returns<{ id: string; full_name: string; email: string; role: RolProfesional }[]>();
   return data ?? [];
 }
 
@@ -42,6 +51,7 @@ export async function cambiarContrasenaColaborador(
   colaboradorId: string,
   nuevaContrasena: string
 ): Promise<{ error?: string }> {
+  await requireAdmin();
   const supabase = await createClient();
   const {
     data: { user },
@@ -55,6 +65,25 @@ export async function cambiarContrasenaColaborador(
     password: nuevaContrasena,
   });
   if (error) return { error: error.message };
+  return {};
+}
+
+export async function cambiarRolColaborador(
+  colaboradorId: string,
+  role: RolProfesional
+): Promise<{ error?: string }> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user?.id === colaboradorId) {
+    return { error: "No te podés sacar el rol de administrador a vos mismo." };
+  }
+
+  const { error } = await supabase.from("professionals").update({ role }).eq("id", colaboradorId);
+  if (error) return { error: error.message };
+  revalidatePath("/ajustes");
   return {};
 }
 

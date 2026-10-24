@@ -1,14 +1,17 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { cambiarContrasenaColaborador } from "./actions";
+import type { RolProfesional } from "@/lib/dipra/auth";
+import { cambiarContrasenaColaborador, cambiarRolColaborador } from "./actions";
 
-type Colaborador = { id: string; full_name: string; email: string };
+type Colaborador = { id: string; full_name: string; email: string; role: RolProfesional };
 
-export function ColaboradoresForm({ colaboradores }: { colaboradores: Colaborador[] }) {
+export function ColaboradoresForm({ colaboradores: colaboradoresIniciales }: { colaboradores: Colaborador[] }) {
+  const [colaboradores, setColaboradores] = useState(colaboradoresIniciales);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [nuevaPassword, setNuevaPassword] = useState("");
   const [pending, startTransition] = useTransition();
+  const [cambiandoRolId, setCambiandoRolId] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState<{ id: string; tipo: "ok" | "error"; texto: string } | null>(null);
 
   const abrir = (id: string) => {
@@ -34,6 +37,20 @@ export function ColaboradoresForm({ colaboradores }: { colaboradores: Colaborado
     });
   };
 
+  const cambiarRol = (id: string, role: RolProfesional) => {
+    setMensaje(null);
+    setCambiandoRolId(id);
+    startTransition(async () => {
+      const resultado = await cambiarRolColaborador(id, role);
+      if (resultado.error) {
+        setMensaje({ id, tipo: "error", texto: resultado.error });
+      } else {
+        setColaboradores((prev) => prev.map((c) => (c.id === id ? { ...c, role } : c)));
+      }
+      setCambiandoRolId(null);
+    });
+  };
+
   if (colaboradores.length === 0) return null;
 
   return (
@@ -41,7 +58,8 @@ export function ColaboradoresForm({ colaboradores }: { colaboradores: Colaborado
       <h2 className="mb-1 font-medium dp-text-heading">Colaboradores</h2>
       <p className="dp-muted mb-3 text-xs">
         Si alguien no puede entrar, acá le podés poner vos mismo una contraseña nueva y pasársela
-        directo (por WhatsApp, por ejemplo) — no depende de que le llegue un mail.
+        directo (por WhatsApp, por ejemplo) — no depende de que le llegue un mail. &quot;Colaboradora&quot;
+        no puede editar la Ficha clínica ni ver Finanzas o Ajustes.
       </p>
       <ul className="flex flex-col divide-y divide-black/5">
         {colaboradores.map((c) => (
@@ -51,15 +69,26 @@ export function ColaboradoresForm({ colaboradores }: { colaboradores: Colaborado
                 <p className="dp-text-heading truncate text-sm font-medium">{c.full_name || c.email}</p>
                 <p className="dp-muted truncate text-xs">{c.email}</p>
               </div>
-              {editandoId !== c.id && (
-                <button
-                  type="button"
-                  onClick={() => abrir(c.id)}
-                  className="dp-text-brand shrink-0 text-xs font-medium hover:underline"
+              <div className="flex shrink-0 items-center gap-3">
+                <select
+                  value={c.role}
+                  onChange={(e) => cambiarRol(c.id, e.target.value as RolProfesional)}
+                  disabled={cambiandoRolId === c.id}
+                  className="rounded-lg border border-black/10 px-2 py-1 text-xs outline-none focus:dp-border-brand disabled:opacity-50"
                 >
-                  Cambiar contraseña
-                </button>
-              )}
+                  <option value="colaboradora">Colaboradora</option>
+                  <option value="admin">Administrador/a</option>
+                </select>
+                {editandoId !== c.id && (
+                  <button
+                    type="button"
+                    onClick={() => abrir(c.id)}
+                    className="dp-text-brand text-xs font-medium hover:underline"
+                  >
+                    Cambiar contraseña
+                  </button>
+                )}
+              </div>
             </div>
 
             {editandoId === c.id && (

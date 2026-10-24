@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { ClienteServicio, Gasto, Pago, Servicio } from "@/lib/dipra/types";
+import { requireAdmin } from "@/lib/dipra/auth";
 
 function revalidar(clienteId?: string) {
   revalidatePath("/finanzas");
@@ -18,6 +19,7 @@ export async function crearServicio(input: {
   periodicidad: string;
   descripcion: string;
 }): Promise<Servicio> {
+  await requireAdmin();
   const supabase = await createClient();
   const { data, error } = await supabase.from("servicios").insert(input).select("*").single<Servicio>();
   if (error) throw new Error(error.message);
@@ -29,6 +31,7 @@ export async function actualizarServicio(
   id: string,
   patch: Partial<Pick<Servicio, "nombre" | "tipo" | "precio" | "periodicidad" | "descripcion">>
 ) {
+  await requireAdmin();
   const supabase = await createClient();
   const { error } = await supabase.from("servicios").update(patch).eq("id", id);
   if (error) throw new Error(error.message);
@@ -39,6 +42,7 @@ export async function actualizarServicio(
 // se archiva — deja de aparecer para asignar a nuevos clientes, pero no
 // rompe el historial de quienes ya lo tienen.
 export async function archivarServicio(id: string, activo: boolean) {
+  await requireAdmin();
   const supabase = await createClient();
   const { error } = await supabase.from("servicios").update({ activo }).eq("id", id);
   if (error) throw new Error(error.message);
@@ -51,6 +55,7 @@ export async function asignarServicio(
   clienteId: string,
   input: { servicioId: string; precioAcordado: number; fechaInicio: string }
 ): Promise<ClienteServicio> {
+  await requireAdmin();
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("cliente_servicios")
@@ -70,6 +75,7 @@ export async function asignarServicio(
 // "Terminar" un plan/servicio asignado — no se borra, queda en el
 // historial del cliente con su fecha_fin.
 export async function finalizarClienteServicio(clienteId: string, id: string) {
+  await requireAdmin();
   const supabase = await createClient();
   const { error } = await supabase
     .from("cliente_servicios")
@@ -92,6 +98,7 @@ export async function crearPago(
     comentario: string;
   }
 ): Promise<Pago> {
+  await requireAdmin();
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("pagos")
@@ -112,6 +119,7 @@ export async function crearPago(
 }
 
 export async function eliminarPago(clienteId: string, id: string) {
+  await requireAdmin();
   const supabase = await createClient();
   const { error } = await supabase.from("pagos").delete().eq("id", id);
   if (error) throw new Error(error.message);
@@ -126,6 +134,7 @@ export async function crearGasto(input: {
   monto: number;
   descripcion: string;
 }): Promise<Gasto> {
+  await requireAdmin();
   const supabase = await createClient();
   const { data, error } = await supabase.from("gastos").insert(input).select("*").single<Gasto>();
   if (error) throw new Error(error.message);
@@ -134,6 +143,7 @@ export async function crearGasto(input: {
 }
 
 export async function eliminarGasto(id: string) {
+  await requireAdmin();
   const supabase = await createClient();
   const { error } = await supabase.from("gastos").delete().eq("id", id);
   if (error) throw new Error(error.message);

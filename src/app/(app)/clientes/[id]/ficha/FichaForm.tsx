@@ -9,7 +9,15 @@ import type { Cliente } from "@/lib/dipra/types";
 
 type CampoExtra = { id: string; etiqueta: string; valor: string };
 
-export function FichaForm({ cliente, linkBoletasSii }: { cliente: Cliente; linkBoletasSii: string | null }) {
+export function FichaForm({
+  cliente,
+  linkBoletasSii,
+  soloLectura = false,
+}: {
+  cliente: Cliente;
+  linkBoletasSii: string | null;
+  soloLectura?: boolean;
+}) {
   const [datos, setDatos] = useState({
     nombre: cliente.nombre,
     rut: cliente.rut ?? "",
@@ -53,7 +61,12 @@ export function FichaForm({ cliente, linkBoletasSii }: { cliente: Cliente; linkB
   const inputClass = "rounded-lg border border-black/10 px-3 py-2 text-sm outline-none focus:dp-border-brand";
 
   return (
-    <div className="flex flex-col gap-6">
+    <fieldset disabled={soloLectura} className="m-0 flex min-w-0 flex-col gap-6 border-0 p-0">
+      {soloLectura && (
+        <p className="dp-bg-faint dp-muted rounded-2xl px-4 py-3 text-sm">
+          👁 Solo lectura — tu cuenta no puede editar la ficha clínica de los pacientes.
+        </p>
+      )}
       <section className="dp-surface rounded-2xl p-5 shadow-sm">
         <h2 className="mb-4 font-medium dp-text-heading">Datos personales</h2>
         <div className="grid grid-cols-2 gap-4">
@@ -239,17 +252,19 @@ export function FichaForm({ cliente, linkBoletasSii }: { cliente: Cliente; linkB
         </div>
       </section>
 
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={guardar}
-          disabled={pending}
-          className="dp-bg-brand rounded-lg px-5 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {pending ? "Guardando…" : "Guardar cambios"}
-        </button>
-        {savedAt && !pending && <span className="dp-muted text-xs">Guardado.</span>}
-      </div>
-    </div>
+      {!soloLectura && (
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={guardar}
+            disabled={pending}
+            className="dp-bg-brand rounded-lg px-5 py-2 text-sm font-medium text-white disabled:opacity-50"
+          >
+            {pending ? "Guardando…" : "Guardar cambios"}
+          </button>
+          {savedAt && !pending && <span className="dp-muted text-xs">Guardado.</span>}
+        </div>
+      )}
+    </fieldset>
   );
 }

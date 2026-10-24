@@ -1,9 +1,11 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { ClienteServicio, Pago, Servicio } from "@/lib/dipra/types";
+import { obtenerRolActual } from "@/lib/dipra/auth";
 import { ClienteFinanzasView } from "./ClienteFinanzasView";
 
 export default async function ClienteFinanzasPage({ params }: { params: Promise<{ id: string }> }) {
+  if ((await obtenerRolActual()) !== "admin") redirect("/");
   const { id } = await params;
   const supabase = await createClient();
 
