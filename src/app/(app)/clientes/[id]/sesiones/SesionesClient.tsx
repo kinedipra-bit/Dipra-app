@@ -139,6 +139,56 @@ function fmtFechaCorta(f: string) {
   return d.toLocaleDateString("es-CL", { day: "numeric", month: "short" }).replace(/\.$/, "");
 }
 
+// Listado de solo lectura de los ejercicios de una sesión ya registrada,
+// agrupado por bloque — se usa tanto en el historial (lista de sesiones
+// pasadas) como en el panel de referencia "Sesión anterior" al planificar
+// una nueva, para no duplicar el mismo formateo dos veces.
+function ListaEjerciciosSesion({ ejercicios }: { ejercicios: EjercicioSesion[] }) {
+  return (
+    <div className="flex flex-col gap-2">
+      {agruparPorBloque(ejercicios).map((grupo, gIdx) => (
+        <div key={gIdx}>
+          {grupo.bloqueTitle && (
+            <p className="dp-text-brand mb-0.5 text-sm font-semibold tracking-wide uppercase">
+              {grupo.bloqueTitle}
+            </p>
+          )}
+          <div className="divide-y divide-black/5">
+            {grupo.items.map(({ ejercicio: ex }) => {
+              const kgPlanTexto =
+                ex.pesosSeriesPlan && ex.pesosSeriesPlan.filter((p) => Number(p) > 0).length > 0
+                  ? ex.pesosSeriesPlan.map((p) => Number(p) || 0).join("/")
+                  : String(ex.kgPlan);
+              const kgRealTexto =
+                ex.pesosSeriesReal && ex.pesosSeriesReal.filter((p) => Number(p) > 0).length > 0
+                  ? ex.pesosSeriesReal.map((p) => Number(p) || 0).join("/")
+                  : String(ex.kgReal);
+              const rpeTexto =
+                ex.rpeSeries && ex.rpeSeries.some((r) => r !== "" && r !== undefined)
+                  ? ex.rpeSeries.map((r) => (r === "" || r === undefined ? "—" : r)).join("/")
+                  : ex.rpe;
+              const repsRealTexto =
+                ex.repsSeriesReal && ex.repsSeriesReal.some((r) => Number(r) > 0)
+                  ? ex.repsSeriesReal.map((r) => Number(r) || 0).join("/")
+                  : String(ex.repsReal);
+              return (
+                <div key={ex.id} className="flex items-center justify-between gap-2 py-1.5 text-sm">
+                  <span className="dp-text-heading truncate">{ex.nombre}</span>
+                  <span className="dp-muted shrink-0 font-mono text-xs">
+                    {ex.extra ? "agregado en la sesión" : `plan ${ex.seriesPlan}×${ex.repsPlan}×${kgPlanTexto}kg`}
+                    {" → "}real {ex.seriesReal}×
+                    {repsRealTexto}×{kgRealTexto}kg{rpeTexto ? ` · RPE ${rpeTexto}` : ""}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // Solo el pilar "Estrés" trae la marca `invertido` (ver constants.ts) — el
 // resto del union type de PILARES_KEYS no tiene esa propiedad en absoluto.
 function pilarInvertido(p: (typeof PILARES_KEYS)[number]): boolean {
@@ -198,11 +248,14 @@ export function SesionesClient({
 
   const sesiones = [...sesionesIniciales].sort((a, b) => b.fecha.localeCompare(a.fecha));
   const sesionesConEjercicios = sesiones.filter((s) => s.ejercicios.length > 0);
+  const sesionFuente = sesionesConEjercicios.find((s) => s.id === sesionFuenteId);
 
   const iniciarNueva = () => {
     setDraft(nuevoDraft(sesiones.length === 0));
     setBloquesExtra([]);
-    setSesionFuenteId("");
+    // Precarga la más reciente como referencia — así entra directo viendo
+    // "qué hizo la última vez" sin tener que elegir nada.
+    setSesionFuenteId(sesionesConEjercicios[0]?.id ?? "");
     setModo("form");
   };
 
@@ -652,9 +705,47 @@ export function SesionesClient({
           ))}
         </datalist>
 
-        <div>
-          <div className="mb-2 flex flex-col gap-2">
-            <div className="flex items-center justify-between">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
+          {sesionesConEjercicios.length > 0 && (
+            <div className="dp-surface rounded-2xl border border-black/5 p-3">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="dp-text-heading text-xs font-semibold uppercase tracking-wide">Sesión anterior</p>
+                  <p className="dp-muted text-[11px]">Para tener a la vista mientras planificás — no se edita acá.</p>
+                </div>
+                <select
+                  value={sesionFuenteId}
+                  onChange={(e) => setSesionFuenteId(e.target.value)}
+                  className="rounded-lg border border-black/10 px-2 py-1 text-xs outline-none focus:dp-border-brand"
+                >
+                  <option value="">Elegí una sesión…</option>
+                  {sesionesConEjercicios.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {fmtFechaCorta(s.fecha)} · {s.tipo || "Kinesiología"}
+                      {s.dia_plan_label ? ` · ${s.dia_plan_label}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {sesionFuente ? (
+                <>
+                  <ListaEjerciciosSesion ejercicios={sesionFuente.ejercicios} />
+                  <button
+                    type="button"
+                    onClick={copiarDeSesionAnterior}
+                    className="dp-text-brand mt-2 text-xs font-medium hover:underline"
+                  >
+                    Copiar todo a la planificación de hoy →
+                  </button>
+                </>
+              ) : (
+                <p className="dp-muted text-xs">Elegí una sesión para ver su detalle acá.</p>
+              )}
+            </div>
+          )}
+
+          <div>
+            <div className="mb-2 flex items-center justify-between">
               <div>
                 <p className="dp-text-heading text-xs font-semibold uppercase tracking-wide">
                   Ejercicios planificados en esta sesión
@@ -672,35 +763,8 @@ export function SesionesClient({
               </button>
             </div>
 
-            {sesionesConEjercicios.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2">
-                <select
-                  value={sesionFuenteId}
-                  onChange={(e) => setSesionFuenteId(e.target.value)}
-                  className="rounded-lg border border-black/10 px-2 py-1 text-xs outline-none focus:dp-border-brand"
-                >
-                  <option value="">Copiar de una sesión anterior…</option>
-                  {sesionesConEjercicios.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {fmtFechaCorta(s.fecha)} · {s.tipo || "Kinesiología"}
-                      {s.dia_plan_label ? ` · ${s.dia_plan_label}` : ""}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={copiarDeSesionAnterior}
-                  disabled={!sesionFuenteId}
-                  className="dp-text-brand rounded-lg border border-dashed border-current px-2.5 py-1 text-xs font-medium disabled:opacity-40"
-                >
-                  Copiar
-                </button>
-              </div>
-            )}
-          </div>
-
-          {bloquesExtra.length === 0 ? (
-            <p className="dp-muted text-xs">Todavía no agregaste ningún bloque.</p>
+            {bloquesExtra.length === 0 ? (
+              <p className="dp-muted text-xs">Todavía no agregaste ningún bloque.</p>
           ) : (
             <div className="flex flex-col gap-3">
               {bloquesExtra.map((b, bIdx) => (
@@ -829,6 +893,7 @@ export function SesionesClient({
               ))}
             </div>
           )}
+          </div>
         </div>
 
         <label className="flex flex-col gap-1 text-sm">
@@ -1011,49 +1076,7 @@ export function SesionesClient({
                         <p className="dp-text-heading text-sm">{s.comentarios_pre}</p>
                       </div>
                     )}
-                    {s.ejercicios.length > 0 && (
-                      <div className="flex flex-col gap-2">
-                        {agruparPorBloque(s.ejercicios).map((grupo, gIdx) => (
-                          <div key={gIdx}>
-                            {grupo.bloqueTitle && (
-                              <p className="dp-text-brand mb-0.5 text-sm font-semibold tracking-wide uppercase">
-                                {grupo.bloqueTitle}
-                              </p>
-                            )}
-                            <div className="divide-y divide-black/5">
-                              {grupo.items.map(({ ejercicio: ex }) => {
-                                const kgPlanTexto =
-                                  ex.pesosSeriesPlan && ex.pesosSeriesPlan.filter((p) => Number(p) > 0).length > 0
-                                    ? ex.pesosSeriesPlan.map((p) => Number(p) || 0).join("/")
-                                    : String(ex.kgPlan);
-                                const kgRealTexto =
-                                  ex.pesosSeriesReal && ex.pesosSeriesReal.filter((p) => Number(p) > 0).length > 0
-                                    ? ex.pesosSeriesReal.map((p) => Number(p) || 0).join("/")
-                                    : String(ex.kgReal);
-                                const rpeTexto =
-                                  ex.rpeSeries && ex.rpeSeries.some((r) => r !== "" && r !== undefined)
-                                    ? ex.rpeSeries.map((r) => (r === "" || r === undefined ? "—" : r)).join("/")
-                                    : ex.rpe;
-                                const repsRealTexto =
-                                  ex.repsSeriesReal && ex.repsSeriesReal.some((r) => Number(r) > 0)
-                                    ? ex.repsSeriesReal.map((r) => Number(r) || 0).join("/")
-                                    : String(ex.repsReal);
-                                return (
-                                  <div key={ex.id} className="flex items-center justify-between py-1.5 text-sm">
-                                    <span className="dp-text-heading">{ex.nombre}</span>
-                                    <span className="dp-muted font-mono text-xs">
-                                      {ex.extra ? "agregado en la sesión" : `plan ${ex.seriesPlan}×${ex.repsPlan}×${kgPlanTexto}kg`}
-                                      {" → "}real {ex.seriesReal}×
-                                      {repsRealTexto}×{kgRealTexto}kg{rpeTexto ? ` · RPE ${rpeTexto}` : ""}
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    {s.ejercicios.length > 0 && <ListaEjerciciosSesion ejercicios={s.ejercicios} />}
                     {s.comentarios && (
                       <div>
                         <p className="dp-muted mb-0.5 text-[10px] font-medium uppercase tracking-wide">Post-sesión</p>
