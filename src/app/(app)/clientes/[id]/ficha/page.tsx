@@ -1,14 +1,16 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Cliente } from "@/lib/dipra/types";
+import { obtenerRolActual } from "@/lib/dipra/auth";
 import { FichaForm } from "./FichaForm";
 
 export default async function FichaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [{ data: cliente }, { data: userData }] = await Promise.all([
+  const [{ data: cliente }, { data: userData }, rol] = await Promise.all([
     supabase.from("clients").select("*").eq("id", id).single<Cliente>(),
     supabase.auth.getUser(),
+    obtenerRolActual(),
   ]);
 
   if (!cliente) notFound();
@@ -23,5 +25,5 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
     linkBoletasSii = professional?.link_boletas_sii ?? null;
   }
 
-  return <FichaForm cliente={cliente} linkBoletasSii={linkBoletasSii} />;
+  return <FichaForm cliente={cliente} linkBoletasSii={linkBoletasSii} soloLectura={rol !== "admin"} />;
 }

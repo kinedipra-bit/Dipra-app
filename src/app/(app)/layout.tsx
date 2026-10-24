@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/login/actions";
+import { obtenerRolActual } from "@/lib/dipra/auth";
 import { InstalarApp } from "@/components/InstalarApp";
 
 const NAV = [
@@ -10,9 +11,9 @@ const NAV = [
   { href: "/clientes", label: "Clientes" },
   { href: "/agenda", label: "Agenda" },
   { href: "/grupos", label: "Grupos" },
-  { href: "/finanzas", label: "Finanzas" },
+  { href: "/finanzas", label: "Finanzas", soloAdmin: true },
   { href: "/biblioteca", label: "Biblioteca" },
-  { href: "/ajustes", label: "Ajustes" },
+  { href: "/ajustes", label: "Ajustes", soloAdmin: true },
 ];
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -23,11 +24,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   if (!user) redirect("/login");
 
-  const { data: professional } = await supabase
-    .from("professionals")
-    .select("full_name, email")
-    .eq("id", user.id)
-    .single();
+  const [{ data: professional }, rol] = await Promise.all([
+    supabase.from("professionals").select("full_name, email").eq("id", user.id).single(),
+    obtenerRolActual(),
+  ]);
+  const nav = NAV.filter((item) => !item.soloAdmin || rol === "admin");
 
   const displayName = professional?.full_name || professional?.email || user.email || "";
   const initials = displayName
@@ -52,7 +53,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
 
           <nav className="flex gap-1 overflow-x-auto sm:flex-col">
-            {NAV.map((item) => (
+            {nav.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

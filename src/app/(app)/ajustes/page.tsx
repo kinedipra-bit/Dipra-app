@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { obtenerRolActual } from "@/lib/dipra/auth";
 import { AjustesForm } from "./AjustesForm";
 import { InvitarColaboradorForm } from "./InvitarColaboradorForm";
 import { ColaboradoresForm } from "./ColaboradoresForm";
@@ -11,6 +12,7 @@ export default async function AjustesPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+  if ((await obtenerRolActual()) !== "admin") redirect("/");
 
   const { data: professional } = await supabase
     .from("professionals")
