@@ -121,20 +121,23 @@ export default async function AgendaPage({
                 const citasCelda = citasPorCelda.get(f)?.get(h) ?? [];
                 const href =
                   citasCelda.length > 0 ? `/agenda/dia?fecha=${f}` : `/agenda/nueva?fecha=${f}&hora=${h}`;
+                const visibles = citasCelda.slice(0, 4);
+                const restantes = citasCelda.length - visibles.length;
                 return (
                   <Link
                     key={`${f}-${h}`}
                     href={href}
-                    className="flex min-h-11 flex-col gap-0.5 border-b border-l border-black/5 p-1 hover:dp-bg-faint"
+                    className="flex min-h-11 flex-wrap content-start gap-0.5 border-b border-l border-black/5 p-1 hover:dp-bg-faint"
                   >
-                    {citasCelda.map((c) => (
+                    {visibles.map((c) => (
                       <span
                         key={c.id}
-                        className={`dp-text-heading truncate rounded px-1 py-0.5 text-[10px] font-medium ${TIPO_CITA_COLOR[c.tipo as keyof typeof TIPO_CITA_COLOR] ?? "dp-bg-faint"}`}
+                        className={`dp-text-heading max-w-[calc(50%-1px)] truncate rounded px-1 py-0.5 text-[10px] font-medium ${TIPO_CITA_COLOR[c.tipo as keyof typeof TIPO_CITA_COLOR] ?? "dp-bg-faint"}`}
                       >
-                        {c.cliente_nombre}
+                        {c.cliente_nombre.split(" ")[0]}
                       </span>
                     ))}
+                    {restantes > 0 && <span className="dp-muted px-1 text-[10px] font-medium">+{restantes}</span>}
                   </Link>
                 );
               })}
