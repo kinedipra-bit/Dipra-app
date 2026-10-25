@@ -105,7 +105,7 @@ export default async function AgendaDiaPage({
         </Link>
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1">
         {slots.map((h) => {
           const citasHora = citasPorHora.get(h) ?? [];
           const ocupado = citasHora.length > 0;
@@ -116,19 +116,19 @@ export default async function AgendaDiaPage({
           const grupo = grupoIdsEnHora.length === 1 ? gruposPorId.get(grupoIdsEnHora[0]) : undefined;
           return (
             <div key={h} className={ocupado ? "dp-surface overflow-hidden rounded-xl shadow-sm" : "rounded-xl"}>
-              <div className={`flex items-center justify-between px-4 py-2 ${ocupado ? "dp-bg-faint" : ""}`}>
-                <span className={`font-mono text-sm ${ocupado ? "dp-text-heading font-medium" : "dp-muted"}`}>
+              <div className={`flex items-center justify-between px-3 py-1 ${ocupado ? "dp-bg-faint" : ""}`}>
+                <span className={`font-mono text-xs ${ocupado ? "dp-text-heading font-medium" : "dp-muted"}`}>
                   {h}
                 </span>
                 <Link
                   href={`/agenda/nueva?fecha=${fecha}&hora=${h}`}
-                  className="dp-text-brand text-xs font-medium hover:underline"
+                  className="dp-text-brand text-[11px] font-medium hover:underline"
                 >
                   {ocupado ? "+ Agregar a esta hora" : "+ Agregar"}
                 </Link>
               </div>
               {grupo && (
-                <div className="dp-bg-lime-soft flex items-center justify-between px-4 py-1.5">
+                <div className="dp-bg-lime-soft flex items-center justify-between px-3 py-1">
                   <span className="dp-text-heading text-xs font-medium">👥 {grupo.nombre}</span>
                   <Link href={`/grupos/${grupo.id}`} className="dp-text-brand text-xs font-medium hover:underline">
                     Ver planificación →
@@ -136,9 +136,9 @@ export default async function AgendaDiaPage({
                 </div>
               )}
               {ocupado && (
-                <div className="divide-y divide-black/5">
+                <div className="grid grid-cols-1 divide-y divide-black/5 sm:grid-cols-2 sm:divide-y-0 [&>*:nth-child(odd)]:sm:border-r [&>*]:sm:border-black/5">
                   {citasHora.map((c) => (
-                    <CitaRow key={c.id} cita={c} mostrarHora={false} />
+                    <CitaRow key={c.id} cita={c} mostrarHora={false} compacto />
                   ))}
                 </div>
               )}

@@ -22,7 +22,15 @@ function labelEstado(estado: (typeof ESTADOS_CITA)[number]) {
   return estado.charAt(0).toUpperCase() + estado.slice(1);
 }
 
-export function CitaRow({ cita, mostrarHora = true }: { cita: Cita; mostrarHora?: boolean }) {
+export function CitaRow({
+  cita,
+  mostrarHora = true,
+  compacto = false,
+}: {
+  cita: Cita;
+  mostrarHora?: boolean;
+  compacto?: boolean;
+}) {
   const [estado, setEstado] = useState(cita.estado);
   const [pending, startTransition] = useTransition();
 
@@ -41,32 +49,43 @@ export function CitaRow({ cita, mostrarHora = true }: { cita: Cita; mostrarHora?
   };
 
   return (
-    <div className="flex items-center gap-3 p-4">
-      {mostrarHora && <span className="dp-body w-16 shrink-0 font-mono text-sm">{cita.hora.slice(0, 5)}</span>}
-      <Avatar iniciales={iniciales(cita.cliente_nombre)} size={34} />
+    <div className={`flex items-center gap-2 ${compacto ? "px-3 py-1" : "gap-3 p-4"}`}>
+      {mostrarHora && (
+        <span className={`dp-body shrink-0 font-mono ${compacto ? "w-12 text-xs" : "w-16 text-sm"}`}>
+          {cita.hora.slice(0, 5)}
+        </span>
+      )}
+      {!compacto && <Avatar iniciales={iniciales(cita.cliente_nombre)} size={34} />}
+      <span
+        className={`shrink-0 rounded-full ${compacto ? "h-2 w-2" : "hidden"} ${TIPO_CITA_COLOR[cita.tipo as keyof typeof TIPO_CITA_COLOR] ?? "dp-bg-faint"}`}
+      />
       <div className="min-w-0 flex-1">
         {cita.client_id ? (
           <Link
             href={`/clientes/${cita.client_id}/ficha`}
-            className="dp-text-heading truncate text-sm font-medium hover:dp-text-brand"
+            className={`dp-text-heading truncate font-medium hover:dp-text-brand ${compacto ? "text-xs" : "text-sm"}`}
           >
             {cita.cliente_nombre}
           </Link>
         ) : (
-          <p className="dp-text-heading truncate text-sm font-medium">{cita.cliente_nombre}</p>
+          <p className={`dp-text-heading truncate font-medium ${compacto ? "text-xs" : "text-sm"}`}>
+            {cita.cliente_nombre}
+          </p>
         )}
-        <p className="dp-muted flex items-center gap-1.5 text-xs">
-          <span
-            className={`h-2 w-2 shrink-0 rounded-full ${TIPO_CITA_COLOR[cita.tipo as keyof typeof TIPO_CITA_COLOR] ?? "dp-bg-faint"}`}
-          />
-          {cita.tipo}
-        </p>
+        {!compacto && (
+          <p className="dp-muted flex items-center gap-1.5 text-xs">
+            <span
+              className={`h-2 w-2 shrink-0 rounded-full ${TIPO_CITA_COLOR[cita.tipo as keyof typeof TIPO_CITA_COLOR] ?? "dp-bg-faint"}`}
+            />
+            {cita.tipo}
+          </p>
+        )}
       </div>
       <select
         value={estado}
         onChange={(e) => cambiarEstado(e.target.value as Cita["estado"])}
         disabled={pending}
-        className="rounded-lg border border-black/10 px-2 py-1 text-xs outline-none disabled:opacity-50"
+        className={`rounded-lg border border-black/10 outline-none disabled:opacity-50 ${compacto ? "px-1.5 py-0.5 text-[11px]" : "px-2 py-1 text-xs"}`}
       >
         {ESTADOS_CITA.map((e) => (
           <option key={e} value={e}>
