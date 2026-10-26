@@ -7,6 +7,12 @@ import { ESTADOS_CITA, TIPOS_CITA } from "@/lib/dipra/constants";
 import type { Cita, Grupo } from "@/lib/dipra/types";
 import { contarSesionesKinesiologia, crearCita, crearCitaGrupal, obtenerDiasPlan } from "../actions";
 
+// "Grupo Fuerza" no es una opción al agendar individual — una sesión suelta
+// con ese tipo quedaría con el mismo color/etiqueta que una clase grupal
+// real pero sin roster ni grupo_id detrás, confundiendo la grilla. Para
+// agendar un grupo de verdad está el botón "Elegir un grupo" de arriba.
+const TIPOS_CITA_INDIVIDUAL = TIPOS_CITA.filter((t) => t !== "Grupo Fuerza");
+
 function labelEstado(estado: (typeof ESTADOS_CITA)[number]) {
   if (estado === "alerta") return "Alerta leve";
   if (estado === "no_asistio") return "No asistió";
@@ -37,7 +43,7 @@ export function NuevaCitaForm({
   const [nombreLibre, setNombreLibre] = useState("");
   const [fecha, setFecha] = useState(fechaInicial);
   const [hora, setHora] = useState(horaInicial);
-  const [tipo, setTipo] = useState<string>(TIPOS_CITA[0]);
+  const [tipo, setTipo] = useState<string>("Personalizado");
   const [estado, setEstado] = useState<Cita["estado"]>("pendiente");
   const [diasPlan, setDiasPlan] = useState<{ id: string; label: string }[]>([]);
   const [diaPlanLabel, setDiaPlanLabel] = useState("");
@@ -286,7 +292,7 @@ export function NuevaCitaForm({
             <label className="flex flex-col gap-1 text-sm">
               <span className="dp-body font-medium">Tipo de sesión</span>
               <select value={tipo} onChange={(e) => setTipo(e.target.value)} className={inputClass}>
-                {TIPOS_CITA.map((t) => (
+                {TIPOS_CITA_INDIVIDUAL.map((t) => (
                   <option key={t} value={t}>
                     {t}
                   </option>
