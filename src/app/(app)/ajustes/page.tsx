@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { obtenerRolActual } from "@/lib/dipra/auth";
@@ -28,6 +29,16 @@ export default async function AjustesPage() {
       <InvitarColaboradorForm />
       <ColaboradoresForm colaboradores={colaboradores} />
       <AjustesForm initialLinkBoletasSii={professional?.link_boletas_sii ?? null} />
+      <section className="dp-surface rounded-2xl p-5 shadow-sm">
+        <h2 className="mb-1 font-medium dp-text-heading">Importar seguimiento desde Excel</h2>
+        <p className="dp-muted mb-3 text-xs">
+          Carga única de los datos de salud/rendimiento del Excel de seguimiento — muestra una vista previa
+          antes de guardar nada.
+        </p>
+        <Link href="/ajustes/importar-seguimiento" className="dp-text-brand text-sm font-medium hover:underline">
+          Ir a la importación →
+        </Link>
+      </section>
     </div>
   );
 }
