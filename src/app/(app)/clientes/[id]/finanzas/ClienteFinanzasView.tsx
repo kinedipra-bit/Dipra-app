@@ -161,6 +161,7 @@ export function ClienteFinanzasView({
                 <span className="dp-body font-medium">Precio acordado</span>
                 <input
                   type="number"
+                  min="0"
                   value={precioAcordado}
                   onChange={(e) => setPrecioAcordado(e.target.value)}
                   onFocus={(e) => e.target.select()}
@@ -275,6 +276,7 @@ export function ClienteFinanzasView({
                 <span className="dp-body font-medium">Monto</span>
                 <input
                   type="number"
+                  min="0"
                   value={montoPago}
                   onChange={(e) => setMontoPago(e.target.value)}
                   onFocus={(e) => e.target.select()}
