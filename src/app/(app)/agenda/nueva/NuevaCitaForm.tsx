@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { ESTADOS_CITA, TIPOS_CITA } from "@/lib/dipra/constants";
 import type { Cita, Grupo } from "@/lib/dipra/types";
@@ -42,6 +43,7 @@ export function NuevaCitaForm({
   const [diaPlanLabel, setDiaPlanLabel] = useState("");
   const [sesionesKine, setSesionesKine] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   // Coincidencia exacta (sin mayúsculas/acentos de más) con lo que se
   // escribió o se eligió de la lista sugerida — con 100 clientes no tiene
@@ -89,10 +91,16 @@ export function NuevaCitaForm({
   const inputClass = "rounded-lg border border-black/10 px-3 py-2 text-sm outline-none focus:dp-border-brand";
 
   const submit = () => {
+    setError(null);
     if (esGrupal) {
       if (!grupoId) return;
-      startTransition(() => {
-        crearCitaGrupal({ grupoId, fecha, hora, estado });
+      startTransition(async () => {
+        try {
+          await crearCitaGrupal({ grupoId, fecha, hora, estado });
+        } catch (e) {
+          unstable_rethrow(e);
+          setError(e instanceof Error ? e.message : "No se pudo agendar la clase grupal.");
+        }
       });
       return;
     }
@@ -100,31 +108,41 @@ export function NuevaCitaForm({
     if (sinFicha) {
       const nombre = nombreLibre.trim();
       if (!nombre) return;
-      startTransition(() => {
-        crearCita({
-          client_id: null,
-          cliente_nombre: nombre,
-          fecha,
-          hora,
-          tipo,
-          estado,
-          dia_plan_label: null,
-        });
+      startTransition(async () => {
+        try {
+          await crearCita({
+            client_id: null,
+            cliente_nombre: nombre,
+            fecha,
+            hora,
+            tipo,
+            estado,
+            dia_plan_label: null,
+          });
+        } catch (e) {
+          unstable_rethrow(e);
+          setError(e instanceof Error ? e.message : "No se pudo agendar.");
+        }
       });
       return;
     }
 
     if (!clienteElegido) return;
-    startTransition(() => {
-      crearCita({
-        client_id: clienteElegido.id,
-        cliente_nombre: clienteElegido.nombre,
-        fecha,
-        hora,
-        tipo,
-        estado,
-        dia_plan_label: mostrarDiaPlan ? diaPlanLabel || null : null,
-      });
+    startTransition(async () => {
+      try {
+        await crearCita({
+          client_id: clienteElegido.id,
+          cliente_nombre: clienteElegido.nombre,
+          fecha,
+          hora,
+          tipo,
+          estado,
+          dia_plan_label: mostrarDiaPlan ? diaPlanLabel || null : null,
+        });
+      } catch (e) {
+        unstable_rethrow(e);
+        setError(e instanceof Error ? e.message : "No se pudo agendar.");
+      }
     });
   };
 
@@ -197,6 +215,7 @@ export function NuevaCitaForm({
             >
               {pending ? "Agendando…" : "Agendar clase grupal"}
             </button>
+            {error && <p className="dp-alert text-sm">{error}</p>}
           </>
         ) : clientes.length === 0 && !sinFicha ? (
           <p className="dp-muted text-sm">Todavía no hay clientes cargados para agendar.</p>
@@ -324,6 +343,7 @@ export function NuevaCitaForm({
             >
               {pending ? "Agendando…" : "Agendar"}
             </button>
+            {error && <p className="dp-alert text-sm">{error}</p>}
           </>
         )}
       </div>
