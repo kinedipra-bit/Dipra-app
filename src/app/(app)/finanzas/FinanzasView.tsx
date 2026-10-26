@@ -242,6 +242,7 @@ function ServiciosTab({
               <span className="dp-body font-medium">Precio (CLP)</span>
               <input
                 type="number"
+                min="0"
                 value={precio}
                 onChange={(e) => setPrecio(e.target.value)}
                 onFocus={(e) => e.target.select()}
@@ -425,6 +426,7 @@ function GastosTab({
               <span className="dp-body font-medium">Monto (CLP)</span>
               <input
                 type="number"
+                min="0"
                 value={monto}
                 onChange={(e) => setMonto(e.target.value)}
                 onFocus={(e) => e.target.select()}
