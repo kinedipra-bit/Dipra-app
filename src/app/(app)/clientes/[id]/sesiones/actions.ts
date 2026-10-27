@@ -172,3 +172,13 @@ export async function actualizarTipoYAutoriaSesion(
   if (error) throw new Error(error.message);
   revalidar(clienteId);
 }
+
+// Corrige los pesos/series/reps de una sesión YA registrada — ej. cuando se
+// anotaron en papel durante la sesión y se cargan después. No se podía
+// editar nada de una sesión pasada salvo tipo/autoría.
+export async function actualizarEjerciciosSesion(clienteId: string, sesionId: string, ejercicios: EjercicioSesion[]) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("sesiones").update({ ejercicios }).eq("id", sesionId);
+  if (error) throw new Error(error.message);
+  revalidar(clienteId);
+}
