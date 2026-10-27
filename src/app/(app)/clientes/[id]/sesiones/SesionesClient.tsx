@@ -24,6 +24,7 @@ import type {
   Sesion,
 } from "@/lib/dipra/types";
 import {
+  actualizarEjerciciosSesion,
   actualizarTipoYAutoriaSesion,
   copiarSesionAPlanFuerza,
   copiarSesionATareas,
@@ -34,6 +35,8 @@ import {
 } from "./actions";
 import { guardarEnBiblioteca } from "../plan/actions";
 import { ExerciseRow, EXERCISE_ROW_GRID_EDITABLE } from "../plan/ExerciseRow";
+import { crearPrHistorial } from "../evolucion/actions";
+import { METRICS, type MetricKey } from "../evolucion/metricas";
 import { EscalaUnoADiez } from "./EscalaUnoADiez";
 
 const inputClass = "rounded-lg border border-black/10 px-3 py-2 text-sm outline-none focus:dp-border-brand";
@@ -275,6 +278,21 @@ export function SesionesClient({
   const [editandoMetaId, setEditandoMetaId] = useState<string | null>(null);
   const [metaTipo, setMetaTipo] = useState("");
   const [metaPorCliente, setMetaPorCliente] = useState(false);
+  // Corregir los pesos/series/reps de una sesión ya registrada (ej. se
+  // anotaron en papel) — separado de "Editar tipo / autoría".
+  const [editandoEjerciciosId, setEditandoEjerciciosId] = useState<string | null>(null);
+  const [ejerciciosEdicion, setEjerciciosEdicion] = useState<EjercicioSesion[]>([]);
+  const [guardandoEjerciciosEdicion, startGuardarEjerciciosEdicion] = useTransition();
+  // "Guardar como PR" — manda el peso de un ejercicio puntual (de la
+  // sesión, ya sea en registro vivo o corrigiendo una pasada) al historial
+  // de PRs que usan Evaluación/Evolución, para no tener que cargarlo de
+  // nuevo a mano ahí.
+  const [prFormExId, setPrFormExId] = useState<string | null>(null);
+  const [prMetric, setPrMetric] = useState<MetricKey | "">("");
+  const [prValor, setPrValor] = useState("");
+  const [prFecha, setPrFecha] = useState("");
+  const [guardandoPr, startGuardarPr] = useTransition();
+  const [prGuardadoExId, setPrGuardadoExId] = useState<string | null>(null);
   const [copiandoA, setCopiandoA] = useState<"tareas" | "plan" | null>(null);
   const [, startCopia] = useTransition();
   const [mensajeCopia, setMensajeCopia] = useState<string | null>(null);
@@ -495,6 +513,61 @@ export function SesionesClient({
     startTransition(async () => {
       await actualizarTipoYAutoriaSesion(clienteId, id, metaTipo, metaPorCliente);
       setEditandoMetaId(null);
+    });
+  };
+
+  const abrirEdicionEjercicios = (s: Sesion) => {
+    setEditandoEjerciciosId(s.id);
+    setEjerciciosEdicion(s.ejercicios.map((e) => ({ ...e })));
+  };
+
+  const actualizarEjercicioEdicion = (idx: number, patch: Partial<EjercicioSesion>) => {
+    setEjerciciosEdicion((prev) => prev.map((e, i) => (i === idx ? { ...e, ...patch } : e)));
+  };
+
+  const guardarEjerciciosEdicion = (sesionId: string) => {
+    startGuardarEjerciciosEdicion(async () => {
+      await actualizarEjerciciosSesion(clienteId, sesionId, ejerciciosEdicion);
+      setEditandoEjerciciosId(null);
+    });
+  };
+
+  const abrirFormularioPr = (ex: EjercicioSesion, fecha: string) => {
+    setPrFormExId(ex.id);
+    setPrMetric("");
+    setPrValor(String(ex.kgReal || ""));
+    setPrFecha(fecha);
+  };
+
+  const guardarComoPr = () => {
+    if (!prMetric || !prValor) return;
+    const exId = prFormExId;
+    startGuardarPr(async () => {
+      await crearPrHistorial(clienteId, {
+        fecha: prFecha,
+        mesociclo: "Registrado desde Sesiones",
+        objetivo: "",
+        sentadilla: 0,
+        peso_muerto: 0,
+        press_banca: 0,
+        press_militar: 0,
+        broad_jump: 0,
+        abalakov_jump: 0,
+        cmj: 0,
+        squat_jump: 0,
+        agarre_der: 0,
+        agarre_izq: 0,
+        dead_hang: 0,
+        pull_ups: 0,
+        push_up: 0,
+        plancha_frontal: 0,
+        plancha_lateral_der: 0,
+        plancha_lateral_izq: 0,
+        pararse_del_suelo: 0,
+        [prMetric]: Number(prValor) || 0,
+      });
+      setPrFormExId(null);
+      setPrGuardadoExId(exId);
     });
   };
 
@@ -1167,13 +1240,24 @@ export function SesionesClient({
                         </button>
                       </div>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => abrirEdicionMeta(s)}
-                        className="dp-text-brand w-fit text-xs hover:underline"
-                      >
-                        Editar tipo / autoría
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => abrirEdicionMeta(s)}
+                          className="dp-text-brand w-fit text-xs hover:underline"
+                        >
+                          Editar tipo / autoría
+                        </button>
+                        {s.ejercicios.length > 0 && editandoEjerciciosId !== s.id && (
+                          <button
+                            type="button"
+                            onClick={() => abrirEdicionEjercicios(s)}
+                            className="dp-text-brand w-fit text-xs hover:underline"
+                          >
+                            Editar pesos/series
+                          </button>
+                        )}
+                      </div>
                     )}
                     <div className="grid grid-cols-5 gap-2">
                       {PILARES_KEYS.map((p) => {
@@ -1198,7 +1282,141 @@ export function SesionesClient({
                         <p className="dp-text-heading text-sm">{s.comentarios_pre}</p>
                       </div>
                     )}
-                    {s.ejercicios.length > 0 && <ListaEjerciciosSesion ejercicios={s.ejercicios} />}
+                    {s.ejercicios.length > 0 &&
+                      (editandoEjerciciosId === s.id ? (
+                        <div className="flex flex-col gap-3">
+                          {agruparPorBloque(ejerciciosEdicion).map((grupo, gIdx) => (
+                            <div key={gIdx}>
+                              {grupo.bloqueTitle && (
+                                <p className="dp-text-brand mb-1 text-sm font-semibold tracking-wide uppercase">
+                                  {grupo.bloqueTitle}
+                                </p>
+                              )}
+                              <div className="flex flex-col divide-y divide-black/5">
+                                {grupo.items.map(({ ejercicio: ex, idx }) => (
+                                  <div key={ex.id} className="flex flex-col gap-1.5 py-2">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="dp-text-heading min-w-0 flex-1 truncate text-sm">
+                                        {ex.nombre}
+                                      </span>
+                                      <span className="dp-muted text-[10px]">Series</span>
+                                      <input
+                                        type="number"
+                                        value={ex.seriesReal}
+                                        onChange={(e) =>
+                                          actualizarEjercicioEdicion(idx, { seriesReal: Number(e.target.value) })
+                                        }
+                                        style={{ width: 48 }}
+                                        className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-xs outline-none focus:dp-border-brand"
+                                      />
+                                      <span className="dp-muted text-[10px]">Reps</span>
+                                      <input
+                                        type="number"
+                                        value={ex.repsReal}
+                                        onChange={(e) =>
+                                          actualizarEjercicioEdicion(idx, {
+                                            repsReal: Number(e.target.value),
+                                            repsSeriesReal: undefined,
+                                          })
+                                        }
+                                        style={{ width: 48 }}
+                                        className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-xs outline-none focus:dp-border-brand"
+                                      />
+                                      <span className="dp-muted text-[10px]">Kg</span>
+                                      <input
+                                        type="number"
+                                        value={ex.kgReal}
+                                        onChange={(e) =>
+                                          actualizarEjercicioEdicion(idx, {
+                                            kgReal: Number(e.target.value),
+                                            pesosSeriesReal: undefined,
+                                          })
+                                        }
+                                        style={{ width: 56 }}
+                                        className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-xs outline-none focus:dp-border-brand"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => abrirFormularioPr(ex, s.fecha)}
+                                        className="dp-text-brand text-[11px] font-medium hover:underline"
+                                      >
+                                        + Guardar como PR
+                                      </button>
+                                      {prGuardadoExId === ex.id && prFormExId !== ex.id && (
+                                        <span className="dp-text-brand text-[11px]">✓ Guardado en PR</span>
+                                      )}
+                                    </div>
+                                    {prFormExId === ex.id && (
+                                      <div className="dp-bg-faint flex flex-wrap items-center gap-2 rounded-lg p-2">
+                                        <select
+                                          value={prMetric}
+                                          onChange={(e) => setPrMetric(e.target.value as MetricKey | "")}
+                                          className="rounded-lg border border-black/10 px-2 py-1 text-xs outline-none focus:dp-border-brand"
+                                        >
+                                          <option value="">Elegí el PR…</option>
+                                          {METRICS.map((m) => (
+                                            <option key={m.key} value={m.key}>
+                                              {m.label}
+                                            </option>
+                                          ))}
+                                        </select>
+                                        <input
+                                          type="number"
+                                          value={prValor}
+                                          onChange={(e) => setPrValor(e.target.value)}
+                                          placeholder="Valor"
+                                          style={{ width: 70 }}
+                                          className="rounded-lg border border-black/10 px-2 py-1 text-xs outline-none focus:dp-border-brand"
+                                        />
+                                        <input
+                                          type="date"
+                                          value={prFecha}
+                                          onChange={(e) => setPrFecha(e.target.value)}
+                                          className="rounded-lg border border-black/10 px-2 py-1 font-mono text-xs outline-none focus:dp-border-brand"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={guardarComoPr}
+                                          disabled={!prMetric || !prValor || guardandoPr}
+                                          className="dp-bg-brand rounded-lg px-2.5 py-1 text-xs font-medium text-white disabled:opacity-50"
+                                        >
+                                          {guardandoPr ? "Guardando…" : "Guardar"}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => setPrFormExId(null)}
+                                          className="dp-muted text-xs hover:underline"
+                                        >
+                                          Cancelar
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => guardarEjerciciosEdicion(s.id)}
+                              disabled={guardandoEjerciciosEdicion}
+                              className="dp-bg-brand w-fit rounded-lg px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+                            >
+                              {guardandoEjerciciosEdicion ? "Guardando…" : "Guardar cambios"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditandoEjerciciosId(null)}
+                              className="dp-muted text-xs hover:underline"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <ListaEjerciciosSesion ejercicios={s.ejercicios} />
+                      ))}
                     {s.comentarios && (
                       <div>
                         <p className="dp-muted mb-0.5 text-[10px] font-medium uppercase tracking-wide">Post-sesión</p>
