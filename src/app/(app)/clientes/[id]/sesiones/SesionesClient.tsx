@@ -51,6 +51,34 @@ function nuevoDraft(esPrimeraSesion: boolean): NuevaSesionInput {
   };
 }
 
+// Nombre de bloque único (no choca con uno ya usado en el registro) para
+// "+ Agregar bloque" dentro de la sesión — mismo criterio que PlanView para
+// que dos bloques sin renombrar no se vean mezclados en uno solo al
+// agruparPorBloque.
+function tituloBloqueUnicoEnDraft(ejercicios: EjercicioSesion[]): string {
+  const existentes = new Set(ejercicios.map((e) => e.bloqueTitle ?? ""));
+  if (!existentes.has("Nuevo bloque")) return "Nuevo bloque";
+  let n = 2;
+  while (existentes.has(`Nuevo bloque ${n}`)) n++;
+  return `Nuevo bloque ${n}`;
+}
+
+function nuevoEjercicioSesionVacio(bloqueTitle: string): EjercicioSesion {
+  return {
+    id: crypto.randomUUID(),
+    nombre: "",
+    seriesPlan: 0,
+    repsPlan: 0,
+    kgPlan: 0,
+    seriesReal: 3,
+    repsReal: 10,
+    kgReal: 0,
+    bloqueTitle,
+    rpe: "",
+    extra: true,
+  };
+}
+
 function nuevoEjercicioExtra(): EjercicioPlan {
   return {
     id: crypto.randomUUID(),
@@ -280,6 +308,40 @@ export function SesionesClient({
     setDraft({ ...draft, ejercicios: next });
   };
 
+  // Agregar/renombrar bloques y ejercicios directo en el registro de la
+  // sesión (no en "Ejercicios planificados en esta sesión", que es algo
+  // aparte) — para poder mejorar/completar sobre la marcha lo que el día
+  // del plan ya trajo, en vez de solo poder cargar números sobre lo
+  // existente. `insertAfterIdx` en -1 inserta al principio.
+  const addEjercicioEnDraft = (bloqueTitle: string, insertAfterIdx: number) => {
+    if (!draft) return;
+    const next = [...draft.ejercicios];
+    next.splice(insertAfterIdx + 1, 0, nuevoEjercicioSesionVacio(bloqueTitle));
+    setDraft({ ...draft, ejercicios: next });
+  };
+
+  const addBloqueEnDraft = (insertAfterIdx: number) => {
+    if (!draft) return;
+    const titulo = tituloBloqueUnicoEnDraft(draft.ejercicios);
+    const next = [...draft.ejercicios];
+    next.splice(insertAfterIdx + 1, 0, nuevoEjercicioSesionVacio(titulo));
+    setDraft({ ...draft, ejercicios: next });
+  };
+
+  const renameBloqueDraft = (idxs: number[], nuevoTitulo: string) => {
+    if (!draft) return;
+    const next = [...draft.ejercicios];
+    idxs.forEach((i) => {
+      next[i] = { ...next[i], bloqueTitle: nuevoTitulo };
+    });
+    setDraft({ ...draft, ejercicios: next });
+  };
+
+  const removeEjercicioDraft = (idx: number) => {
+    if (!draft) return;
+    setDraft({ ...draft, ejercicios: draft.ejercicios.filter((_, i) => i !== idx) });
+  };
+
   // "Ejercicios planificados en esta sesión" — mismo CRUD que PlanView,
   // pero sobre un array plano local (bloquesExtra) en vez del árbol
   // dia.bloques: acá no hay "día" ni "semana", es solo lo que se está
@@ -362,7 +424,11 @@ export function SesionesClient({
     const extrasComoSesion = bloquesExtra.flatMap((b) =>
       b.exercises.map((e) => ejercicioSesionDesdePlan(e, b.title))
     );
-    const input = { ...draft, ejercicios: [...draft.ejercicios, ...extrasComoSesion] };
+    // Si se agregó un ejercicio desde "+ Agregar ejercicio"/"+ Agregar
+    // bloque" y quedó sin nombre, se descarta en vez de guardar una fila
+    // vacía.
+    const ejerciciosDraft = draft.ejercicios.filter((e) => e.nombre.trim());
+    const input = { ...draft, ejercicios: [...ejerciciosDraft, ...extrasComoSesion] };
     startTransition(async () => {
       await crearSesion(clienteId, input);
       setDraft(null);
@@ -525,7 +591,7 @@ export function SesionesClient({
             </p>
             <div
               className="dp-muted grid gap-2 pb-1 text-[10px] font-medium uppercase tracking-wide"
-              style={{ gridTemplateColumns: "1.4fr 0.9fr 0.5fr 0.5fr 0.9fr 0.4fr" }}
+              style={{ gridTemplateColumns: "1.3fr 0.9fr 0.5fr 0.5fr 0.9fr 0.4fr 0.2fr" }}
             >
               <span>Ejercicio</span>
               <span>Plan (S×R×Kg)</span>
@@ -533,14 +599,20 @@ export function SesionesClient({
               <span className="text-center">Rep.</span>
               <span className="text-center">Kg real</span>
               <span className="text-center">RPE</span>
+              <span />
             </div>
             <div className="flex flex-col gap-3">
-              {agruparPorBloque(draft.ejercicios).map((grupo, gIdx) => (
+              {agruparPorBloque(draft.ejercicios).map((grupo, gIdx) => {
+                const idxsGrupo = grupo.items.map(({ idx }) => idx);
+                const ultimoIdxGrupo = idxsGrupo[idxsGrupo.length - 1];
+                return (
                 <div key={gIdx}>
                   {grupo.bloqueTitle && (
-                    <p className="dp-text-brand mb-1 text-base font-semibold tracking-wide uppercase">
-                      {grupo.bloqueTitle}
-                    </p>
+                    <input
+                      value={grupo.bloqueTitle}
+                      onChange={(e) => renameBloqueDraft(idxsGrupo, e.target.value)}
+                      className="dp-text-brand mb-1 w-full border-0 border-b border-transparent bg-transparent text-base font-semibold tracking-wide uppercase outline-none hover:border-black/10 focus:border-black/10"
+                    />
                   )}
                   <div className="divide-y divide-black/5">
                     {grupo.items.map(({ ejercicio: ex, idx }) => {
@@ -578,10 +650,19 @@ export function SesionesClient({
                         <div key={ex.id} className="py-1.5">
                         <div
                           className="grid items-center gap-2"
-                          style={{ gridTemplateColumns: "1.4fr 0.9fr 0.5fr 0.5fr 0.9fr 0.4fr" }}
+                          style={{ gridTemplateColumns: "1.3fr 0.9fr 0.5fr 0.5fr 0.9fr 0.4fr 0.2fr" }}
                         >
                           <div className="min-w-0">
-                            {embedUrl ? (
+                            {!ex.nombre ? (
+                              <input
+                                value={ex.nombre}
+                                onChange={(e) => updateEjercicio(idx, { nombre: e.target.value })}
+                                list="sesiones-biblioteca-datalist"
+                                placeholder="Nombre del ejercicio…"
+                                autoFocus
+                                className="w-full rounded-md border border-black/10 px-1.5 py-0.5 text-sm outline-none focus:dp-border-brand"
+                              />
+                            ) : embedUrl ? (
                               <button
                                 type="button"
                                 onClick={() => setVideoAbiertoId(videoAbierto ? null : ex.id)}
@@ -670,6 +751,13 @@ export function SesionesClient({
                               />
                             ))}
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => removeEjercicioDraft(idx)}
+                            className="dp-muted hover:dp-alert justify-self-end text-xs"
+                          >
+                            ✕
+                          </button>
                         </div>
                         {videoAbierto && embedUrl && (
                           <div
@@ -690,11 +778,35 @@ export function SesionesClient({
                       );
                     })}
                   </div>
+                  <div className="mt-1 flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => addEjercicioEnDraft(grupo.bloqueTitle, ultimoIdxGrupo)}
+                      className="dp-text-brand text-xs font-medium hover:underline"
+                    >
+                      + Agregar ejercicio
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addBloqueEnDraft(ultimoIdxGrupo)}
+                      className="dp-text-brand text-xs font-medium hover:underline"
+                    >
+                      + Agregar bloque acá
+                    </button>
+                  </div>
                 </div>
-              ))}
+                );
+              })}
               {draft.ejercicios.length === 0 && (
                 <p className="dp-muted py-2 text-xs">Este día no tiene ejercicios cargados en la planificación todavía.</p>
               )}
+              <button
+                type="button"
+                onClick={() => addBloqueEnDraft(draft.ejercicios.length - 1)}
+                className="dp-text-brand w-fit text-xs font-medium hover:underline"
+              >
+                + Agregar bloque
+              </button>
             </div>
           </div>
         )}
