@@ -267,6 +267,11 @@ export function SesionesClient({
   const [pending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [videoAbiertoId, setVideoAbiertoId] = useState<string | null>(null);
+  // Qué ejercicio del registro está mostrando el input de nombre en vez del
+  // texto/link fijo — no se puede inferir de "nombre vacío" (apenas se
+  // escribe la primera letra deja de estar vacío y el input desaparecía
+  // solo, expulsando al que estaba tipeando).
+  const [nombreEditandoId, setNombreEditandoId] = useState<string | null>(null);
   const [editandoMetaId, setEditandoMetaId] = useState<string | null>(null);
   const [metaTipo, setMetaTipo] = useState("");
   const [metaPorCliente, setMetaPorCliente] = useState(false);
@@ -315,17 +320,21 @@ export function SesionesClient({
   // existente. `insertAfterIdx` en -1 inserta al principio.
   const addEjercicioEnDraft = (bloqueTitle: string, insertAfterIdx: number) => {
     if (!draft) return;
+    const nuevo = nuevoEjercicioSesionVacio(bloqueTitle);
     const next = [...draft.ejercicios];
-    next.splice(insertAfterIdx + 1, 0, nuevoEjercicioSesionVacio(bloqueTitle));
+    next.splice(insertAfterIdx + 1, 0, nuevo);
     setDraft({ ...draft, ejercicios: next });
+    setNombreEditandoId(nuevo.id);
   };
 
   const addBloqueEnDraft = (insertAfterIdx: number) => {
     if (!draft) return;
     const titulo = tituloBloqueUnicoEnDraft(draft.ejercicios);
+    const nuevo = nuevoEjercicioSesionVacio(titulo);
     const next = [...draft.ejercicios];
-    next.splice(insertAfterIdx + 1, 0, nuevoEjercicioSesionVacio(titulo));
+    next.splice(insertAfterIdx + 1, 0, nuevo);
     setDraft({ ...draft, ejercicios: next });
+    setNombreEditandoId(nuevo.id);
   };
 
   const renameBloqueDraft = (idxs: number[], nuevoTitulo: string) => {
@@ -653,10 +662,11 @@ export function SesionesClient({
                           style={{ gridTemplateColumns: "1.3fr 0.9fr 0.5fr 0.5fr 0.9fr 0.4fr 0.2fr" }}
                         >
                           <div className="min-w-0">
-                            {!ex.nombre ? (
+                            {nombreEditandoId === ex.id || !ex.nombre ? (
                               <input
                                 value={ex.nombre}
                                 onChange={(e) => updateEjercicio(idx, { nombre: e.target.value })}
+                                onBlur={() => setNombreEditandoId((id) => (id === ex.id ? null : id))}
                                 list="sesiones-biblioteca-datalist"
                                 placeholder="Nombre del ejercicio…"
                                 autoFocus
