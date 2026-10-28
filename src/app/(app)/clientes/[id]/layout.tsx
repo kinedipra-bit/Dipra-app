@@ -27,6 +27,27 @@ export default async function ClienteLayout({
 
   if (!cliente) notFound();
 
+  // Para el aviso "cambios sin compartir" en las pestañas Plan/Tareas —
+  // antes solo se veía adentro de cada pestaña, así que al estar parado en
+  // Sesiones (u otra) no había ninguna señal de que algo quedó sin
+  // compartir. Si el cliente no usa el portal, no tiene sentido avisar.
+  const [{ data: planKine }, { data: semanaActiva }] = await Promise.all([
+    cliente.portal_habilitado
+      ? supabase
+          .from("plan_kine")
+          .select("cambios_sin_compartir")
+          .eq("client_id", id)
+          .maybeSingle<{ cambios_sin_compartir: boolean }>()
+      : Promise.resolve({ data: null }),
+    cliente.portal_habilitado && cliente.semana_activa_id
+      ? supabase
+          .from("plan_semanas")
+          .select("cambios_sin_compartir")
+          .eq("id", cliente.semana_activa_id)
+          .maybeSingle<{ cambios_sin_compartir: boolean }>()
+      : Promise.resolve({ data: null }),
+  ]);
+
   const edad = calcularEdad(cliente.fecha_nacimiento);
   const esCumpleanosHoy =
     !!cliente.fecha_nacimiento && diasHastaCumpleanos(cliente.fecha_nacimiento) === 0;
@@ -68,7 +89,12 @@ export default async function ClienteLayout({
         </div>
       </div>
 
-      <ClienteTabs clienteId={cliente.id} esAdmin={rol === "admin"} />
+      <ClienteTabs
+        clienteId={cliente.id}
+        esAdmin={rol === "admin"}
+        planSinCompartir={!!semanaActiva?.cambios_sin_compartir}
+        tareasSinCompartir={!!planKine?.cambios_sin_compartir}
+      />
 
       <div>{children}</div>
     </div>
