@@ -320,6 +320,11 @@ export interface EjercicioSesion {
   pesoCadaUno?: boolean;
   tipoCarga?: string;
   tiempoSerie?: string;
+  // Igual que en EjercicioPlan — necesario para que el volumen (ver
+  // volumenEjercicioSesion) sepa que kgReal no es peso real cuando la carga
+  // es banda/peso corporal/tiempo/vueltas.
+  cargaTipo?: "kg" | "banda" | "peso_corporal" | "tiempo" | "vueltas";
+  vueltas?: number;
   // Link del video del ejercicio en el plan — copiado al armar la sesión
   // del día para poder previsualizarlo igual que en "Mi rutina" (antes no
   // se copiaba y la sesión de hoy nunca mostraba el video).
