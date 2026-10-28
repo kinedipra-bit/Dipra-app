@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { tonoEscalaPilar } from "@/lib/dipra/calc";
 import { agruparPorBloque, ejerciciosDesdeDia } from "@/lib/dipra/agruparEjercicios";
 import { PILARES_KEYS, TIPOS_SESION, emptySesionPilares } from "@/lib/dipra/constants";
-import { esYoutubeVertical, youtubeEmbedUrl } from "@/lib/youtube";
+import { esYoutubeVertical, normalizeLink, youtubeEmbedUrl } from "@/lib/youtube";
 import {
   CUALIDADES,
   GRUPOS_MUSCULARES,
@@ -759,7 +759,7 @@ export function SesionesClient({
                               </button>
                             ) : ex.link ? (
                               <a
-                                href={ex.link}
+                                href={normalizeLink(ex.link)}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="dp-text-brand block truncate text-sm underline"

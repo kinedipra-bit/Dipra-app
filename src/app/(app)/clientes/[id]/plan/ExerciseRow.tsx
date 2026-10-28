@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { cargaTipoEfectivo, volumenEjercicio, type CargaTipo } from "@/lib/dipra/calc";
-import { esYoutubeVertical, youtubeEmbedUrl } from "@/lib/youtube";
+import { esYoutubeVertical, normalizeLink, youtubeEmbedUrl } from "@/lib/youtube";
 import { CUALIDADES, GRUPOS_MUSCULARES } from "@/lib/dipra/tablaIntensidad";
 import type { CualidadFuerza, EjercicioPlan, EjercicioBiblioteca, GrupoMuscular } from "@/lib/dipra/types";
 
@@ -214,7 +214,7 @@ export function ExerciseRow({
             </button>
           ) : ex.link ? (
             <a
-              href={ex.link}
+              href={normalizeLink(ex.link)}
               target="_blank"
               rel="noreferrer"
               className="dp-text-brand truncate text-sm underline"

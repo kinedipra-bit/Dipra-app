@@ -1,9 +1,21 @@
+// Si el link no trae esquema (típico al pegar desde el celular, ej.
+// "youtube.com/watch?v=xyz" o "www.instagram.com/reel/xyz"), new URL()
+// explota y el link queda tratado como ruta relativa del propio sitio en
+// vez de abrir afuera — un <a href="youtube.com/..."> navega a
+// "dipra-app.vercel.app/youtube.com/..." (404) en vez de a YouTube. Se le
+// agrega "https://" antes de usarlo en cualquier lado.
+export function normalizeLink(link: string): string {
+  const trimmed = link.trim();
+  if (!trimmed) return trimmed;
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
 // Extrae el id de video de los formatos de URL de YouTube que aparecen en
 // la biblioteca de ejercicios: watch?v=, youtu.be/, shorts/.
 export function youtubeEmbedUrl(link: string): string | null {
   if (!link) return null;
   try {
-    const url = new URL(link);
+    const url = new URL(normalizeLink(link));
     if (!/(^|\.)youtube\.com$|^youtu\.be$/.test(url.hostname)) return null;
 
     let id: string | null = null;
@@ -35,7 +47,7 @@ export function youtubeEmbedUrl(link: string): string | null {
 export function esYoutubeVertical(link: string): boolean {
   if (!link) return false;
   try {
-    const url = new URL(link);
+    const url = new URL(normalizeLink(link));
     return url.pathname.startsWith("/shorts/");
   } catch {
     return false;

@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { PILARES_KEYS, emptySesionPilares } from "@/lib/dipra/constants";
 import { agruparPorBloque, ejerciciosDesdeDia } from "@/lib/dipra/agruparEjercicios";
 import { EscalaUnoADiez } from "@/app/(app)/clientes/[id]/sesiones/EscalaUnoADiez";
-import { esYoutubeVertical, youtubeEmbedUrl } from "@/lib/youtube";
+import { esYoutubeVertical, normalizeLink, youtubeEmbedUrl } from "@/lib/youtube";
 import { tonoEscalaPilar } from "@/lib/dipra/calc";
 import type { DiaPlan, EjercicioSesion } from "@/lib/dipra/types";
 import { crearSesionPortal } from "./actions";
@@ -331,7 +331,7 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
                               </button>
                             ) : ex.link ? (
                               <a
-                                href={ex.link}
+                                href={normalizeLink(ex.link)}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="dp-text-brand text-sm font-medium underline"
