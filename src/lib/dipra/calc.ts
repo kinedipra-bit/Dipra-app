@@ -22,6 +22,9 @@ type Ejercicio = {
   repsSeries?: (number | string)[];
   unilateral?: boolean;
   pesoCadaUno?: boolean;
+  cargaTipo?: CargaTipo;
+  tipoCarga?: string;
+  tiempoSerie?: string;
 };
 type Bloque = { exercises: Ejercicio[] };
 type Dia = { bloques: Bloque[] };
@@ -54,6 +57,11 @@ export function cargaTipoEfectivo(e: EjercicioConCarga): CargaTipo {
 // - `pesoCadaUno` (ej. dos mancuernas de 7,5 kg cada una): el número
 //   cargado es el peso de CADA implemento, no el total → se duplica el kg.
 export function volumenEjercicio(e: Ejercicio): number {
+  // Si la carga no es en Kg (banda/peso corporal/tiempo/vueltas), `kg` (y
+  // pesosSeries) puede traer un número viejo de antes de cambiar el tipo —
+  // nunca se limpia al cambiar el selector "Carga" — pero no representa
+  // peso real, así que no debe sumar al volumen.
+  if (cargaTipoEfectivo(e) !== "kg") return 0;
   const factorPeso = e.pesoCadaUno ? 2 : 1;
   const pesosSeries = (e.pesosSeries ?? []).map((p) => Number(p) || 0);
   const repsSeries = (e.repsSeries ?? []).map((r) => Number(r) || 0);
@@ -88,6 +96,9 @@ type EjercicioSesionVol = {
   repsSeriesReal?: (number | string)[];
   unilateral?: boolean;
   pesoCadaUno?: boolean;
+  cargaTipo?: CargaTipo;
+  tipoCarga?: string;
+  tiempoSerie?: string;
 };
 
 // Mismo criterio que volumenEjercicio, pero sobre lo REALMENTE ejecutado en
@@ -97,6 +108,10 @@ type EjercicioSesionVol = {
 // índice (misma serie); lo que no está activo usa el valor uniforme
 // repsReal/kgReal para todas las series.
 export function volumenEjercicioSesion(e: EjercicioSesionVol): number {
+  // Mismo criterio que volumenEjercicio: si la carga no es en Kg, kgReal
+  // no representa peso real y no debe sumar al volumen.
+  const tipo = cargaTipoEfectivo({ cargaTipo: e.cargaTipo, tipoCarga: e.tipoCarga, tiempoSerie: e.tiempoSerie, kg: e.kgReal });
+  if (tipo !== "kg") return 0;
   const factorPeso = e.pesoCadaUno ? 2 : 1;
   const pesosSeries = (e.pesosSeriesReal ?? []).map((p) => Number(p) || 0);
   const repsSeries = (e.repsSeriesReal ?? []).map((r) => Number(r) || 0);
