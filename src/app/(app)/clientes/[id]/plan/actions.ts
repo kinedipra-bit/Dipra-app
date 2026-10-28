@@ -85,6 +85,7 @@ export async function crearSemana(
   if (clienteError) throw new Error(clienteError.message);
 
   revalidatePath(`/clientes/${clienteId}/plan`);
+  revalidatePath(`/clientes/${clienteId}/sesiones`);
   revalidarInicio();
   return data;
 }
@@ -98,6 +99,7 @@ export async function setSemanaActiva(clienteId: string, semanaId: string) {
 
   if (error) throw new Error(error.message);
   revalidatePath(`/clientes/${clienteId}/plan`);
+  revalidatePath(`/clientes/${clienteId}/sesiones`);
   revalidarInicio();
 }
 
@@ -138,6 +140,7 @@ export async function eliminarSemana(clienteId: string, semanaId: string) {
   }
 
   revalidatePath(`/clientes/${clienteId}/plan`);
+  revalidatePath(`/clientes/${clienteId}/sesiones`);
   revalidarInicio();
 }
 
@@ -159,6 +162,11 @@ export async function guardarSemana(
 
   if (error) throw new Error(error.message);
   revalidatePath(`/clientes/${clienteId}/plan`);
+  // Sesiones lee `dias` (el borrador) directo para armar la "Ejecución real
+  // vs. planificado" de una sesión nueva — sin esto, el caché de navegación
+  // de Next podía seguir mostrando el plan de antes de este guardado si se
+  // entraba a Sesiones por un link en vez de recargar la página.
+  revalidatePath(`/clientes/${clienteId}/sesiones`);
   revalidarInicio();
 }
 
