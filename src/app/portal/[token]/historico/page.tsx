@@ -7,6 +7,7 @@ import { obtenerClientePortal, sesionValidaPara } from "../acceso";
 import { PortalAcceso } from "../PortalAcceso";
 import { AyudaSeccion } from "../AyudaSeccion";
 import { EliminarSesionButton } from "../sesiones/EliminarSesionButton";
+import { ProgresionPorEjercicio, type EjercicioHistorico } from "./ProgresionPorEjercicio";
 
 const MESES = [
   "Enero",
@@ -97,6 +98,34 @@ export default async function PortalHistoricoPage({ params }: { params: Promise<
   });
   const meses = [...porMes.entries()].sort((a, b) => b[0].localeCompare(a[0]));
 
+  // Lo mismo que arriba (porSemana) pero por ejercicio puntual en vez de
+  // volumen total — para poder comparar "cuánto hice la semana pasada en
+  // ESTE ejercicio" sesión a sesión, no solo el total movido.
+  const porEjercicio = new Map<string, EjercicioHistorico["entradas"]>();
+  (sesiones ?? []).forEach((s) => {
+    s.ejercicios.forEach((ex) => {
+      const nombre = ex.nombre.trim();
+      if (!nombre) return;
+      const lista = porEjercicio.get(nombre) ?? [];
+      lista.push({
+        fecha: s.fecha,
+        diaPlanLabel: s.dia_plan_label || null,
+        seriesReal: ex.seriesReal,
+        repsReal: ex.repsReal,
+        kgReal: ex.kgReal,
+        repsSeriesReal: ex.repsSeriesReal,
+        pesosSeriesReal: ex.pesosSeriesReal,
+      });
+      porEjercicio.set(nombre, lista);
+    });
+  });
+  const ejerciciosHistorico: EjercicioHistorico[] = [...porEjercicio.entries()]
+    .map(([nombre, entradas]) => ({
+      nombre,
+      entradas: [...entradas].sort((a, b) => b.fecha.localeCompare(a.fecha)),
+    }))
+    .sort((a, b) => b.entradas[0].fecha.localeCompare(a.entradas[0].fecha));
+
   return (
     <div className="flex flex-col gap-5">
       <AyudaSeccion>
@@ -143,6 +172,8 @@ export default async function PortalHistoricoPage({ params }: { params: Promise<
           </div>
         </section>
       )}
+
+      <ProgresionPorEjercicio ejercicios={ejerciciosHistorico} />
 
       {meses.length === 0 ? (
         <p className="dp-muted dp-surface rounded-2xl p-8 text-center text-sm shadow-sm">
