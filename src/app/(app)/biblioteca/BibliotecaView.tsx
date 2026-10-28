@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { EjercicioBiblioteca } from "@/lib/dipra/types";
+import { normalizeLink } from "@/lib/youtube";
 import { crearEjercicioBiblioteca, actualizarEjercicioBiblioteca, eliminarEjercicioBiblioteca } from "./actions";
 
 /**
@@ -142,7 +143,7 @@ export function BibliotecaView({ bibliotecaInicial }: { bibliotecaInicial: Ejerc
             />
             {b.link && (
               <a
-                href={b.link}
+                href={normalizeLink(b.link)}
                 target="_blank"
                 rel="noreferrer"
                 title="Abrir video"

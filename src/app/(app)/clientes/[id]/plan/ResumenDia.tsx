@@ -1,5 +1,6 @@
 import { calcVolumenDia, cargaTipoEfectivo } from "@/lib/dipra/calc";
 import type { DiaPlan } from "@/lib/dipra/types";
+import { normalizeLink } from "@/lib/youtube";
 
 // Migrado desde ResumenDia (dipra-app.jsx líneas 661-703).
 export function ResumenDia({ dia }: { dia: DiaPlan }) {
@@ -43,7 +44,7 @@ export function ResumenDia({ dia }: { dia: DiaPlan }) {
                       <div className="min-w-0">
                         {e.link ? (
                           <a
-                            href={e.link}
+                            href={normalizeLink(e.link)}
                             target="_blank"
                             rel="noreferrer"
                             className="dp-text-brand block truncate text-sm underline"
