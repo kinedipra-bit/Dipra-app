@@ -33,19 +33,33 @@ export async function GET(request: NextRequest) {
     .returns<{ client_id: string; clients: { nombre: string; portal_token: string } | null }[]>();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // Cada envío se aísla en su propio try/catch — antes, si UNO fallaba (ej.
+  // VAPID_PRIVATE_KEY no configurada en Vercel), el throw escapaba del
+  // Promise.all sin nada que lo atajara y ningún cliente recibía el aviso
+  // ese día, sin dejar ningún rastro del motivo.
   let clientesAvisados = 0;
+  const errores: string[] = [];
   await Promise.all(
     (dias ?? []).map(async (d) => {
       if (!d.clients) return;
-      const primerNombre = d.clients.nombre.trim().split(" ")[0] || d.clients.nombre;
-      const { enviadas } = await mandarPushACliente(d.client_id, {
-        title: "Hoy entrenás 💪",
-        body: `${primerNombre}, hoy es uno de los días que marcaste para entrenar.`,
-        url: `/portal/${d.clients.portal_token}/sesiones`,
-      });
-      if (enviadas > 0) clientesAvisados++;
+      try {
+        const primerNombre = d.clients.nombre.trim().split(" ")[0] || d.clients.nombre;
+        const { enviadas } = await mandarPushACliente(d.client_id, {
+          title: "Hoy entrenás 💪",
+          body: `${primerNombre}, hoy es uno de los días que marcaste para entrenar.`,
+          url: `/portal/${d.clients.portal_token}/sesiones`,
+        });
+        if (enviadas > 0) clientesAvisados++;
+      } catch (e) {
+        errores.push(`${d.clients?.nombre ?? d.client_id}: ${e instanceof Error ? e.message : String(e)}`);
+      }
     })
   );
 
-  return NextResponse.json({ fecha: hoy, confirmados: dias?.length ?? 0, clientesAvisados });
+  return NextResponse.json({
+    fecha: hoy,
+    confirmados: dias?.length ?? 0,
+    clientesAvisados,
+    ...(errores.length > 0 ? { errores } : {}),
+  });
 }
