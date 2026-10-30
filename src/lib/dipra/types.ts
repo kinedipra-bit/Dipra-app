@@ -508,6 +508,18 @@ export interface TareaCheckin {
   created_at: string;
 }
 
+// Pulso diario de dolor/energía — un registro por cliente por día,
+// independiente de qué tarea se marcó hecha (ver TareaCheckin).
+export interface CheckinDiario {
+  id: string;
+  client_id: string;
+  fecha: string;
+  dolor: number;
+  energia: number;
+  nota: string;
+  created_at: string;
+}
+
 // Suscripción de notificaciones push (Web Push) de un dispositivo del
 // portal de un cliente — ver src/lib/push.ts.
 export interface PushSubscriptionRow {

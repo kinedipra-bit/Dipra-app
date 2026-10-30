@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { EjercicioBiblioteca, TareaCheckin } from "@/lib/dipra/types";
+import type { CheckinDiario, EjercicioBiblioteca, TareaCheckin } from "@/lib/dipra/types";
 import { obtenerOCrearPlanKine } from "./actions";
 import { KinePlanView } from "./KinePlanView";
 
@@ -14,18 +14,26 @@ export default async function TareasPage({ params }: { params: Promise<{ id: str
   const { id } = await params;
   const supabase = await createClient();
 
-  const [plan, { data: cliente }, { data: biblioteca }, { data: checkins }] = await Promise.all([
-    obtenerOCrearPlanKine(id),
-    supabase.from("clients").select("portal_habilitado").eq("id", id).single<{ portal_habilitado: boolean }>(),
-    supabase.from("biblioteca_ejercicios").select("id, nombre, link").order("nombre").returns<EjercicioBiblioteca[]>(),
-    supabase
-      .from("client_tareas_checkins")
-      .select("*")
-      .eq("client_id", id)
-      .gte("fecha", hace30Dias())
-      .order("fecha", { ascending: false })
-      .returns<TareaCheckin[]>(),
-  ]);
+  const [plan, { data: cliente }, { data: biblioteca }, { data: checkins }, { data: checkinsDiarios }] =
+    await Promise.all([
+      obtenerOCrearPlanKine(id),
+      supabase.from("clients").select("portal_habilitado").eq("id", id).single<{ portal_habilitado: boolean }>(),
+      supabase.from("biblioteca_ejercicios").select("id, nombre, link").order("nombre").returns<EjercicioBiblioteca[]>(),
+      supabase
+        .from("client_tareas_checkins")
+        .select("*")
+        .eq("client_id", id)
+        .gte("fecha", hace30Dias())
+        .order("fecha", { ascending: false })
+        .returns<TareaCheckin[]>(),
+      supabase
+        .from("client_checkins_diarios")
+        .select("*")
+        .eq("client_id", id)
+        .gte("fecha", hace30Dias())
+        .order("fecha", { ascending: false })
+        .returns<CheckinDiario[]>(),
+    ]);
 
   if (!cliente) notFound();
 
@@ -41,6 +49,7 @@ export default async function TareasPage({ params }: { params: Promise<{ id: str
       bibliotecaInicial={biblioteca ?? []}
       indicacionesPdfUrl={indicacionesPdfUrl}
       checkins={checkins ?? []}
+      checkinsDiarios={checkinsDiarios ?? []}
     />
   );
 }
