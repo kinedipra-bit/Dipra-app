@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { DiaPlan, PlanKine, TareaCheckin } from "@/lib/dipra/types";
+import type { CheckinDiario, DiaPlan, PlanKine, TareaCheckin } from "@/lib/dipra/types";
 
 function hoyISO() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date());
@@ -103,6 +103,31 @@ export async function desmarcarTareaHecha(token: string, diaId: string) {
 
   revalidatePath(`/portal/${token}/tareas`);
   revalidatePath(`/clientes/${cliente.id}/tareas`);
+}
+
+// Check-in diario de dolor/energía — un registro por cliente por día,
+// upsert porque el cliente puede volver a entrar y corregirlo el mismo día.
+export async function guardarCheckinDiario(
+  token: string,
+  input: { dolor: number; energia: number; nota: string }
+): Promise<CheckinDiario> {
+  const admin = createAdminClient();
+  const { data: cliente } = await admin.from("clients").select("id").eq("portal_token", token).single();
+  if (!cliente) throw new Error("Link inválido");
+
+  const { data, error } = await admin
+    .from("client_checkins_diarios")
+    .upsert(
+      { client_id: cliente.id, fecha: hoyISO(), dolor: input.dolor, energia: input.energia, nota: input.nota.trim() },
+      { onConflict: "client_id,fecha" }
+    )
+    .select("*")
+    .single<CheckinDiario>();
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/portal/${token}/tareas`);
+  revalidatePath(`/clientes/${cliente.id}/tareas`);
+  return data;
 }
 
 export async function obtenerCheckinsTareas(clienteId: string, desde: string): Promise<TareaCheckin[]> {

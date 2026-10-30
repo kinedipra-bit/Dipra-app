@@ -3,8 +3,17 @@
 import { useEffect, useState, useTransition } from "react";
 import { blockTemplate } from "@/lib/dipra/constants";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
-import type { BloquePlan, DiaPlan, EjercicioBiblioteca, EjercicioPlan, PlanKine, TareaCheckin } from "@/lib/dipra/types";
+import type {
+  BloquePlan,
+  CheckinDiario,
+  DiaPlan,
+  EjercicioBiblioteca,
+  EjercicioPlan,
+  PlanKine,
+  TareaCheckin,
+} from "@/lib/dipra/types";
 import { TareasCheckinsDia } from "./TareasCheckinsDia";
+import { CheckinsDiariosSection } from "./CheckinsDiariosSection";
 import {
   actualizarIndicacionesTexto,
   compartirPlanKine,
@@ -170,6 +179,7 @@ export function KinePlanView({
   bibliotecaInicial,
   indicacionesPdfUrl,
   checkins,
+  checkinsDiarios,
 }: {
   clienteId: string;
   planInicial: PlanKine;
@@ -179,6 +189,7 @@ export function KinePlanView({
   bibliotecaInicial: EjercicioBiblioteca[];
   indicacionesPdfUrl: string | null;
   checkins: TareaCheckin[];
+  checkinsDiarios: CheckinDiario[];
 }) {
   const [plan, setPlan] = useState(planInicial);
   const [dias, setDias] = useState<DiaPlan[]>(planInicial.dias);
@@ -458,6 +469,8 @@ export function KinePlanView({
         onSubirPdf={subirPdf}
         onQuitarPdf={quitarPdf}
       />
+
+      <CheckinsDiariosSection checkins={checkinsDiarios} />
 
       {portalHabilitado && plan.cambios_sin_compartir && (
         <div className="dp-bg-amber-soft flex flex-wrap items-center justify-between gap-2 rounded-2xl px-4 py-3">
