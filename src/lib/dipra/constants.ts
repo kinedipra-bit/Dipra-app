@@ -49,19 +49,26 @@ export const DIAS_SEMANA_LARGO = ["Lunes", "Martes", "Miércoles", "Jueves", "Vi
 
 export const DAY_LABELS = ["Día 1", "Día 2", "Día 3", "Día 4"] as const;
 
+// "Antecedentes mórbidos" pasó a ser el TÍTULO de un grupo de campos (no una
+// casilla propia para llenar) — Nicolás lo pidió así porque en la ficha
+// real se piensa por sistema (sistémicos, respiratorios, neurológicos...),
+// no como un cajón único de texto libre. `grupo` dice bajo qué
+// encabezado va cada campo en FichaForm; "morbidos" (la key vieja) se
+// mantiene como catch-all "Otros / sin clasificar" dentro del mismo grupo
+// para no perder texto que algún cliente ya tenga cargado ahí.
 export const ANTECEDENTES_CAMPOS = [
-  { key: "morbidos", label: "Antecedentes mórbidos" },
-  { key: "qx", label: "Antecedentes quirúrgicos" },
-  { key: "partos", label: "Partos" },
-  { key: "hormonal", label: "Antecedentes hormonales" },
-  { key: "cronicas", label: "Enfermedades crónicas" },
-  { key: "respiratorios", label: "Antecedentes respiratorios" },
-  { key: "sistemicos", label: "Antecedentes sistémicos" },
-  { key: "neurologicos", label: "Antecedentes neurológicos" },
-  { key: "cardiacos", label: "Antecedentes cardíacos" },
-  { key: "cancer", label: "Cáncer" },
-  { key: "deporte", label: "Deporte practicado" },
-  { key: "lesiones", label: "Lesiones previas" },
+  { key: "sistemicos", label: "Sistémicos", grupo: "morbidos" },
+  { key: "respiratorios", label: "Respiratorios", grupo: "morbidos" },
+  { key: "neurologicos", label: "Neurológicos", grupo: "morbidos" },
+  { key: "cardiacos", label: "Cardíacos", grupo: "morbidos" },
+  { key: "cancer", label: "Cáncer", grupo: "morbidos" },
+  { key: "cronicas", label: "Enfermedades crónicas", grupo: "morbidos" },
+  { key: "hormonal", label: "Hormonales", grupo: "morbidos" },
+  { key: "morbidos", label: "Otros / sin clasificar", grupo: "morbidos" },
+  { key: "qx", label: "Antecedentes quirúrgicos", grupo: "otros" },
+  { key: "partos", label: "Partos", grupo: "otros" },
+  { key: "deporte", label: "Deporte practicado", grupo: "otros" },
+  { key: "lesiones", label: "Lesiones previas", grupo: "otros" },
 ] as const;
 
 export const PILARES_DESCRIPTIVOS_CAMPOS = [

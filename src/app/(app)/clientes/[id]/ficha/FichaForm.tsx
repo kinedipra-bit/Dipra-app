@@ -206,8 +206,25 @@ export function FichaForm({
 
       <section className="dp-surface rounded-2xl p-5 shadow-sm">
         <h2 className="mb-4 font-medium dp-text-heading">Antecedentes clínicos</h2>
+
+        <h3 className="dp-text-brand mb-3 text-xs font-semibold tracking-wide uppercase">Antecedentes mórbidos</h3>
+        <div className="mb-6 grid grid-cols-2 gap-4">
+          {ANTECEDENTES_CAMPOS.filter((f) => f.grupo === "morbidos").map((f) => (
+            <label key={f.key} className="flex flex-col gap-1 text-sm">
+              <span className="dp-body font-medium">{f.label}</span>
+              <textarea
+                rows={2}
+                className={inputClass}
+                value={antecedentes[f.key] ?? ""}
+                onChange={(e) => setAntecedentes({ ...antecedentes, [f.key]: e.target.value })}
+              />
+            </label>
+          ))}
+        </div>
+
+        <h3 className="dp-text-brand mb-3 text-xs font-semibold tracking-wide uppercase">Otros antecedentes</h3>
         <div className="grid grid-cols-2 gap-4">
-          {ANTECEDENTES_CAMPOS.map((f) => (
+          {ANTECEDENTES_CAMPOS.filter((f) => f.grupo === "otros").map((f) => (
             <label key={f.key} className="flex flex-col gap-1 text-sm">
               <span className="dp-body font-medium">{f.label}</span>
               <textarea
