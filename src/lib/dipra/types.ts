@@ -181,6 +181,14 @@ export interface EjercicioPlan {
   // bloque). Si no se setea, hereda el del bloque (ver tablaIntensidad.ts).
   grupoMuscular?: GrupoMuscular;
   cualidad?: CualidadFuerza;
+  // Clasificación del tipo de salto (ver TIPOS_INICIACION_SALTO y afines en
+  // tablaIntensidad.ts) — solo tiene sentido cuando la cualidad efectiva es
+  // "Pliometría", pero se guarda igual de suelto por si se reclasifica el
+  // ejercicio después.
+  saltoIniciacion?: string;
+  saltoMovimiento?: string;
+  saltoDireccion?: string;
+  saltoEnfasis?: string;
   link: string;
   rpe: string;
   rir: string;

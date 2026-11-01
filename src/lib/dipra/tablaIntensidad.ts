@@ -117,6 +117,25 @@ export const PLIOMETRIA_NOTAS: string[] = [
   "Descanso entre series con relación trabajo:pausa de 1:5 a 1:10, priorizando la calidad de cada contacto.",
 ];
 
+// Taxonomía de clasificación de saltos pliométricos (NSCA) — para describir
+// QUÉ TIPO de salto es un ejercicio de Pliometría, no cuánto volumen/
+// descanso le corresponde (eso ya lo cubre TABLA_INTENSIDAD). Se muestra en
+// ExerciseRow solo cuando la cualidad efectiva del ejercicio es
+// "Pliometría".
+export const TIPOS_INICIACION_SALTO = [
+  "No contramovimiento (NCM)",
+  "Contramovimiento (CM)",
+  "Doble contacto (DC)",
+  "Continuo (CONT)",
+  "Drop jump (DJ)",
+] as const;
+
+export const TIPOS_MOVIMIENTO_SALTO = ["Jump", "Bound", "Hop"] as const;
+
+export const DIRECCIONES_SALTO = ["Lineal", "Lateral", "Rotacional"] as const;
+
+export const ENFASIS_SALTO = ["Vertical", "Horizontal"] as const;
+
 export const GRUPOS_MUSCULARES: GrupoMuscular[] = [
   "Empuje superior",
   "Tracción superior",
