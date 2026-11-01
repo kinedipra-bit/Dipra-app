@@ -3,7 +3,14 @@
 import { useState } from "react";
 import { cargaTipoEfectivo, volumenEjercicio, type CargaTipo } from "@/lib/dipra/calc";
 import { esYoutubeVertical, normalizeLink, youtubeEmbedUrl } from "@/lib/youtube";
-import { CUALIDADES, GRUPOS_MUSCULARES } from "@/lib/dipra/tablaIntensidad";
+import {
+  CUALIDADES,
+  DIRECCIONES_SALTO,
+  ENFASIS_SALTO,
+  GRUPOS_MUSCULARES,
+  TIPOS_INICIACION_SALTO,
+  TIPOS_MOVIMIENTO_SALTO,
+} from "@/lib/dipra/tablaIntensidad";
 import type { CualidadFuerza, EjercicioPlan, EjercicioBiblioteca, GrupoMuscular } from "@/lib/dipra/types";
 
 // Columnas de la fila editable (Ejercicio/Ser./Rep./Kg/Vol./eliminar) — el
@@ -76,6 +83,10 @@ export function ExerciseRow({
   const volumen = volumenEjercicio(ex);
   const tipo = cargaTipoEfectivo(ex);
   const seriesCount = Number(ex.series) || 0;
+  // Clasificación de salto (NSCA) solo tiene sentido con cualidad
+  // Pliometría — ex.cualidad pisa la del bloque, igual criterio que
+  // etiquetaEfectiva() en tablaIntensidad.ts.
+  const esPliometria = (ex.cualidad ?? etiquetaBloque?.cualidad) === "Pliometría";
   const pesosSeriesActivo = (ex.pesosSeries ?? []).some((p) => Number(p) > 0);
   const repsSeriesActivo = (ex.repsSeries ?? []).some((r) => Number(r) > 0);
 
@@ -488,6 +499,71 @@ export function ExerciseRow({
         </div>
       )}
 
+      {!readOnly && esPliometria && (
+        <div className="dp-bg-faint mt-1 ml-0.5 flex flex-wrap items-center gap-3 rounded-lg px-2 py-1.5">
+          <div className="flex items-center gap-1">
+            <span className="dp-muted text-[10px] font-medium">Iniciación</span>
+            <select
+              value={ex.saltoIniciacion ?? ""}
+              onChange={(e) => onChange({ ...ex, saltoIniciacion: e.target.value || undefined })}
+              className="dp-body rounded-md border border-black/10 bg-white px-1.5 py-0.5 text-[11px] outline-none focus:dp-border-brand"
+            >
+              <option value="">—</option>
+              {TIPOS_INICIACION_SALTO.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="dp-muted text-[10px] font-medium">Movimiento</span>
+            <select
+              value={ex.saltoMovimiento ?? ""}
+              onChange={(e) => onChange({ ...ex, saltoMovimiento: e.target.value || undefined })}
+              className="dp-body rounded-md border border-black/10 bg-white px-1.5 py-0.5 text-[11px] outline-none focus:dp-border-brand"
+            >
+              <option value="">—</option>
+              {TIPOS_MOVIMIENTO_SALTO.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="dp-muted text-[10px] font-medium">Dirección</span>
+            <select
+              value={ex.saltoDireccion ?? ""}
+              onChange={(e) => onChange({ ...ex, saltoDireccion: e.target.value || undefined })}
+              className="dp-body rounded-md border border-black/10 bg-white px-1.5 py-0.5 text-[11px] outline-none focus:dp-border-brand"
+            >
+              <option value="">—</option>
+              {DIRECCIONES_SALTO.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="dp-muted text-[10px] font-medium">Énfasis</span>
+            <select
+              value={ex.saltoEnfasis ?? ""}
+              onChange={(e) => onChange({ ...ex, saltoEnfasis: e.target.value || undefined })}
+              className="dp-body rounded-md border border-black/10 bg-white px-1.5 py-0.5 text-[11px] outline-none focus:dp-border-brand"
+            >
+              <option value="">—</option>
+              {ENFASIS_SALTO.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
       {/* Inputs de peso por serie individual */}
       {!readOnly && tipo === "kg" && pesoPorSerieAbierto && seriesCount > 0 && (
         <div className="dp-bg-faint mt-1 ml-0.5 flex flex-wrap items-center gap-2 rounded-lg px-2 py-1">
@@ -531,7 +607,8 @@ export function ExerciseRow({
       {/* Badges de solo lectura para tipo de carga / tiempo (iso) / nota de reps
           (unilateral ya se ve junto a reps). El tiempo lleva aclaración de que
           es duración de ejecución, NO descanso — eso va aparte más abajo. */}
-      {readOnly && (ex.tipoCarga || ex.tiempoSerie || ex.notaReps) && (
+      {readOnly &&
+        (ex.tipoCarga || ex.tiempoSerie || ex.notaReps || ex.saltoIniciacion || ex.saltoMovimiento || ex.saltoDireccion || ex.saltoEnfasis) && (
         <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-0.5">
           {ex.tipoCarga && (
             <span className="dp-bg-faint dp-body rounded-full px-2 py-0.5 text-[10px] font-medium">
@@ -548,6 +625,13 @@ export function ExerciseRow({
               {ex.notaReps}
             </span>
           )}
+          {[ex.saltoIniciacion, ex.saltoMovimiento, ex.saltoDireccion, ex.saltoEnfasis]
+            .filter(Boolean)
+            .map((v) => (
+              <span key={v} className="dp-bg-faint dp-body rounded-full px-2 py-0.5 text-[10px] font-medium">
+                {v}
+              </span>
+            ))}
         </div>
       )}
 
