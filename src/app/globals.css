@@ -125,6 +125,36 @@ body {
   background: linear-gradient(135deg, var(--dp-brand), var(--dp-lime));
 }
 
+/* Relleno degradado para barras de progreso (Evolución del portal) — misma
+   idea que las líneas con relleno de los gráficos de referencia. */
+.dp-bar-gradient {
+  background: linear-gradient(180deg, var(--dp-lime), var(--dp-brand));
+}
+
+/*
+ * "Eyebrow" — etiqueta chica en mayúscula arriba de un título, para
+ * escanear más rápido una pantalla con varias secciones (técnica sacada de
+ * los carruseles de marketing que mandó Nicolás como referencia). Pensada
+ * para ir pegada arriba de un <h2>, no reemplaza el título.
+ */
+.dp-eyebrow {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/*
+ * Tarjeta con acento de color a la izquierda — mismo origen que
+ * `.dp-eyebrow`. El color lo pone quien la usa (dp-border-*); acá solo el
+ * grosor/posición del borde para no repetirlo en cada componente.
+ */
+.dp-card-accent {
+  border-left-width: 3px;
+  border-left-style: solid;
+}
+
 /*
  * Scope oscuro para tarjetas de alto contraste (ej. el bloque de
  * ejercicios del portal del atleta) — redefine las variables de texto/

@@ -156,6 +156,7 @@ export default async function PortalHistoricoPage({ params }: { params: Promise<
 
       {porSemana.some((s) => s.volumen > 0) && (
         <section className="dp-scope-dark rounded-2xl p-5 shadow-sm">
+          <p className="dp-eyebrow dp-text-brand mb-0.5">Carga</p>
           <h2 className="dp-text-brand mb-1 font-[family-name:var(--font-display)] font-semibold">
             Progresión semanal — volumen
           </h2>
@@ -164,8 +165,15 @@ export default async function PortalHistoricoPage({ params }: { params: Promise<
             un mismo ciclo.
           </p>
           <div className="divide-y divide-white/10">
-            {porSemana.map((s) => (
-              <div key={s.numero} className="flex items-center justify-between gap-3 py-2 text-sm">
+            {porSemana.map((s) => {
+              const completa = s.diasTotales > 0 && s.diasEntrenados >= s.diasTotales;
+              return (
+              <div
+                key={s.numero}
+                className={`flex items-center justify-between gap-3 py-2 pl-2 text-sm ${
+                  completa ? "dp-card-accent dp-border-lime" : ""
+                }`}
+              >
                 <span className="dp-body font-medium">
                   Semana {s.numero}
                   {s.mesociclo && <span className="dp-muted"> · {s.mesociclo}</span>}
@@ -183,7 +191,8 @@ export default async function PortalHistoricoPage({ params }: { params: Promise<
                   </span>
                 </span>
               </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
