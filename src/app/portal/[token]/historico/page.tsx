@@ -2,12 +2,13 @@ import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { volumenEjercicioSesion } from "@/lib/dipra/calc";
 import { enmascararCorreo } from "@/lib/dipra/portalPin";
-import type { PlanSemana, Sesion } from "@/lib/dipra/types";
+import type { CheckinDiario, PlanSemana, Sesion } from "@/lib/dipra/types";
 import { obtenerClientePortal, sesionValidaPara } from "../acceso";
 import { PortalAcceso } from "../PortalAcceso";
 import { AyudaSeccion } from "../AyudaSeccion";
 import { EliminarSesionButton } from "../sesiones/EliminarSesionButton";
 import { ProgresionPorEjercicio, type EjercicioHistorico } from "./ProgresionPorEjercicio";
+import { ProgresionDolorRendimiento } from "./ProgresionDolorRendimiento";
 
 const MESES = [
   "Enero",
@@ -47,7 +48,7 @@ export default async function PortalHistoricoPage({ params }: { params: Promise<
 
   const admin = createAdminClient();
 
-  const [{ data: sesiones }, { data: semana }, { data: semanas }] = await Promise.all([
+  const [{ data: sesiones }, { data: semana }, { data: semanas }, { data: checkinsDiarios }] = await Promise.all([
     admin
       .from("sesiones")
       .select("*")
@@ -67,6 +68,12 @@ export default async function PortalHistoricoPage({ params }: { params: Promise<
       .eq("client_id", cliente.id)
       .order("created_at", { ascending: true })
       .returns<Pick<PlanSemana, "numero" | "mesociclo" | "dias" | "created_at">[]>(),
+    admin
+      .from("client_checkins_diarios")
+      .select("*")
+      .eq("client_id", cliente.id)
+      .order("fecha", { ascending: true })
+      .returns<CheckinDiario[]>(),
   ]);
 
   // Volumen por semana planificada: a cada plan_semanas le corresponde la
@@ -85,7 +92,15 @@ export default async function PortalHistoricoPage({ params }: { params: Promise<
       0
     );
     const diasEntrenados = new Set(sesionesVentana.map((ses) => ses.dia_plan_label)).size;
-    return { numero: s.numero, mesociclo: s.mesociclo, diasTotales: s.dias.length, diasEntrenados, volumen };
+    // Mismo criterio de ventana que el volumen — promedio de dolor (ver
+    // CheckinDiarioCard en Tareas) de esa semana, para el gráfico combinado
+    // dolor/rendimiento de abajo.
+    const checkinsVentana = (checkinsDiarios ?? []).filter((c) => c.fecha >= desde && (!hasta || c.fecha < hasta));
+    const dolorPromedio =
+      checkinsVentana.length > 0
+        ? checkinsVentana.reduce((sum, c) => sum + c.dolor, 0) / checkinsVentana.length
+        : null;
+    return { numero: s.numero, mesociclo: s.mesociclo, diasTotales: s.dias.length, diasEntrenados, volumen, dolorPromedio };
   });
 
   // Agrupa por mes calendario (YYYY-MM), más reciente primero.
@@ -172,6 +187,8 @@ export default async function PortalHistoricoPage({ params }: { params: Promise<
           </div>
         </section>
       )}
+
+      <ProgresionDolorRendimiento semanas={porSemana} />
 
       <ProgresionPorEjercicio ejercicios={ejerciciosHistorico} />
 
