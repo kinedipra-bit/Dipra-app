@@ -61,6 +61,7 @@ export default async function PortalEvolucionPage({ params }: { params: Promise<
       </AyudaSeccion>
 
       <div className="dp-scope-dark rounded-2xl p-5 shadow-sm">
+        <p className="dp-eyebrow dp-text-brand mb-0.5">Medición</p>
         <h2 className="dp-text-brand mb-1 font-[family-name:var(--font-display)] font-semibold">
           Composición corporal
         </h2>
@@ -105,6 +106,7 @@ export default async function PortalEvolucionPage({ params }: { params: Promise<
         </p>
       ) : (
         <div className="dp-scope-dark rounded-2xl p-5 shadow-sm">
+          <p className="dp-eyebrow dp-text-brand mb-0.5">Mesociclo a mesociclo</p>
           <h2 className="dp-text-brand mb-1 font-[family-name:var(--font-display)] font-semibold">Tu progreso</h2>
           <p className="dp-muted mb-4 text-xs">Cada columna es un mesociclo — el ★ marca tu mejor marca histórica.</p>
 
@@ -166,7 +168,7 @@ export default async function PortalEvolucionPage({ params }: { params: Promise<
                             <div key={h.id} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
                               {pr && <span className="dp-text-amber text-[11px]">★</span>}
                               <div
-                                className="dp-bg-brand w-full rounded-t-md"
+                                className="dp-bar-gradient w-full rounded-t-md"
                                 style={{ height: `${(v / max) * 100}%`, opacity: pr ? 1 : 0.55 }}
                                 title={`${h.mesociclo} · ${fmtFecha(h.fecha)}: ${v}`}
                               />

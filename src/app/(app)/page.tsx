@@ -107,21 +107,25 @@ export default async function InicioPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="dp-surface rounded-2xl p-5 shadow-sm">
-          <p className="dp-muted text-sm">Clientes</p>
+        <div className="dp-surface dp-card-accent dp-border-brand rounded-2xl p-5 shadow-sm">
+          <p className="dp-eyebrow dp-text-brand">Base de clientes</p>
           <p className="mt-1 text-3xl font-semibold dp-text-heading">{totalClientes ?? 0}</p>
         </div>
-        <div className="dp-surface rounded-2xl p-5 shadow-sm">
-          <p className="dp-muted text-sm">Citas hoy</p>
+        <div className="dp-surface dp-card-accent dp-border-amber rounded-2xl p-5 shadow-sm">
+          <p className="dp-eyebrow dp-text-amber">Agenda de hoy</p>
           <p className="mt-1 text-3xl font-semibold dp-text-heading">{citasHoy?.length ?? 0}</p>
         </div>
-        <div className="dp-surface rounded-2xl p-5 shadow-sm">
-          <p className="dp-muted text-sm">Sesiones hoy</p>
+        <div className="dp-surface dp-card-accent dp-border-lime rounded-2xl p-5 shadow-sm">
+          <p className="dp-eyebrow dp-text-heading" style={{ color: "var(--dp-lime)" }}>
+            Entrenamiento
+          </p>
           <p className="mt-1 text-3xl font-semibold dp-text-heading">{sesionesHoy ?? 0}</p>
+          <p className="dp-muted text-xs">sesiones hoy</p>
         </div>
       </div>
 
       <div className="dp-surface rounded-2xl p-5 shadow-sm">
+        <p className="dp-eyebrow dp-muted mb-0.5">Hoy</p>
         <h2 className="mb-3 font-medium dp-text-heading">Citas de hoy</h2>
         {!citasHoy || citasHoy.length === 0 ? (
           <p className="dp-muted text-sm">No hay citas agendadas para hoy.</p>
@@ -148,7 +152,8 @@ export default async function InicioPage() {
       </div>
 
       {clientesConAlerta.length > 0 && (
-        <div className="dp-surface rounded-2xl p-5 shadow-sm">
+        <div className="dp-surface dp-card-accent dp-border-alert rounded-2xl p-5 shadow-sm">
+          <p className="dp-eyebrow dp-alert mb-0.5">Atención</p>
           <h2 className="mb-3 font-medium dp-text-heading">Necesitan tu atención</h2>
           <ul className="flex flex-col divide-y divide-black/5">
             {clientesConAlerta.map((c) => (
@@ -173,7 +178,8 @@ export default async function InicioPage() {
       )}
 
       {sinSeguimiento.length > 0 && (
-        <div className="dp-surface rounded-2xl p-5 shadow-sm">
+        <div className="dp-surface dp-card-accent dp-border-amber rounded-2xl p-5 shadow-sm">
+          <p className="dp-eyebrow dp-text-amber mb-0.5">Pendiente</p>
           <h2 className="mb-1 font-medium dp-text-heading">Citas sin seguimiento</h2>
           <p className="dp-muted mb-3 text-xs">
             Ya pasó la fecha, nadie marcó cancelada/no asistió, y no hay una sesión registrada ese día.
@@ -199,7 +205,10 @@ export default async function InicioPage() {
       )}
 
       {proximosCumpleanos.length > 0 && (
-        <div className="dp-surface rounded-2xl p-5 shadow-sm">
+        <div className="dp-surface dp-card-accent dp-border-lime rounded-2xl p-5 shadow-sm">
+          <p className="dp-eyebrow mb-0.5" style={{ color: "var(--dp-lime)" }}>
+            Esta semana
+          </p>
           <h2 className="mb-3 font-medium dp-text-heading">🎂 Cumpleaños</h2>
           <ul className="flex flex-col divide-y divide-black/5">
             {proximosCumpleanos.map((c) => (
