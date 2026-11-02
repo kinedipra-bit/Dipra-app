@@ -5,12 +5,15 @@
 export type MetricKey =
   | "sentadilla"
   | "peso_muerto"
+  | "rdl"
   | "press_banca"
   | "press_militar"
   | "broad_jump"
   | "abalakov_jump"
   | "cmj"
   | "squat_jump"
+  | "sprint_segundos"
+  | "cooper_metros"
   | "agarre_der"
   | "agarre_izq"
   | "dead_hang"
@@ -37,17 +40,20 @@ export const GRUPOS: GrupoDef[] = [
     metrics: [
       { key: "sentadilla", label: "Sentadilla" },
       { key: "peso_muerto", label: "Peso muerto" },
+      { key: "rdl", label: "RDL" },
       { key: "press_banca", label: "Press banca" },
       { key: "press_militar", label: "Press militar" },
     ],
   },
   {
-    titulo: "Saltos",
+    titulo: "Saltos y otras",
     metrics: [
       { key: "broad_jump", label: "Broad jump" },
       { key: "abalakov_jump", label: "Abalakov" },
       { key: "cmj", label: "CMJ" },
       { key: "squat_jump", label: "Squat jump (SJ)" },
+      { key: "sprint_segundos", label: "Sprint (seg)" },
+      { key: "cooper_metros", label: "Test de Cooper (m en 12 min)" },
     ],
   },
   {
@@ -77,6 +83,9 @@ export function nuevoDraft() {
     fecha: new Date().toISOString().slice(0, 10),
     mesociclo: "",
     objetivo: "",
+    // No es un MetricKey numérico como el resto — es un selector aparte,
+    // de ahí que se agregue a mano en vez de venir de camposVacios().
+    peso_muerto_variante: "" as "" | "Barra" | "Hexagonal",
     ...camposVacios(),
   };
 }
