@@ -10,12 +10,16 @@ export interface NuevaMedicionInput {
   objetivo: string;
   sentadilla: number;
   peso_muerto: number;
+  rdl: number;
+  peso_muerto_variante?: "Barra" | "Hexagonal" | null;
   press_banca: number;
   press_militar: number;
   broad_jump: number;
   abalakov_jump: number;
   cmj: number;
   squat_jump: number;
+  sprint_segundos: number;
+  cooper_metros: number;
   agarre_der: number;
   agarre_izq: number;
   dead_hang: number;

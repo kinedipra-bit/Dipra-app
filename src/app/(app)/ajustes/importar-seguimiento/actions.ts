@@ -59,7 +59,7 @@ function computeMotivoConsulta(p: PersonaExcelSeguimiento): string | null {
   return partes.length ? partes.join(" ") : null;
 }
 
-const METRICAS_EXTRA_LABELS = ["RDL (kg)", "TUG (seg)", "Unipodal der (seg)", "Unipodal izq (seg)", "NCMJ (cm)"] as const;
+const METRICAS_EXTRA_LABELS = ["TUG (seg)", "Unipodal der (seg)", "Unipodal izq (seg)", "NCMJ (cm)"] as const;
 
 async function obtenerOcrearMetricasExtra(
   supabase: Awaited<ReturnType<typeof createClient>>
@@ -214,12 +214,19 @@ async function importarPersona(
       objetivo: notasObjetivo.join(" "),
       sentadilla: persona.prSquat ?? 0,
       peso_muerto: persona.prDeadlift ?? 0,
+      // RDL ya es campo fijo (antes iba a metricas_rendimiento_extra, ver
+      // abajo) — TUG/Unipodal/NCMJ se quedan en extra por ahora, no tienen
+      // un hogar fijo tan directo como RDL (ver client_bateria_adulto_mayor
+      // para cargarlos ahí a mano si corresponde).
+      rdl: persona.rdl ?? 0,
       press_banca: esPushUpDesdePress ? 0 : persona.prPress ?? 0,
       press_militar: 0,
       broad_jump: 0,
       abalakov_jump: 0,
       cmj: persona.cmjPotencia ?? persona.cmjFuerza ?? 0,
       squat_jump: persona.squatJump ?? 0,
+      sprint_segundos: 0,
+      cooper_metros: 0,
       agarre_der: persona.agarreDer ?? 0,
       agarre_izq: persona.agarreIzq ?? 0,
       dead_hang: persona.deadHang ?? 0,
@@ -230,7 +237,6 @@ async function importarPersona(
       plancha_lateral_izq: persona.planchaLateralIzq ?? 0,
       pararse_del_suelo: 0,
       extra: {
-        [metricaIds["RDL (kg)"]]: persona.rdl ?? 0,
         [metricaIds["TUG (seg)"]]: persona.tug ?? 0,
         [metricaIds["Unipodal der (seg)"]]: persona.unipodalDer ?? 0,
         [metricaIds["Unipodal izq (seg)"]]: persona.unipodalIzq ?? 0,

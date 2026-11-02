@@ -104,8 +104,47 @@ export interface PrHistorialEntry {
   plancha_lateral_der: number;
   plancha_lateral_izq: number;
   pararse_del_suelo: number;
+  rdl: number;
+  peso_muerto_variante: "Barra" | "Hexagonal" | null;
+  sprint_segundos: number;
+  cooper_metros: number;
   // Valores de métricas personalizadas (ver MetricaExtra) — clave = su id.
   extra: Record<string, number>;
+}
+
+// Movilidad articular (0-3, lógica FMS) — historial por fecha. Distinto de
+// MovilidadEsferaEntry (patrón de movimiento libre por esfera corporal).
+export interface MovilidadArticularEntry {
+  id: string;
+  client_id: string;
+  fecha: string;
+  hombro_der: number | null;
+  hombro_izq: number | null;
+  cadera_der: number | null;
+  cadera_izq: number | null;
+  tobillo_der: number | null;
+  tobillo_izq: number | null;
+  columna_extension: number | null;
+  columna_flexion: number | null;
+  columna_rotacion_der: number | null;
+  columna_rotacion_izq: number | null;
+  notas: string;
+  created_at: string;
+}
+
+// Batería adulto mayor — 5 tests validados, un registro por fecha.
+export interface BateriaAdultoMayorEntry {
+  id: string;
+  client_id: string;
+  fecha: string;
+  tug_segundos: number | null;
+  sit_to_stand_reps: number | null;
+  balance_unipodal_der_segundos: number | null;
+  balance_unipodal_izq_segundos: number | null;
+  step_up_reps: number | null;
+  velocidad_marcha_mseg: number | null;
+  notas: string;
+  created_at: string;
 }
 
 // Ejercicio de rendimiento agregado por el profesional además de los fijos

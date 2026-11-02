@@ -20,6 +20,7 @@ function draftDesdeEntry(entry: PrHistorialEntry) {
   draft.fecha = entry.fecha;
   draft.mesociclo = entry.mesociclo;
   draft.objetivo = entry.objetivo;
+  draft.peso_muerto_variante = entry.peso_muerto_variante ?? "";
   METRICS.forEach((m) => {
     draft[m.key] = String(entry[m.key] ?? "");
   });
@@ -35,7 +36,7 @@ function draftDesdeEntry(entry: PrHistorialEntry) {
  * (donde solo hace falta cargar el dato, no ver la evolución histórica).
  *
  * Además de las métricas fijas, permite agregar nuevos ejercicios a seguir
- * (ej. "RDL") — quedan disponibles para siempre (ver metricasExtra), acá y
+ * (ej. "Hip thrust") — quedan disponibles para siempre (ver metricasExtra), acá y
  * en los gráficos de Evolución si el padre escucha onMetricasExtraChange.
  */
 export function NuevaMedicionForm({
@@ -111,12 +112,16 @@ export function NuevaMedicionForm({
       objetivo: draft.objetivo.trim(),
       sentadilla: 0,
       peso_muerto: 0,
+      rdl: 0,
+      peso_muerto_variante: draft.peso_muerto_variante || null,
       press_banca: 0,
       press_militar: 0,
       broad_jump: 0,
       abalakov_jump: 0,
       cmj: 0,
       squat_jump: 0,
+      sprint_segundos: 0,
+      cooper_metros: 0,
       agarre_der: 0,
       agarre_izq: 0,
       dead_hang: 0,
@@ -211,6 +216,19 @@ export function NuevaMedicionForm({
                       onChange={(e) => setDraft({ ...draft, [m.key]: e.target.value })}
                       className={`${inputClass} font-mono`}
                     />
+                    {m.key === "peso_muerto" && Number(draft.peso_muerto) > 0 && (
+                      <select
+                        value={draft.peso_muerto_variante}
+                        onChange={(e) =>
+                          setDraft({ ...draft, peso_muerto_variante: e.target.value as "" | "Barra" | "Hexagonal" })
+                        }
+                        className={`${inputClass} text-[10px]`}
+                      >
+                        <option value="">Variante…</option>
+                        <option value="Barra">Barra</option>
+                        <option value="Hexagonal">Hexagonal</option>
+                      </select>
+                    )}
                   </label>
                 ))}
               </div>
