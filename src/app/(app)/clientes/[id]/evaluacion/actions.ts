@@ -5,10 +5,12 @@ import { createClient } from "@/lib/supabase/server";
 import type { FmsData } from "@/lib/dipra/calc";
 import { emptyFms } from "@/lib/dipra/constants";
 import type {
+  BateriaAdultoMayorEntry,
   ComposicionCorporalEntry,
   EpisodioHistorialEntry,
   EvaluacionCustomEntry,
   FmsHistorialEntry,
+  MovilidadArticularEntry,
   MovilidadEsferaEntry,
 } from "@/lib/dipra/types";
 
@@ -230,6 +232,59 @@ export async function actualizarEvaluacionCustom(
 export async function eliminarEvaluacionCustom(clienteId: string, id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("client_evaluaciones_custom").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidar(clienteId);
+}
+
+// Movilidad articular (0-3, lógica FMS) -----------------------------------
+// Historial por fecha, igual patrón que FMS — un registro nuevo por
+// reevaluación, nunca se pisa el anterior.
+
+export type NuevaMovilidadArticularInput = Omit<
+  MovilidadArticularEntry,
+  "id" | "client_id" | "created_at"
+>;
+
+export async function crearMovilidadArticular(clienteId: string, input: NuevaMovilidadArticularInput) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("client_movilidad_articular_historial")
+    .insert({ client_id: clienteId, ...input })
+    .select("*")
+    .single<MovilidadArticularEntry>();
+  if (error) throw new Error(error.message);
+  revalidar(clienteId);
+  return data;
+}
+
+export async function eliminarMovilidadArticular(clienteId: string, id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("client_movilidad_articular_historial").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidar(clienteId);
+}
+
+// Batería adulto mayor -----------------------------------------------------
+// 5 tests validados (TUG, 30s sit-to-stand, balance unipodal, step-up,
+// velocidad de marcha) — historial por fecha, mismo criterio que el resto.
+
+export type NuevaBateriaAdultoMayorInput = Omit<BateriaAdultoMayorEntry, "id" | "client_id" | "created_at">;
+
+export async function crearBateriaAdultoMayor(clienteId: string, input: NuevaBateriaAdultoMayorInput) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("client_bateria_adulto_mayor")
+    .insert({ client_id: clienteId, ...input })
+    .select("*")
+    .single<BateriaAdultoMayorEntry>();
+  if (error) throw new Error(error.message);
+  revalidar(clienteId);
+  return data;
+}
+
+export async function eliminarBateriaAdultoMayor(clienteId: string, id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("client_bateria_adulto_mayor").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidar(clienteId);
 }

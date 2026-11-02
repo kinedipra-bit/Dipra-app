@@ -2,12 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type {
+  BateriaAdultoMayorEntry,
   Cliente,
   ComposicionCorporalEntry,
   EpisodioHistorialEntry,
   EvaluacionCustomEntry,
   FmsHistorialEntry,
   MetricaExtra,
+  MovilidadArticularEntry,
   MovilidadEsferaEntry,
 } from "@/lib/dipra/types";
 import { EpisodiosSection } from "./EpisodiosSection";
@@ -15,6 +17,8 @@ import { PilaresSection } from "./PilaresSection";
 import { ComposicionCorporalSection } from "./ComposicionCorporalSection";
 import { FmsSection } from "./FmsSection";
 import { MovilidadEsferasSection } from "./MovilidadEsferasSection";
+import { MovilidadArticularSection } from "./MovilidadArticularSection";
+import { BateriaAdultoMayorSection } from "./BateriaAdultoMayorSection";
 import { EvaluacionesCustomSection } from "./EvaluacionesCustomSection";
 import { DiagnosticoKinesicoSection } from "./DiagnosticoKinesicoSection";
 import { NuevaMedicionForm } from "../evolucion/NuevaMedicionForm";
@@ -31,6 +35,8 @@ export default async function EvaluacionPage({ params }: { params: Promise<{ id:
     { data: movilidad },
     { data: evaluacionesCustom },
     { data: metricasExtra },
+    { data: movilidadArticular },
+    { data: bateriaAdultoMayor },
   ] = await Promise.all([
     supabase.from("clients").select("*").eq("id", id).single<Cliente>(),
     supabase
@@ -69,6 +75,18 @@ export default async function EvaluacionPage({ params }: { params: Promise<{ id:
       .or(`cliente_id.is.null,cliente_id.eq.${id}`)
       .order("created_at")
       .returns<MetricaExtra[]>(),
+    supabase
+      .from("client_movilidad_articular_historial")
+      .select("*")
+      .eq("client_id", id)
+      .order("fecha", { ascending: false })
+      .returns<MovilidadArticularEntry[]>(),
+    supabase
+      .from("client_bateria_adulto_mayor")
+      .select("*")
+      .eq("client_id", id)
+      .order("fecha", { ascending: false })
+      .returns<BateriaAdultoMayorEntry[]>(),
   ]);
 
   if (!cliente) notFound();
@@ -100,6 +118,8 @@ export default async function EvaluacionPage({ params }: { params: Promise<{ id:
 
       <FmsSection clienteId={cliente.id} initialItems={fmsHistorial ?? []} />
       <MovilidadEsferasSection clienteId={cliente.id} initialItems={movilidad ?? []} />
+      <MovilidadArticularSection clienteId={cliente.id} initialItems={movilidadArticular ?? []} />
+      <BateriaAdultoMayorSection clienteId={cliente.id} initialItems={bateriaAdultoMayor ?? []} />
       <EvaluacionesCustomSection clienteId={cliente.id} initialItems={evaluacionesCustom ?? []} />
       <DiagnosticoKinesicoSection clienteId={cliente.id} initialDiagnostico={cliente.diagnostico_kinesico} />
     </div>
