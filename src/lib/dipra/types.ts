@@ -423,6 +423,10 @@ export interface Sesion {
   // Solo relevante cuando registrada_por_cliente=true: el profesional ya la
   // revisó. Las que carga el profesional mismo arrancan revisadas.
   revisada: boolean;
+  // Feedback del profesional sobre ESTA sesión puntual — a diferencia de
+  // "revisada" (que solo marca que ya se vio), esto el cliente lo lee en su
+  // histórico. Distinto de `comentarios`, que es lo que escribe el cliente.
+  comentario_profesional: string;
   created_at: string;
 }
 
