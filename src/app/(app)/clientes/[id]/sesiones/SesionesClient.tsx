@@ -30,6 +30,7 @@ import {
   copiarSesionATareas,
   crearSesion,
   eliminarSesion,
+  guardarComentarioProfesional,
   marcarSesionRevisada,
   type NuevaSesionInput,
 } from "./actions";
@@ -307,6 +308,11 @@ export function SesionesClient({
   const [copiandoA, setCopiandoA] = useState<"tareas" | "plan" | null>(null);
   const [, startCopia] = useTransition();
   const [mensajeCopia, setMensajeCopia] = useState<string | null>(null);
+  // Feedback del profesional sobre una sesión puntual — el cliente lo lee en
+  // su histórico del portal (ver Sesion.comentario_profesional).
+  const [comentarioProfEditandoId, setComentarioProfEditandoId] = useState<string | null>(null);
+  const [comentarioProfBorrador, setComentarioProfBorrador] = useState("");
+  const [guardandoComentarioProf, startGuardarComentarioProf] = useTransition();
 
   const sesiones = [...sesionesIniciales].sort((a, b) => b.fecha.localeCompare(a.fecha));
   const sesionesConEjercicios = sesiones.filter((s) => s.ejercicios.length > 0);
@@ -514,6 +520,18 @@ export function SesionesClient({
     });
   };
 
+  const abrirComentarioProf = (s: Sesion) => {
+    setComentarioProfEditandoId(s.id);
+    setComentarioProfBorrador(s.comentario_profesional || "");
+  };
+
+  const guardarComentarioProf = (id: string) => {
+    startGuardarComentarioProf(async () => {
+      await guardarComentarioProfesional(clienteId, id, comentarioProfBorrador);
+      setComentarioProfEditandoId(null);
+    });
+  };
+
   const abrirEdicionMeta = (s: Sesion) => {
     setEditandoMetaId(s.id);
     setMetaTipo(s.tipo || TIPOS_SESION[0]);
@@ -589,9 +607,12 @@ export function SesionesClient({
     const alerta = pilarBajo(draft.pilares, draft.es_primera_sesion);
 
     return (
-      <div className="dp-surface flex flex-col gap-4 rounded-2xl p-5 shadow-sm">
+      <div className="dp-surface dp-card-accent dp-border-brand flex flex-col gap-4 rounded-2xl p-5 shadow-sm">
         <div className="flex items-center justify-between">
-          <h3 className="dp-text-heading font-medium">Nueva sesión</h3>
+          <div>
+            <p className="dp-eyebrow dp-text-brand mb-0.5">Registro de sesión</p>
+            <h3 className="dp-text-heading font-medium">Nueva sesión</h3>
+          </div>
           <button type="button" onClick={cancelar} className="dp-muted text-sm hover:dp-text-brand">
             Cancelar
           </button>
@@ -1016,6 +1037,7 @@ export function SesionesClient({
         </p>
       ) : (
         <div className="flex flex-col gap-3">
+          <p className="dp-eyebrow dp-muted">Historial</p>
           {sesiones.map((s) => {
             const expanded = expandedId === s.id;
             const alerta = tieneAlerta(s);
@@ -1276,6 +1298,58 @@ export function SesionesClient({
                         <p className="dp-text-heading text-sm">{s.comentarios}</p>
                       </div>
                     )}
+                    <div>
+                      <p className="dp-muted mb-0.5 text-[10px] font-medium uppercase tracking-wide">
+                        Tu feedback — lo ve en su histórico
+                      </p>
+                      {comentarioProfEditandoId === s.id ? (
+                        <div className="flex flex-col gap-1.5">
+                          <textarea
+                            value={comentarioProfBorrador}
+                            onChange={(e) => setComentarioProfBorrador(e.target.value)}
+                            rows={2}
+                            placeholder="Ej: excelente progreso en sentadilla, la próxima bajamos el descanso…"
+                            className="dp-ink w-full rounded-lg border border-black/10 px-2 py-1.5 text-sm outline-none focus:dp-border-brand"
+                          />
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => guardarComentarioProf(s.id)}
+                              disabled={guardandoComentarioProf}
+                              className="dp-bg-brand w-fit rounded-lg px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+                            >
+                              {guardandoComentarioProf ? "Guardando…" : "Guardar"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setComentarioProfEditandoId(null)}
+                              className="dp-muted text-xs hover:underline"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      ) : s.comentario_profesional ? (
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="dp-text-heading text-sm">{s.comentario_profesional}</p>
+                          <button
+                            type="button"
+                            onClick={() => abrirComentarioProf(s)}
+                            className="dp-text-brand shrink-0 text-xs hover:underline"
+                          >
+                            Editar
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => abrirComentarioProf(s)}
+                          className="dp-text-brand w-fit text-xs hover:underline"
+                        >
+                          + Dejar un comentario
+                        </button>
+                      )}
+                    </div>
                     <div className="flex items-center gap-3">
                       {s.registrada_por_cliente && !s.revisada && (
                         <button
