@@ -612,7 +612,8 @@ export function PlanView({
         ))}
       </datalist>
 
-      <div className="dp-surface rounded-2xl p-5 shadow-sm">
+      <div className="dp-surface dp-card-accent dp-border-brand rounded-2xl p-5 shadow-sm">
+        <p className="dp-eyebrow dp-text-brand mb-1">Rutina semanal</p>
         <div className="mb-3 flex flex-wrap items-center gap-1.5">
           {semanas.map((s) => (
             <div
@@ -947,7 +948,10 @@ export function PlanView({
           </div>
 
           {dia && (
-            <div className="dp-surface rounded-2xl p-5 shadow-sm">
+            <div className="dp-surface dp-card-accent dp-border-lime rounded-2xl p-5 shadow-sm">
+              <p className="dp-eyebrow mb-1" style={{ color: "var(--dp-lime)" }}>
+                Día activo
+              </p>
               <input
                 value={dia.label}
                 onChange={(e) => renameDia(diaIdx, e.target.value)}
