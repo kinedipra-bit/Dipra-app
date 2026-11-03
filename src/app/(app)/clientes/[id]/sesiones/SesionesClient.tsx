@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { tonoEscalaPilar } from "@/lib/dipra/calc";
 import { agruparPorBloque, ejerciciosDesdeDia } from "@/lib/dipra/agruparEjercicios";
 import { PILARES_KEYS, TIPOS_SESION, emptySesionPilares } from "@/lib/dipra/constants";
-import { esYoutubeVertical, normalizeLink, youtubeEmbedUrl } from "@/lib/youtube";
+import { FilaEjercicioDraft } from "./FilaEjercicioDraft";
 import {
   CUALIDADES,
   GRUPOS_MUSCULARES,
@@ -207,13 +207,20 @@ function ListaEjerciciosSesion({ ejercicios }: { ejercicios: EjercicioSesion[] }
                   ? ex.repsSeriesReal.map((r) => Number(r) || 0).join("/")
                   : String(ex.repsReal);
               return (
-                <div key={ex.id} className="flex items-center justify-between gap-2 py-1.5 text-sm">
-                  <span className="dp-text-heading truncate">{ex.nombre}</span>
-                  <span className="dp-muted shrink-0 font-mono text-xs">
-                    {ex.extra ? "agregado en la sesión" : `plan ${ex.seriesPlan}×${ex.repsPlan}×${kgPlanTexto}kg`}
-                    {" → "}real {ex.seriesReal}×
-                    {repsRealTexto}×{kgRealTexto}kg{rpeTexto ? ` · RPE ${rpeTexto}` : ""}
-                  </span>
+                <div key={ex.id} className="py-1.5">
+                  <div className="flex items-center justify-between gap-2 text-sm">
+                    <span className="dp-text-heading truncate">{ex.nombre}</span>
+                    <span className="dp-muted shrink-0 font-mono text-xs">
+                      {ex.extra ? "agregado en la sesión" : `plan ${ex.seriesPlan}×${ex.repsPlan}×${kgPlanTexto}kg`}
+                      {" → "}real {ex.seriesReal}×
+                      {repsRealTexto}×{kgRealTexto}kg{rpeTexto ? ` · RPE ${rpeTexto}` : ""}
+                    </span>
+                  </div>
+                  {ex.comentario && (
+                    <p className="dp-bg-amber-soft dp-text-amber mt-1 rounded-md px-2 py-1 text-xs">
+                      💬 {ex.comentario}
+                    </p>
+                  )}
                 </div>
               );
             })}
@@ -678,18 +685,6 @@ export function SesionesClient({
             <p className="dp-text-heading mb-2 text-xs font-semibold uppercase tracking-wide">
               Ejecución real vs. planificado
             </p>
-            <div
-              className="dp-muted grid gap-2 pb-1 text-[10px] font-medium uppercase tracking-wide"
-              style={{ gridTemplateColumns: "1.3fr 0.9fr 0.5fr 0.5fr 0.9fr 0.4fr 0.2fr" }}
-            >
-              <span>Ejercicio</span>
-              <span>Plan (S×R×Kg)</span>
-              <span className="text-center">Ser.</span>
-              <span className="text-center">Rep.</span>
-              <span className="text-center">Kg real</span>
-              <span className="text-center">RPE</span>
-              <span />
-            </div>
             <div className="flex flex-col gap-3">
               {agruparPorBloque(draft.ejercicios).map((grupo, gIdx) => {
                 const idxsGrupo = grupo.items.map(({ idx }) => idx);
@@ -703,170 +698,21 @@ export function SesionesClient({
                       className="dp-text-brand mb-1 w-full border-0 border-b border-transparent bg-transparent text-base font-semibold tracking-wide uppercase outline-none hover:border-black/10 focus:border-black/10"
                     />
                   )}
-                  <div className="divide-y divide-black/5">
-                    {grupo.items.map(({ ejercicio: ex, idx }) => {
-                      const pesosPlan = (ex.pesosSeriesPlan ?? []).filter((p) => Number(p) > 0);
-                      const kgPlanTexto =
-                        pesosPlan.length > 0 ? pesosPlan.map((p) => Number(p) || 0).join("/") : String(ex.kgPlan);
-                      const pesosRealActivo = (ex.pesosSeriesReal ?? []).some((p) => Number(p) > 0);
-                      const cambiarPesoReal = (i: number, value: string) => {
-                        const largo = Math.max(ex.seriesReal, pesosPlan.length, 1);
-                        const current = Array.from(
-                          { length: largo },
-                          (_, idx2) => ex.pesosSeriesReal?.[idx2] ?? ex.kgReal ?? 0
-                        );
-                        current[i] = value === "" ? "" : Number(value);
-                        updateEjercicio(idx, { pesosSeriesReal: current });
-                      };
-                      const cambiarRpeReal = (i: number, value: string) => {
-                        const largo = Math.max(ex.seriesReal, 1);
-                        const current = Array.from({ length: largo }, (_, idx2) => ex.rpeSeries?.[idx2] ?? "");
-                        current[i] = value;
-                        updateEjercicio(idx, { rpeSeries: current });
-                      };
-                      const cambiarRepsReal = (i: number, value: string) => {
-                        const largo = Math.max(ex.seriesReal, 1);
-                        const current = Array.from(
-                          { length: largo },
-                          (_, idx2) => ex.repsSeriesReal?.[idx2] ?? ex.repsReal
-                        );
-                        current[i] = value === "" ? "" : Number(value);
-                        updateEjercicio(idx, { repsSeriesReal: current });
-                      };
-                      const embedUrl = youtubeEmbedUrl(ex.link ?? "");
-                      const videoAbierto = videoAbiertoId === ex.id;
-                      return (
-                        <div key={ex.id} className="py-1.5">
-                        <div
-                          className="grid items-center gap-2"
-                          style={{ gridTemplateColumns: "1.3fr 0.9fr 0.5fr 0.5fr 0.9fr 0.4fr 0.2fr" }}
-                        >
-                          <div className="min-w-0">
-                            {nombreEditandoId === ex.id || !ex.nombre ? (
-                              <input
-                                value={ex.nombre}
-                                onChange={(e) => updateEjercicio(idx, { nombre: e.target.value })}
-                                onBlur={() => setNombreEditandoId((id) => (id === ex.id ? null : id))}
-                                list="sesiones-biblioteca-datalist"
-                                placeholder="Nombre del ejercicio…"
-                                autoFocus
-                                className="w-full rounded-md border border-black/10 px-1.5 py-0.5 text-sm outline-none focus:dp-border-brand"
-                              />
-                            ) : embedUrl ? (
-                              <button
-                                type="button"
-                                onClick={() => setVideoAbiertoId(videoAbierto ? null : ex.id)}
-                                className="dp-text-brand flex items-center gap-1 truncate text-left text-sm underline decoration-dotted"
-                              >
-                                <span aria-hidden>▶</span> {ex.nombre}
-                              </button>
-                            ) : ex.link ? (
-                              <a
-                                href={normalizeLink(ex.link)}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="dp-text-brand block truncate text-sm underline"
-                              >
-                                {ex.nombre}
-                              </a>
-                            ) : (
-                              <span className="dp-text-heading block truncate text-sm">{ex.nombre}</span>
-                            )}
-                            {(ex.tipoCarga || ex.tiempoSerie) && (
-                              <span className="dp-muted text-[10px]">
-                                {[ex.tipoCarga, ex.tiempoSerie].filter(Boolean).join(" · ")}
-                              </span>
-                            )}
-                            {ex.notaReps && (
-                              <span className="dp-bg-amber-soft dp-text-amber block rounded-md px-1.5 py-0.5 text-[10px]">
-                                {ex.notaReps}
-                              </span>
-                            )}
-                          </div>
-                          <span className="dp-muted font-mono text-xs">
-                            {ex.seriesPlan}×{ex.repsPlan}
-                            {ex.unilateral ? " c/u" : ""}×{kgPlanTexto}kg{ex.pesoCadaUno ? " c/u" : ""}
-                          </span>
-                          <input
-                            type="number"
-                            value={ex.seriesReal}
-                            onChange={(e) => updateEjercicio(idx, { seriesReal: Number(e.target.value) })}
-                            className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-sm outline-none focus:dp-border-brand"
-                          />
-                          <div className="flex flex-wrap items-center gap-1">
-                            {Array.from({ length: Math.max(ex.seriesReal, 1) }).map((_, i) => (
-                              <input
-                                key={i}
-                                type="number"
-                                value={ex.repsSeriesReal?.[i] ?? ex.repsReal}
-                                onChange={(e) => cambiarRepsReal(i, e.target.value)}
-                                style={{ width: 36 }}
-                                className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-xs outline-none focus:dp-border-brand"
-                              />
-                            ))}
-                          </div>
-                          {pesosRealActivo ? (
-                            <div className="flex flex-wrap items-center gap-1">
-                              {Array.from({ length: Math.max(ex.seriesReal, pesosPlan.length, 1) }).map((_, i) => (
-                                <input
-                                  key={i}
-                                  type="number"
-                                  value={ex.pesosSeriesReal?.[i] ?? ex.kgReal ?? 0}
-                                  onChange={(e) => cambiarPesoReal(i, e.target.value)}
-                                  style={{ width: 36 }}
-                                  className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-xs outline-none focus:dp-border-brand"
-                                />
-                              ))}
-                            </div>
-                          ) : (
-                            <input
-                              type="number"
-                              value={ex.kgReal}
-                              onChange={(e) => updateEjercicio(idx, { kgReal: Number(e.target.value) })}
-                              className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-sm outline-none focus:dp-border-brand"
-                            />
-                          )}
-                          <div className="flex flex-wrap items-center gap-1">
-                            {Array.from({ length: Math.max(ex.seriesReal, 1) }).map((_, i) => (
-                              <input
-                                key={i}
-                                type="number"
-                                min={0}
-                                max={10}
-                                value={ex.rpeSeries?.[i] ?? ""}
-                                onChange={(e) => cambiarRpeReal(i, e.target.value)}
-                                placeholder="—"
-                                style={{ width: 36 }}
-                                className="rounded-md border border-black/10 px-1 py-0.5 text-center font-mono text-xs outline-none focus:dp-border-brand"
-                              />
-                            ))}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeEjercicioDraft(idx)}
-                            className="dp-muted hover:dp-alert justify-self-end text-xs"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                        {videoAbierto && embedUrl && (
-                          <div
-                            className={`mt-2 overflow-hidden rounded-lg ${
-                              esYoutubeVertical(ex.link ?? "") ? "aspect-[9/16] w-full max-w-[280px]" : "aspect-video w-full"
-                            }`}
-                          >
-                            <iframe
-                              src={embedUrl}
-                              title={`Video de ${ex.nombre}`}
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                              allowFullScreen
-                              className="h-full w-full border-0"
-                            />
-                          </div>
-                        )}
-                        </div>
-                      );
-                    })}
+                  <div className="flex flex-col gap-2">
+                    {grupo.items.map(({ ejercicio: ex, idx }) => (
+                      <FilaEjercicioDraft
+                        key={ex.id}
+                        ex={ex}
+                        idx={idx}
+                        nombreEditando={nombreEditandoId === ex.id}
+                        onAbrirEdicionNombre={() => setNombreEditandoId(ex.id)}
+                        onCerrarEdicionNombre={() => setNombreEditandoId((id) => (id === ex.id ? null : id))}
+                        videoAbierto={videoAbiertoId === ex.id}
+                        onToggleVideo={() => setVideoAbiertoId((id) => (id === ex.id ? null : ex.id))}
+                        onUpdate={updateEjercicio}
+                        onRemove={removeEjercicioDraft}
+                      />
+                    ))}
                   </div>
                   <div className="mt-1 flex items-center gap-3">
                     <button
