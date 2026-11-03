@@ -16,6 +16,22 @@ function revalidarInicio() {
   revalidatePath("/clientes");
 }
 
+// El portal (`dias_publicado`/`semana_activa_id`) es dinámico por cookies()
+// así que no debería depender de esto para ver datos frescos — pero lo
+// revalidamos igual como refuerzo, ya que son rutas que SÍ dependen de lo
+// que se acaba de guardar acá.
+async function revalidarPortal(supabase: Awaited<ReturnType<typeof createClient>>, clienteId: string) {
+  const { data: cliente } = await supabase
+    .from("clients")
+    .select("portal_token")
+    .eq("id", clienteId)
+    .single<{ portal_token: string }>();
+  if (!cliente) return;
+  revalidatePath(`/portal/${cliente.portal_token}/plan`);
+  revalidatePath(`/portal/${cliente.portal_token}/sesiones`);
+  revalidatePath(`/portal/${cliente.portal_token}/historico`);
+}
+
 // Aviso push de "tu semana ya está programada" al compartir — best-effort:
 // si el cliente no activó notificaciones, o la infraestructura de push
 // todavía no está configurada (VAPID / tabla de suscripciones), NO debe
@@ -87,6 +103,7 @@ export async function crearSemana(
   revalidatePath(`/clientes/${clienteId}/plan`);
   revalidatePath(`/clientes/${clienteId}/sesiones`);
   revalidarInicio();
+  await revalidarPortal(supabase, clienteId);
   return data;
 }
 
@@ -101,6 +118,7 @@ export async function setSemanaActiva(clienteId: string, semanaId: string) {
   revalidatePath(`/clientes/${clienteId}/plan`);
   revalidatePath(`/clientes/${clienteId}/sesiones`);
   revalidarInicio();
+  await revalidarPortal(supabase, clienteId);
 }
 
 // Borra una semana (ej. quedó una semana vacía por un corrimiento de
@@ -142,6 +160,7 @@ export async function eliminarSemana(clienteId: string, semanaId: string) {
   revalidatePath(`/clientes/${clienteId}/plan`);
   revalidatePath(`/clientes/${clienteId}/sesiones`);
   revalidarInicio();
+  await revalidarPortal(supabase, clienteId);
 }
 
 // Persiste mesociclo/objetivo y el árbol `dias` completo de una semana en un
@@ -197,6 +216,7 @@ export async function compartirSemana(clienteId: string, semanaId: string) {
 
   revalidatePath(`/clientes/${clienteId}/plan`);
   revalidarInicio();
+  await revalidarPortal(supabase, clienteId);
   await avisarSemanaProgramada(supabase, clienteId);
 }
 
