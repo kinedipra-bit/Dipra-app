@@ -252,7 +252,32 @@ export function ExerciseRow({
           <input
             type="number"
             value={ex.series}
-            onChange={(e) => onChange({ ...ex, series: Number(e.target.value) })}
+            onChange={(e) => {
+              const nuevaSeries = Number(e.target.value);
+              // Si "peso por serie" o "reps por serie" ya estaban activos, hay que
+              // redimensionar esos arrays acá mismo — si no, quedan en el largo
+              // viejo (ej. 2) aunque la grilla de abajo ya se vea con 4 cajitas
+              // (esas de más se ven prellenadas con el kg/reps uniforme, pero eso
+              // es solo el valor de respaldo para mostrar: nunca se guardó en el
+              // array real a menos que el profesional tocara esa cajita a mano).
+              // Esto hacía que el plan mostrara "4 series" pero el portal del
+              // cliente, que arma el texto de kg directo desde pesosSeries, solo
+              // mostrara 2 valores.
+              const patch: Partial<EjercicioPlan> = { series: nuevaSeries };
+              if (pesosSeriesActivo) {
+                patch.pesosSeries = Array.from(
+                  { length: Math.max(nuevaSeries, 0) },
+                  (_, i) => ex.pesosSeries?.[i] ?? ex.kg ?? 0
+                );
+              }
+              if (repsSeriesActivo) {
+                patch.repsSeries = Array.from(
+                  { length: Math.max(nuevaSeries, 0) },
+                  (_, i) => ex.repsSeries?.[i] ?? ex.reps ?? 0
+                );
+              }
+              onChange({ ...ex, ...patch });
+            }}
             onFocus={seleccionarAlEnfocar}
             className="rounded-lg border border-black/10 px-2 py-1 text-center font-mono text-sm outline-none focus:dp-border-brand"
           />
