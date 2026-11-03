@@ -5,6 +5,7 @@ import { InstalarApp } from "@/components/InstalarApp";
 import { obtenerClientePortal, sesionValidaPara } from "./acceso";
 import { cerrarSesionPin } from "./acciones-acceso";
 import { PortalTabs } from "./PortalTabs";
+import { AutoRefreshAlVolver } from "./AutoRefreshAlVolver";
 
 // El manifest global (app/manifest.ts, start_url "/") es para la app del
 // profesional — acá se reemplaza por uno propio del portal (start_url al
@@ -35,6 +36,7 @@ export default async function PortalLayout({
 
   return (
     <div className="dp-bg-app min-h-screen p-4 sm:p-8">
+      {autenticado && <AutoRefreshAlVolver />}
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
         <div className="dp-surface flex items-center justify-between gap-4 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center gap-4">
