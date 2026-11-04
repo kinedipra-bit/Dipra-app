@@ -27,6 +27,16 @@ function fmtHora(h: string) {
   return h.slice(0, 5);
 }
 
+// Nombre + inicial del siguiente — con varios clientes apilados en una
+// misma celda, el nombre completo de cada uno hacía más difícil distinguir
+// de un vistazo cuántos y quiénes hay. El nombre completo sigue disponible
+// al pasar el mouse (title) y en el modal de edición.
+function abreviarNombre(nombre: string) {
+  const partes = nombre.trim().split(/\s+/);
+  if (partes.length <= 1) return nombre;
+  return `${partes[0]} ${partes[1][0]}.`;
+}
+
 export function HorariosView({
   horariosIniciales,
   clientes,
@@ -189,9 +199,27 @@ export function HorariosView({
             </tr>
           </thead>
           <tbody>
-            {FRANJAS.map((f) => (
-              <tr key={f} className="border-t border-black/5">
-                <td className="dp-muted py-1 pr-2 font-mono">{f}</td>
+            {FRANJAS.map((f, idx) => {
+              // Separar mejor una hora de otra: cuando una celda tiene varios
+              // clientes apilados, la fila crece mucho y el borde finito de
+              // siempre quedaba perdido muy abajo, lejos de donde visualmente
+              // se espera el límite — daba la sensación de que los horarios
+              // se mezclaban. Ahora cada hora en punto tiene un borde más
+              // marcado que la media hora, y las horas pares llevan un fondo
+              // tenue para que el bloque completo (así tenga 1 o 6 nombres)
+              // se note de un vistazo como una unidad separada de la de al lado.
+              const esHoraEnPunto = f.endsWith(":00");
+              const horaPar = Math.floor(idx / 2) % 2 === 0;
+              return (
+              <tr
+                key={f}
+                className={`${esHoraEnPunto ? "border-t-2 border-black/15" : "border-t border-black/5"} ${
+                  horaPar ? "dp-bg-faint" : ""
+                }`}
+              >
+                <td className={`dp-muted py-1 pr-2 font-mono ${esHoraEnPunto ? "font-semibold dp-text-heading" : ""}`}>
+                  {f}
+                </td>
                 {DIAS_SEMANA_CORTO.map((_, dia) => {
                   const celda = porCelda.get(`${dia}-${f}`) ?? [];
                   return (
@@ -202,12 +230,12 @@ export function HorariosView({
                             key={h.id}
                             type="button"
                             onClick={() => abrirEdicion(h)}
-                            title={h.tipo}
+                            title={`${h.cliente_nombre} — ${h.tipo}`}
                             className={`truncate rounded px-1.5 py-0.5 text-left text-[11px] font-medium dp-text-heading ${
                               TIPO_CITA_COLOR[h.tipo as keyof typeof TIPO_CITA_COLOR] ?? "dp-bg-faint"
                             }`}
                           >
-                            {h.cliente_nombre}
+                            {abreviarNombre(h.cliente_nombre)}
                           </button>
                         ))}
                         <button
@@ -222,7 +250,8 @@ export function HorariosView({
                   );
                 })}
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
