@@ -241,19 +241,12 @@ export default async function PortalHistoricoPage({ params }: { params: Promise<
 
               <div className="divide-y divide-white/10">
                 {lista.map((s) => (
-                  <div key={s.id} className="py-1.5">
-                    <div className="flex items-center justify-between gap-2 text-sm">
-                      <span className="dp-body">
-                        <span className="font-mono text-xs">{fmtFecha(s.fecha)}</span>
-                        {s.dia_plan_label && ` · ${s.dia_plan_label}`}
-                      </span>
-                      <EliminarSesionButton token={token} sesionId={s.id} />
-                    </div>
-                    {s.comentario_profesional && (
-                      <p className="dp-bg-brand-soft dp-text-brand mt-1 rounded-md px-2 py-1 text-xs">
-                        💬 {s.comentario_profesional}
-                      </p>
-                    )}
+                  <div key={s.id} className="flex items-center justify-between gap-2 py-1.5 text-sm">
+                    <span className="dp-body">
+                      <span className="font-mono text-xs">{fmtFecha(s.fecha)}</span>
+                      {s.dia_plan_label && ` · ${s.dia_plan_label}`}
+                    </span>
+                    <EliminarSesionButton token={token} sesionId={s.id} />
                   </div>
                 ))}
               </div>
