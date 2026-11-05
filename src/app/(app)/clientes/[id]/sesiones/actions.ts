@@ -47,12 +47,9 @@ export async function marcarSesionRevisada(clienteId: string, sesionId: string) 
   revalidar(clienteId);
 }
 
-// Feedback del profesional sobre una sesión puntual (ver Sesion.
-// comentario_profesional) — a diferencia de "Marcar como revisada", esto el
-// cliente lo lee en su histórico del portal, así que también hay que
-// revalidar esa ruta (el portal es dinámico por cookies() así que no
-// debería hacer falta, pero es un refuerzo razonable — ver nota en
-// plan/actions.ts).
+// Nota interna del profesional sobre una sesión puntual (ver Sesion.
+// comentario_profesional) — privada, nunca se muestra en el portal del
+// cliente, así que alcanza con revalidar las rutas del profesional.
 export async function guardarComentarioProfesional(clienteId: string, sesionId: string, comentario: string) {
   const supabase = await createClient();
   const { error } = await supabase
@@ -61,13 +58,6 @@ export async function guardarComentarioProfesional(clienteId: string, sesionId: 
     .eq("id", sesionId);
   if (error) throw new Error(error.message);
   revalidar(clienteId);
-
-  const { data: cliente } = await supabase
-    .from("clients")
-    .select("portal_token")
-    .eq("id", clienteId)
-    .single<{ portal_token: string }>();
-  if (cliente) revalidatePath(`/portal/${cliente.portal_token}/historico`);
 }
 
 // Nuevos ids en todo el árbol — evita que choquen con los que ya existen

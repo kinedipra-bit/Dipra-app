@@ -1300,7 +1300,7 @@ export function SesionesClient({
                     )}
                     <div>
                       <p className="dp-muted mb-0.5 text-[10px] font-medium uppercase tracking-wide">
-                        Tu feedback — lo ve en su histórico
+                        Notas internas — privado, el cliente no las ve
                       </p>
                       {comentarioProfEditandoId === s.id ? (
                         <div className="flex flex-col gap-1.5">
@@ -1308,7 +1308,7 @@ export function SesionesClient({
                             value={comentarioProfBorrador}
                             onChange={(e) => setComentarioProfBorrador(e.target.value)}
                             rows={2}
-                            placeholder="Ej: excelente progreso en sentadilla, la próxima bajamos el descanso…"
+                            placeholder="Ej: terminamos meditando, bloque accesorio no lo hizo…"
                             className="dp-ink w-full rounded-lg border border-black/10 px-2 py-1.5 text-sm outline-none focus:dp-border-brand"
                           />
                           <div className="flex items-center gap-3">
@@ -1346,7 +1346,7 @@ export function SesionesClient({
                           onClick={() => abrirComentarioProf(s)}
                           className="dp-text-brand w-fit text-xs hover:underline"
                         >
-                          + Dejar un comentario
+                          + Agregar nota interna
                         </button>
                       )}
                     </div>
