@@ -152,6 +152,29 @@ export function FilaEjercicioDraft({
               {ex.notaReps}
             </span>
           )}
+          <div className="mt-1 flex flex-wrap items-center gap-3">
+            <label className="flex cursor-pointer items-center gap-1 select-none">
+              <input
+                type="checkbox"
+                checked={!!ex.unilateral}
+                onChange={(e) => onUpdate(idx, { unilateral: e.target.checked })}
+                className="h-3 w-3"
+              />
+              <span className="dp-muted text-[10px] font-medium">Unilateral (reps c/u)</span>
+            </label>
+            <label
+              className="flex cursor-pointer items-center gap-1 select-none"
+              title="Ej. dos mancuernas de 7,5 kg cada una — el volumen se calcula duplicando el kg cargado"
+            >
+              <input
+                type="checkbox"
+                checked={!!ex.pesoCadaUno}
+                onChange={(e) => onUpdate(idx, { pesoCadaUno: e.target.checked })}
+                className="h-3 w-3"
+              />
+              <span className="dp-muted text-[10px] font-medium">Peso c/u (2 mancuernas)</span>
+            </label>
+          </div>
         </div>
         <button type="button" onClick={() => onRemove(idx)} className="dp-muted hover:dp-alert shrink-0 text-xs">
           ✕
@@ -177,8 +200,8 @@ export function FilaEjercicioDraft({
       <div className="mt-2 flex flex-col gap-1">
         <div className="dp-muted grid gap-2 text-[10px] font-medium uppercase tracking-wide" style={gridSets}>
           <span>Serie</span>
-          <span>Reps</span>
-          <span>Kg</span>
+          <span>Reps{ex.unilateral && " c/u"}</span>
+          <span>Kg{ex.pesoCadaUno && " c/u"}</span>
           <span>RPE</span>
           <span />
         </div>
