@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { EjercicioSesion } from "@/lib/dipra/types";
+import type { EjercicioBiblioteca, EjercicioSesion } from "@/lib/dipra/types";
 import { esYoutubeVertical, normalizeLink, youtubeEmbedUrl } from "@/lib/youtube";
 
 const gridSets = { gridTemplateColumns: "1.5rem 1fr 1fr 1fr 1.25rem" };
@@ -36,6 +36,8 @@ export function FilaEjercicioDraft({
   onToggleVideo,
   onUpdate,
   onRemove,
+  biblioteca,
+  onSaveToBiblioteca,
 }: {
   ex: EjercicioSesion;
   idx: number;
@@ -43,6 +45,8 @@ export function FilaEjercicioDraft({
   onToggleVideo: () => void;
   onUpdate: (idx: number, patch: Partial<EjercicioSesion>) => void;
   onRemove: (idx: number) => void;
+  biblioteca: EjercicioBiblioteca[];
+  onSaveToBiblioteca: (ex: { nombre: string; link: string }) => void;
 }) {
   // Independiente del contenido del nombre a propósito — si se derivara de
   // `!ex.nombre` en cada render (como antes), escribir la primera letra ya
@@ -55,6 +59,30 @@ export function FilaEjercicioDraft({
   const pesosPlan = (ex.pesosSeriesPlan ?? []).filter((p) => Number(p) > 0);
   const kgPlanTexto = pesosPlan.length > 0 ? pesosPlan.map((p) => Number(p) || 0).join("/") : String(ex.kgPlan);
   const embedUrl = youtubeEmbedUrl(ex.link ?? "");
+
+  // Mismo criterio que ExerciseRow (Plan): si el nombre tipeado matchea un
+  // ejercicio ya guardado en la biblioteca, copia su link solo. Para un
+  // ejercicio nuevo que no existe todavía, el link queda vacío y lo pega el
+  // profesional a mano más abajo.
+  const handleNombreChange = (nombre: string) => {
+    const esOtroEjercicio = nombre.trim().toLowerCase() !== ex.nombre.trim().toLowerCase();
+    const match = biblioteca.find((b) => b.nombre.trim().toLowerCase() === nombre.trim().toLowerCase());
+    if (match && (esOtroEjercicio || !ex.link)) {
+      onUpdate(idx, { nombre, link: match.link });
+    } else {
+      onUpdate(idx, { nombre });
+    }
+  };
+
+  const yaEnBiblioteca = biblioteca.some(
+    (b) => b.nombre.trim().toLowerCase() === (ex.nombre || "").trim().toLowerCase()
+  );
+  const puedeGuardarEnBiblioteca = !!ex.nombre?.trim() && !!ex.link?.trim() && !yaEnBiblioteca;
+
+  const buscarEnYoutube = () => {
+    const q = encodeURIComponent(`${ex.nombre} ejercicio tecnica`);
+    window.open(`https://www.youtube.com/results?search_query=${q}`, "_blank", "noopener,noreferrer");
+  };
 
   const cambiarReps = (i: number, value: string) => {
     const largo = Math.max(sets, i + 1);
@@ -104,7 +132,7 @@ export function FilaEjercicioDraft({
             {editandoNombre ? (
               <input
                 value={ex.nombre}
-                onChange={(e) => onUpdate(idx, { nombre: e.target.value })}
+                onChange={(e) => handleNombreChange(e.target.value)}
                 onBlur={() => setEditandoNombre(false)}
                 list="sesiones-biblioteca-datalist"
                 placeholder="Nombre del ejercicio…"
@@ -176,6 +204,30 @@ export function FilaEjercicioDraft({
               />
               <span className="dp-muted text-[10px] font-medium">Peso c/u (2 mancuernas)</span>
             </label>
+          </div>
+          <div className="mt-1 flex items-center gap-1.5">
+            <input
+              value={ex.link || ""}
+              onChange={(e) => onUpdate(idx, { link: e.target.value })}
+              placeholder="Pega aquí el link del video (o búscalo en YouTube →)"
+              className="dp-muted flex-1 border-none bg-transparent text-xs outline-none"
+            />
+            <button
+              type="button"
+              onClick={buscarEnYoutube}
+              className="dp-text-brand shrink-0 whitespace-nowrap text-[11px] font-medium hover:underline"
+            >
+              Buscar en YouTube
+            </button>
+            {puedeGuardarEnBiblioteca && (
+              <button
+                type="button"
+                onClick={() => onSaveToBiblioteca({ nombre: ex.nombre.trim(), link: (ex.link || "").trim() })}
+                className="dp-text-amber shrink-0 whitespace-nowrap text-[11px] font-medium hover:underline"
+              >
+                + Guardar en biblioteca
+              </button>
+            )}
           </div>
         </div>
         <button type="button" onClick={() => onRemove(idx)} className="dp-muted hover:dp-alert shrink-0 text-xs">

@@ -722,6 +722,8 @@ export function SesionesClient({
                         onToggleVideo={() => setVideoAbiertoId((id) => (id === ex.id ? null : ex.id))}
                         onUpdate={updateEjercicio}
                         onRemove={removeEjercicioDraft}
+                        biblioteca={biblioteca}
+                        onSaveToBiblioteca={guardarEjercicioEnBiblioteca}
                       />
                     ))}
                   </div>
