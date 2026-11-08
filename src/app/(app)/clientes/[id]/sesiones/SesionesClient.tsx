@@ -709,6 +709,7 @@ export function SesionesClient({
                     <input
                       value={grupo.bloqueTitle}
                       onChange={(e) => renameBloqueDraft(idxsGrupo, e.target.value)}
+                      onFocus={(e) => e.target.select()}
                       className="dp-text-brand mb-1 w-full border-0 border-b border-transparent bg-transparent text-base font-semibold tracking-wide uppercase outline-none hover:border-black/10 focus:border-black/10"
                     />
                   )}
