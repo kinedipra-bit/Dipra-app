@@ -133,7 +133,13 @@ export function FilaEjercicioDraft({
               <input
                 value={ex.nombre}
                 onChange={(e) => handleNombreChange(e.target.value)}
-                onBlur={() => setEditandoNombre(false)}
+                // Si todavía no se escribió nada, cerrar el input al perder el
+                // foco (ej. al tocar otro campo, como el título del bloque)
+                // dejaba la fila colapsada a un espacio vacío con solo el
+                // lápiz — una fila "invisible" sin ningún texto que avise que
+                // ahí hay un ejercicio sin nombrar. Mientras siga vacío, el
+                // input se queda abierto.
+                onBlur={() => ex.nombre.trim() && setEditandoNombre(false)}
                 list="sesiones-biblioteca-datalist"
                 placeholder="Nombre del ejercicio…"
                 autoFocus
