@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { EjercicioSesion } from "@/lib/dipra/types";
 import { esYoutubeVertical, normalizeLink, youtubeEmbedUrl } from "@/lib/youtube";
 
@@ -31,9 +32,6 @@ export function setsDeEjercicio(ex: EjercicioSesion): number {
 export function FilaEjercicioDraft({
   ex,
   idx,
-  nombreEditando,
-  onAbrirEdicionNombre,
-  onCerrarEdicionNombre,
   videoAbierto,
   onToggleVideo,
   onUpdate,
@@ -41,14 +39,18 @@ export function FilaEjercicioDraft({
 }: {
   ex: EjercicioSesion;
   idx: number;
-  nombreEditando: boolean;
-  onAbrirEdicionNombre: () => void;
-  onCerrarEdicionNombre: () => void;
   videoAbierto: boolean;
   onToggleVideo: () => void;
   onUpdate: (idx: number, patch: Partial<EjercicioSesion>) => void;
   onRemove: (idx: number) => void;
 }) {
+  // Independiente del contenido del nombre a propósito — si se derivara de
+  // `!ex.nombre` en cada render (como antes), escribir la primera letra ya
+  // hace que la condición deje de ser "verdadera" y el input se reemplaza
+  // por el texto de solo lectura a mitad de tipeo, expulsando al
+  // profesional del campo apenas empieza a escribir. Por eso el estado
+  // inicial se calcula una sola vez, al montar este ejercicio.
+  const [editandoNombre, setEditandoNombre] = useState(() => !ex.nombre);
   const sets = setsDeEjercicio(ex);
   const pesosPlan = (ex.pesosSeriesPlan ?? []).filter((p) => Number(p) > 0);
   const kgPlanTexto = pesosPlan.length > 0 ? pesosPlan.map((p) => Number(p) || 0).join("/") : String(ex.kgPlan);
@@ -99,11 +101,11 @@ export function FilaEjercicioDraft({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            {nombreEditando || !ex.nombre ? (
+            {editandoNombre ? (
               <input
                 value={ex.nombre}
                 onChange={(e) => onUpdate(idx, { nombre: e.target.value })}
-                onBlur={onCerrarEdicionNombre}
+                onBlur={() => setEditandoNombre(false)}
                 list="sesiones-biblioteca-datalist"
                 placeholder="Nombre del ejercicio…"
                 autoFocus
@@ -133,7 +135,7 @@ export function FilaEjercicioDraft({
                 )}
                 <button
                   type="button"
-                  onClick={onAbrirEdicionNombre}
+                  onClick={() => setEditandoNombre(true)}
                   title="Editar nombre"
                   className="dp-muted shrink-0 text-xs hover:dp-text-brand"
                 >

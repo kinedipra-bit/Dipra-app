@@ -282,11 +282,6 @@ export function SesionesClient({
   const [pending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [videoAbiertoId, setVideoAbiertoId] = useState<string | null>(null);
-  // Qué ejercicio del registro está mostrando el input de nombre en vez del
-  // texto/link fijo — no se puede inferir de "nombre vacío" (apenas se
-  // escribe la primera letra deja de estar vacío y el input desaparecía
-  // solo, expulsando al que estaba tipeando).
-  const [nombreEditandoId, setNombreEditandoId] = useState<string | null>(null);
   const [editandoMetaId, setEditandoMetaId] = useState<string | null>(null);
   const [metaTipo, setMetaTipo] = useState("");
   const [metaPorCliente, setMetaPorCliente] = useState(false);
@@ -359,7 +354,6 @@ export function SesionesClient({
     const next = [...draft.ejercicios];
     next.splice(insertAfterIdx + 1, 0, nuevo);
     setDraft({ ...draft, ejercicios: next });
-    setNombreEditandoId(nuevo.id);
   };
 
   const addBloqueEnDraft = (insertAfterIdx: number) => {
@@ -369,7 +363,6 @@ export function SesionesClient({
     const next = [...draft.ejercicios];
     next.splice(insertAfterIdx + 1, 0, nuevo);
     setDraft({ ...draft, ejercicios: next });
-    setNombreEditandoId(nuevo.id);
   };
 
   const renameBloqueDraft = (idxs: number[], nuevoTitulo: string) => {
@@ -725,9 +718,6 @@ export function SesionesClient({
                         key={ex.id}
                         ex={ex}
                         idx={idx}
-                        nombreEditando={nombreEditandoId === ex.id}
-                        onAbrirEdicionNombre={() => setNombreEditandoId(ex.id)}
-                        onCerrarEdicionNombre={() => setNombreEditandoId((id) => (id === ex.id ? null : id))}
                         videoAbierto={videoAbiertoId === ex.id}
                         onToggleVideo={() => setVideoAbiertoId((id) => (id === ex.id ? null : ex.id))}
                         onUpdate={updateEjercicio}
