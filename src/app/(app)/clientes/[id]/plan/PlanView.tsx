@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { calcVolumenBloque } from "@/lib/dipra/calc";
 import type { FmsData } from "@/lib/dipra/calc";
 import { blockTemplate, nuevosDias, ENFOQUES_PLAN } from "@/lib/dipra/constants";
@@ -41,6 +41,15 @@ import {
 } from "@/lib/dipra/tablaIntensidad";
 
 type Vista = "editar" | "resumen-dia" | "resumen-semana";
+
+// Texto de solo lectura para el panel "Comparar con" — mismo criterio de
+// peso por serie que ExerciseRow (kgTexto), pero sin estado propio porque
+// acá nunca se edita, solo se muestra de referencia.
+function resumenEjercicioPlan(e: EjercicioPlan): string {
+  const pesosActivo = (e.pesosSeries ?? []).some((p) => Number(p) > 0);
+  const kgTexto = pesosActivo ? (e.pesosSeries ?? []).map((p) => Number(p) || 0).join("/") : String(e.kg ?? 0);
+  return `${e.series}×${e.reps}${e.unilateral ? " c/u" : ""}×${kgTexto}kg${e.pesoCadaUno ? " c/u" : ""}`;
+}
 
 function nuevoEjercicio(): EjercicioPlan {
   return {
@@ -141,6 +150,13 @@ export function PlanView({
   const [borrando, startBorrar] = useTransition();
   const [diaIdx, setDiaIdx] = useState(0);
   const [diaFuenteCopiaId, setDiaFuenteCopiaId] = useState("");
+  // "Comparar con" — referencia de solo lectura de cómo quedó la última vez
+  // (u otra que elija el profesional) un día con la misma etiqueta, en otra
+  // semana. Formato del value: "<semanaId>::<diaLabel>". Se recalcula cada
+  // vez que cambia el día activo (ver useEffect más abajo), así que por
+  // defecto siempre apunta al día con el mismo label más reciente — el
+  // profesional puede después elegir otro desde el desplegable.
+  const [compararValue, setCompararValue] = useState("");
   const [vista, setVista] = useState<Vista>("editar");
   const [biblioteca, setBiblioteca] = useState<EjercicioBiblioteca[]>(bibliotecaInicial);
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -167,6 +183,41 @@ export function PlanView({
   );
   const semana = semanas[semanaIdx];
   const dia = semana?.dias[diaIdx];
+
+  // "Comparar con" — opciones de otras semanas para tener de referencia
+  // mientras se programa el día activo (series/reps/ejercicios de la
+  // última vez que se programó un día con esta misma etiqueta, u otra que
+  // elija el profesional). Semana más reciente primero.
+  const semanasParaComparar = semana
+    ? [...semanas].filter((s) => s.id !== semana.id).sort((a, b) => b.numero - a.numero)
+    : [];
+
+  function valorComparar(semanaId: string, diaLabel: string) {
+    return `${semanaId}::${diaLabel}`;
+  }
+
+  // Se recalcula cada vez que cambia el día activo, así por defecto siempre
+  // apunta al día con la misma etiqueta más reciente de una semana
+  // anterior — el profesional puede elegir otro desde el desplegable de
+  // abajo sin que esto se lo pise mientras siga mirando el mismo día.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!dia || !semana) {
+      setCompararValue("");
+      return;
+    }
+    const anterior = semanasParaComparar.find(
+      (s) => s.numero < semana.numero && s.dias.some((d) => d.label === dia.label)
+    );
+    const match = anterior?.dias.find((d) => d.label === dia.label);
+    setCompararValue(anterior && match ? valorComparar(anterior.id, match.label) : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dia?.id]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  const [compararSemanaId, compararDiaLabel] = compararValue.split("::");
+  const semanaComparar = semanas.find((s) => s.id === compararSemanaId);
+  const diaComparar = semanaComparar?.dias.find((d) => d.label === compararDiaLabel);
 
   // Posición de la semana actual dentro de su mesociclo (por nombre) — para
   // la cuenta regresiva de fin de ciclo. Cuenta solo semanas con el mismo
@@ -966,6 +1017,58 @@ export function PlanView({
               />
 
               <SesionesPorDia sesiones={sesiones} diaLabel={dia.label} semanaCreatedAt={semana.created_at} />
+
+              {semanasParaComparar.length > 0 && (
+                <div className="mb-4">
+                  <label className="flex items-center gap-2 text-xs">
+                    <span className="dp-muted font-medium">Comparar con</span>
+                    <select
+                      value={compararValue}
+                      onChange={(e) => setCompararValue(e.target.value)}
+                      className="rounded-lg border border-black/10 px-2 py-1 text-xs outline-none focus:dp-border-brand"
+                    >
+                      <option value="">— Elegí un día de otra semana —</option>
+                      {semanasParaComparar.map((s) => (
+                        <optgroup key={s.id} label={`Semana ${s.numero}${s.mesociclo ? ` · ${s.mesociclo}` : ""}`}>
+                          {s.dias.map((d) => (
+                            <option key={d.id} value={valorComparar(s.id, d.label)}>
+                              {d.label}
+                              {d.foco ? ` — ${d.foco}` : ""}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </label>
+                  {diaComparar && semanaComparar && (
+                    <div className="dp-bg-faint mt-2 rounded-xl p-3">
+                      <p className="dp-eyebrow dp-muted mb-1.5">
+                        Semana {semanaComparar.numero} · {diaComparar.label}
+                        {diaComparar.foco && ` — ${diaComparar.foco}`}
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        {diaComparar.bloques.map((b) => (
+                          <div key={b.id}>
+                            {b.title && (
+                              <p className="dp-text-brand mb-0.5 text-[11px] font-semibold tracking-wide uppercase">
+                                {b.title}
+                              </p>
+                            )}
+                            <div className="flex flex-col gap-0.5">
+                              {b.exercises.map((e) => (
+                                <div key={e.id} className="flex items-center justify-between gap-2 text-xs">
+                                  <span className="dp-body truncate">{e.nombre || "—"}</span>
+                                  <span className="dp-muted shrink-0 font-mono">{resumenEjercicioPlan(e)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex flex-col gap-3">
                 {dia.bloques.map((b, bIdx) => {
