@@ -1164,9 +1164,13 @@ export function SesionesClient({
                                 {grupo.items.map(({ ejercicio: ex, idx }) => (
                                   <div key={ex.id} className="flex flex-col gap-1.5 py-2">
                                     <div className="flex flex-wrap items-center gap-2">
-                                      <span className="dp-text-heading min-w-0 flex-1 truncate text-sm">
-                                        {ex.nombre}
-                                      </span>
+                                      <input
+                                        value={ex.nombre}
+                                        onChange={(e) => actualizarEjercicioEdicion(idx, { nombre: e.target.value })}
+                                        list="sesiones-biblioteca-datalist"
+                                        title="Corregir qué ejercicio fue en realidad"
+                                        className="dp-text-heading min-w-0 flex-1 rounded-md border border-black/10 px-1.5 py-0.5 text-sm outline-none focus:dp-border-brand"
+                                      />
                                       <span className="dp-muted text-[10px]">Series</span>
                                       <input
                                         type="number"
