@@ -87,10 +87,12 @@ export default async function PortalHistoricoPage({ params }: { params: Promise<
     const sesionesVentana = (sesiones ?? []).filter(
       (ses) => ses.fecha >= desde && (!hasta || ses.fecha < hasta)
     );
-    const volumen = sesionesVentana.reduce(
-      (sum, ses) => sum + ses.ejercicios.reduce((sSum, ex) => sSum + volumenEjercicioSesion(ex), 0),
-      0
-    );
+    // Las sesiones de Kinesiología no son "rutina" (no tienen series/reps/kg
+    // que mostrar como volumen de entrenamiento) — se excluyen de este
+    // cálculo para no ensuciar el gráfico de carga con sesiones de otro tipo.
+    const volumen = sesionesVentana
+      .filter((ses) => ses.tipo !== "Kinesiología")
+      .reduce((sum, ses) => sum + ses.ejercicios.reduce((sSum, ex) => sSum + volumenEjercicioSesion(ex), 0), 0);
     const diasEntrenados = new Set(sesionesVentana.map((ses) => ses.dia_plan_label)).size;
     // Mismo criterio de ventana que el volumen — promedio de dolor (ver
     // CheckinDiarioCard en Tareas) de esa semana, para el gráfico combinado
@@ -115,25 +117,29 @@ export default async function PortalHistoricoPage({ params }: { params: Promise<
 
   // Lo mismo que arriba (porSemana) pero por ejercicio puntual en vez de
   // volumen total — para poder comparar "cuánto hice la semana pasada en
-  // ESTE ejercicio" sesión a sesión, no solo el total movido.
+  // ESTE ejercicio" sesión a sesión, no solo el total movido. Mismo
+  // criterio: las técnicas que se cargan en una sesión de Kinesiología no
+  // son "rutina" de entrenamiento, así que no entran a esta progresión.
   const porEjercicio = new Map<string, EjercicioHistorico["entradas"]>();
-  (sesiones ?? []).forEach((s) => {
-    s.ejercicios.forEach((ex) => {
-      const nombre = ex.nombre.trim();
-      if (!nombre) return;
-      const lista = porEjercicio.get(nombre) ?? [];
-      lista.push({
-        fecha: s.fecha,
-        diaPlanLabel: s.dia_plan_label || null,
-        seriesReal: ex.seriesReal,
-        repsReal: ex.repsReal,
-        kgReal: ex.kgReal,
-        repsSeriesReal: ex.repsSeriesReal,
-        pesosSeriesReal: ex.pesosSeriesReal,
+  (sesiones ?? [])
+    .filter((s) => s.tipo !== "Kinesiología")
+    .forEach((s) => {
+      s.ejercicios.forEach((ex) => {
+        const nombre = ex.nombre.trim();
+        if (!nombre) return;
+        const lista = porEjercicio.get(nombre) ?? [];
+        lista.push({
+          fecha: s.fecha,
+          diaPlanLabel: s.dia_plan_label || null,
+          seriesReal: ex.seriesReal,
+          repsReal: ex.repsReal,
+          kgReal: ex.kgReal,
+          repsSeriesReal: ex.repsSeriesReal,
+          pesosSeriesReal: ex.pesosSeriesReal,
+        });
+        porEjercicio.set(nombre, lista);
       });
-      porEjercicio.set(nombre, lista);
     });
-  });
   const ejerciciosHistorico: EjercicioHistorico[] = [...porEjercicio.entries()]
     .map(([nombre, entradas]) => ({
       nombre,
@@ -209,10 +215,9 @@ export default async function PortalHistoricoPage({ params }: { params: Promise<
         meses.map(([key, lista]) => {
           const [anio, mes] = key.split("-").map(Number);
           const nombreMes = `${MESES[mes - 1]} ${anio}`;
-          const volumenTotal = lista.reduce(
-            (sum, s) => sum + s.ejercicios.reduce((sSum, ex) => sSum + volumenEjercicioSesion(ex), 0),
-            0
-          );
+          const volumenTotal = lista
+            .filter((s) => s.tipo !== "Kinesiología")
+            .reduce((sum, s) => sum + s.ejercicios.reduce((sSum, ex) => sSum + volumenEjercicioSesion(ex), 0), 0);
           const porDia = new Map<string, number>();
           lista.forEach((s) => {
             const label = s.dia_plan_label || "Sin día asignado";
@@ -240,15 +245,40 @@ export default async function PortalHistoricoPage({ params }: { params: Promise<
               </div>
 
               <div className="divide-y divide-white/10">
-                {lista.map((s) => (
-                  <div key={s.id} className="flex items-center justify-between gap-2 py-1.5 text-sm">
-                    <span className="dp-body">
-                      <span className="font-mono text-xs">{fmtFecha(s.fecha)}</span>
-                      {s.dia_plan_label && ` · ${s.dia_plan_label}`}
-                    </span>
-                    <EliminarSesionButton token={token} sesionId={s.id} />
-                  </div>
-                ))}
+                {lista.map((s) => {
+                  const esKinesiologia = s.tipo === "Kinesiología";
+                  const trabajado = esKinesiologia
+                    ? s.ejercicios.map((ex) => ex.nombre.trim()).filter(Boolean)
+                    : [];
+                  return (
+                    <div key={s.id} className="py-1.5">
+                      <div className="flex items-center justify-between gap-2 text-sm">
+                        <span className="dp-body">
+                          <span className="font-mono text-xs">{fmtFecha(s.fecha)}</span>
+                          {esKinesiologia ? " · Kinesiología" : s.dia_plan_label && ` · ${s.dia_plan_label}`}
+                        </span>
+                        <EliminarSesionButton token={token} sesionId={s.id} />
+                      </div>
+                      {/* Para Kinesiología se muestra QUÉ se trabajó (solo
+                          nombres) y los comentarios pre/post — nunca
+                          series/reps/kg, que son datos de rutina de
+                          entrenamiento y no corresponden acá. */}
+                      {esKinesiologia && trabajado.length > 0 && (
+                        <p className="dp-muted mt-0.5 text-xs">Se trabajó: {trabajado.join(", ")}</p>
+                      )}
+                      {esKinesiologia && s.comentarios_pre && (
+                        <p className="dp-muted mt-0.5 text-xs">
+                          <span className="font-medium">Pre-sesión:</span> {s.comentarios_pre}
+                        </p>
+                      )}
+                      {esKinesiologia && s.comentarios && (
+                        <p className="dp-muted mt-0.5 text-xs">
+                          <span className="font-medium">Post-sesión:</span> {s.comentarios}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </section>
           );
