@@ -29,6 +29,7 @@ import {
 import { ExerciseRow, EXERCISE_ROW_GRID_EDITABLE } from "./ExerciseRow";
 import { ResumenDia } from "./ResumenDia";
 import { BarraDeCarga } from "./BarraDeCarga";
+import { ImportarRutinaExcelButton } from "./ImportarRutinaExcelButton";
 import { FmsResumenPlan } from "./FmsResumenPlan";
 import { SesionesPorDia } from "@/components/SesionesPorDia";
 import { ResumenProgramacion } from "./ResumenProgramacion";
@@ -585,6 +586,13 @@ export function PlanView({
           >
             {creando ? "Creando…" : "Crear primera semana"}
           </button>
+          <ImportarRutinaExcelButton
+            clienteId={clienteId}
+            onImportado={(nuevas, activaId) => {
+              setSemanas((prev) => [...prev, ...nuevas]);
+              setSemanaActivaId(activaId);
+            }}
+          />
           {plantillas.length > 0 && (
             <>
               <p className="dp-muted text-xs">o empezá de una plantilla de la biblioteca de rutinas</p>
@@ -705,6 +713,13 @@ export function PlanView({
           >
             + {creando ? "Creando…" : "Nueva semana"}
           </button>
+          <ImportarRutinaExcelButton
+            clienteId={clienteId}
+            onImportado={(nuevas, activaId) => {
+              setSemanas((prev) => [...prev, ...nuevas]);
+              setSemanaActivaId(activaId);
+            }}
+          />
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-1.5">
