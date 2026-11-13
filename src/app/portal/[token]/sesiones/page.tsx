@@ -36,9 +36,9 @@ export default async function PortalSesionesPage({ params }: { params: Promise<{
     cliente.semana_activa_id
       ? admin
           .from("plan_semanas")
-          .select("dias_publicado")
+          .select("dias_publicado, publicado_at")
           .eq("id", cliente.semana_activa_id)
-          .single<Pick<PlanSemana, "dias_publicado">>()
+          .single<Pick<PlanSemana, "dias_publicado" | "publicado_at">>()
       : Promise.resolve({ data: null }),
     obtenerDiasConfirmados(cliente.id, toISODate(new Date())),
   ]);
@@ -55,7 +55,11 @@ export default async function PortalSesionesPage({ params }: { params: Promise<{
         diasConfirmadosIniciales={diasConfirmados.map((d) => d.fecha)}
       />
 
-      <PortalNuevaSesionForm token={token} dias={semana?.dias_publicado ?? []} />
+      <PortalNuevaSesionForm
+        token={token}
+        dias={semana?.dias_publicado ?? []}
+        publicadoAt={semana?.publicado_at ?? null}
+      />
 
       <p className="dp-muted text-center text-xs">
         ¿Querés ver lo que ya entrenaste?{" "}
