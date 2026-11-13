@@ -54,6 +54,12 @@ type Draft = {
   pilares: ReturnType<typeof emptySesionPilares>;
   comentarios: string;
   ejercicios: EjercicioSesion[];
+  // Marca de cuándo se compartió la rutina al momento de guardar este
+  // borrador — si el profesional comparte una actualización mientras el
+  // borrador sigue sin enviarse, al recuperarlo esto no coincide con lo
+  // que llega fresco del server y se sabe que los ejercicios quedaron
+  // viejos (ver recuperarDraft).
+  publicadoAt: string | null;
 };
 
 function draftKey(token: string) {
@@ -100,19 +106,28 @@ function ejerciciosDelDia(dia: DiaPlan | undefined): EjercicioSesion[] {
   return dia ? ejerciciosDesdeDia(dia) : [];
 }
 
-function nuevoDraft(dias: DiaPlan[]): Draft {
+function nuevoDraft(dias: DiaPlan[], publicadoAt: string | null): Draft {
   const primerDia = dias[0];
   return {
     diaPlanLabel: primerDia?.label ?? "",
     pilares: emptySesionPilares(),
     comentarios: "",
     ejercicios: ejerciciosDelDia(primerDia),
+    publicadoAt,
   };
 }
 
-export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: DiaPlan[] }) {
+export function PortalNuevaSesionForm({
+  token,
+  dias,
+  publicadoAt,
+}: {
+  token: string;
+  dias: DiaPlan[];
+  publicadoAt: string | null;
+}) {
   const [abierto, setAbierto] = useState(false);
-  const [draft, setDraft] = useState<Draft>(() => nuevoDraft(dias));
+  const [draft, setDraft] = useState<Draft>(() => nuevoDraft(dias, publicadoAt));
   const [pending, startTransition] = useTransition();
   const [enviado, setEnviado] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,13 +143,33 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
   // Tiene que ser un efecto (no un lazy initializer de useState): localStorage
   // no existe en el render de servidor, así que leerlo ahí adentro
   // desincronizaría el HTML del servidor del primer render del cliente.
+  //
+  // Si el profesional compartió una actualización de la rutina DESPUÉS de
+  // que se guardó este borrador (publicadoAt no coincide), los ejercicios
+  // guardados quedaron viejos — antes se restauraban tal cual, así que el
+  // atleta podía terminar registrando una sesión con ejercicios que el
+  // profesional ya había cambiado. Se arman de nuevo desde `dias` (fresco),
+  // tratando de mantener el mismo día elegido; pilares/comentarios sí se
+  // conservan, porque no dependen de la rutina.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const guardado = leerDraft(token);
-    if (guardado) {
+    if (!guardado) return;
+    if (guardado.publicadoAt === publicadoAt) {
       setDraft(guardado);
       setAbierto(true);
+      return;
     }
+    const dia = dias.find((d) => d.label === guardado.diaPlanLabel) ?? dias[0];
+    setDraft({
+      diaPlanLabel: dia?.label ?? "",
+      pilares: guardado.pilares,
+      comentarios: guardado.comentarios,
+      ejercicios: ejerciciosDelDia(dia),
+      publicadoAt,
+    });
+    setAbierto(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -170,7 +205,7 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
           ejercicios: draft.ejercicios,
         });
         borrarDraft(token);
-        setDraft(nuevoDraft(dias));
+        setDraft(nuevoDraft(dias, publicadoAt));
         setEnviado(true);
         setAbierto(false);
       } catch {
@@ -191,7 +226,7 @@ export function PortalNuevaSesionForm({ token, dias }: { token: string; dias: Di
         <button
           type="button"
           onClick={() => {
-            setDraft((prev) => (prev.diaPlanLabel ? prev : nuevoDraft(dias)));
+            setDraft((prev) => (prev.diaPlanLabel ? prev : nuevoDraft(dias, publicadoAt)));
             setAbierto(true);
             setEnviado(false);
           }}
