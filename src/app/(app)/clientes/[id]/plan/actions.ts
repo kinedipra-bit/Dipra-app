@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { mandarPushACliente } from "@/lib/push";
 import type { DiaPlan, PlanSemana, EjercicioBiblioteca, PlantillaRutina } from "@/lib/dipra/types";
+import { parsearRutinaExcel } from "@/lib/dipra/importarRutinaExcel";
 
 // Inicio calcula la alerta "semana completa" (ver alertasProgramacion.ts) a
 // partir de los días/fecha de creación de la semana ACTIVA de cada cliente
@@ -303,4 +304,70 @@ export async function guardarEnBiblioteca(nombre: string, link: string): Promise
 
   revalidatePath("/biblioteca");
   return data;
+}
+
+// Importa una rutina armada en Excel (hoja "Plani <año>", mismo formato que
+// usa Nicolás para todos sus clientes — ver parsearRutinaExcel) y la crea
+// como semanas nuevas, en borrador (cambios_sin_compartir: true, igual que
+// "+ Nueva semana") — nunca se comparten solas, el profesional las revisa
+// en Plan y comparte cuando esté conforme. Sigue la numeración existente
+// del cliente (no reemplaza nada ya cargado).
+export async function importarRutinaDesdeExcel(
+  clienteId: string,
+  formData: FormData
+): Promise<{ semanas: PlanSemana[]; diasCreados: number; ejerciciosCreados: number }> {
+  const archivo = formData.get("archivo");
+  if (!(archivo instanceof File)) throw new Error("No se recibió ningún archivo.");
+
+  const buffer = Buffer.from(await archivo.arrayBuffer());
+  const resultado = await parsearRutinaExcel(buffer);
+
+  const supabase = await createClient();
+  const { data: existentes, error: errorLectura } = await supabase
+    .from("plan_semanas")
+    .select("numero")
+    .eq("client_id", clienteId)
+    .order("numero", { ascending: false })
+    .limit(1)
+    .returns<{ numero: number }[]>();
+  if (errorLectura) throw new Error(errorLectura.message);
+  const numeroBase = existentes?.[0]?.numero ?? 0;
+
+  const filas = resultado.semanas.map((s, i) => ({
+    id: crypto.randomUUID(),
+    client_id: clienteId,
+    numero: numeroBase + i + 1,
+    mesociclo: resultado.mesociclo,
+    objetivo: resultado.objetivo,
+    duracion_semanas: resultado.semanas.length,
+    dias: s.dias as unknown as DiaPlan[],
+    cambios_sin_compartir: true,
+  }));
+
+  const { data: creadas, error } = await supabase
+    .from("plan_semanas")
+    .insert(filas)
+    .select("*")
+    .returns<PlanSemana[]>();
+  if (error) throw new Error(error.message);
+
+  const ultima = creadas?.[creadas.length - 1];
+  if (ultima) {
+    const { error: errorActiva } = await supabase
+      .from("clients")
+      .update({ semana_activa_id: ultima.id })
+      .eq("id", clienteId);
+    if (errorActiva) throw new Error(errorActiva.message);
+  }
+
+  revalidatePath(`/clientes/${clienteId}/plan`);
+  revalidatePath(`/clientes/${clienteId}/sesiones`);
+  revalidarInicio();
+
+  const diasCreados = filas.reduce((sum, f) => sum + f.dias.length, 0);
+  const ejerciciosCreados = filas.reduce(
+    (sum, f) => sum + f.dias.reduce((s2, d) => s2 + d.bloques.reduce((s3, b) => s3 + b.exercises.length, 0), 0),
+    0
+  );
+  return { semanas: creadas ?? [], diasCreados, ejerciciosCreados };
 }
