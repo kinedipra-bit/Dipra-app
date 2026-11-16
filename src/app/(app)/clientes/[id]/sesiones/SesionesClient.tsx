@@ -329,10 +329,38 @@ export function SesionesClient({
     setModo("list");
   };
 
+  // Al elegir un día para una sesión nueva, arranca con lo que REALMENTE se
+  // hizo la última vez que se registró ese mismo día (no con lo
+  // planificado) — si programado dice 20kg pero la última sesión real fue
+  // a 25kg, tiene que seguir mostrando 25kg, no volver a pisarlo con el
+  // número viejo del plan cada vez. Nombre/bloque/video/unilateral siguen
+  // viniendo del plan vigente (por si el ejercicio cambió desde la última
+  // vez); solo los números de desempeño (series/reps/kg/rpe) se traen de
+  // la sesión anterior, quedan de otra forma. Si nunca se registró ese día
+  // antes, sigue mostrando lo planificado como punto de partida.
+  const conValoresReales = (ejercicios: EjercicioSesion[], label: string): EjercicioSesion[] => {
+    const anterior = sesiones.find((s) => s.dia_plan_label === label);
+    if (!anterior) return ejercicios;
+    const porNombre = new Map(anterior.ejercicios.map((e) => [e.nombre.trim().toLowerCase(), e]));
+    return ejercicios.map((ex) => {
+      const real = porNombre.get(ex.nombre.trim().toLowerCase());
+      if (!real) return ex;
+      return {
+        ...ex,
+        seriesReal: real.seriesReal,
+        repsReal: real.repsReal,
+        kgReal: real.kgReal,
+        pesosSeriesReal: real.pesosSeriesReal,
+        repsSeriesReal: real.repsSeriesReal,
+        rpeSeries: real.rpeSeries,
+      };
+    });
+  };
+
   const elegirDia = (label: string) => {
     if (!draft) return;
     const dia = diasPlan.find((d) => d.label === label);
-    const ejercicios = dia ? ejerciciosDesdeDia(dia) : [];
+    const ejercicios = dia ? conValoresReales(ejerciciosDesdeDia(dia), label) : [];
     setDraft({ ...draft, dia_plan_label: label, ejercicios });
   };
 
