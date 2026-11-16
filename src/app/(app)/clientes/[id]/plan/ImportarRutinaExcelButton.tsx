@@ -73,8 +73,15 @@ export function ImportarRutinaExcelButton({
           type="file"
           accept=".xlsx"
           onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
-          className="text-xs"
+          className="hidden"
         />
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="dp-text-brand min-w-0 max-w-full truncate rounded-lg border border-black/10 bg-white px-3 py-1 text-xs font-medium"
+        >
+          {archivo ? archivo.name : "📄 Elegir archivo Excel…"}
+        </button>
         <button
           type="button"
           onClick={importar}
