@@ -396,9 +396,9 @@ export function PortalNuevaSesionForm({
                               />
                             </div>
                           )}
-                          {(ex.tipoCarga || ex.tiempoSerie) && (
+                          {(ex.tipoCarga || ex.tiempoSerie || ex.tut) && (
                             <p className="dp-muted text-[10px]">
-                              {[ex.tipoCarga, ex.tiempoSerie].filter(Boolean).join(" · ")}
+                              {[ex.tipoCarga, ex.tiempoSerie, ex.tut && `Tempo ${ex.tut}`].filter(Boolean).join(" · ")}
                             </p>
                           )}
                           {ex.notaReps && (
