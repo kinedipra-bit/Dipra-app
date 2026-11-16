@@ -181,7 +181,8 @@ export function FilaEjercicioDraft({
           <p className="dp-muted font-mono text-xs">
             plan {ex.seriesPlan}×{ex.repsPlan}
             {ex.unilateral ? " c/u" : ""}×{kgPlanTexto}kg{ex.pesoCadaUno ? " c/u" : ""}
-            {(ex.tipoCarga || ex.tiempoSerie) && ` · ${[ex.tipoCarga, ex.tiempoSerie].filter(Boolean).join(" · ")}`}
+            {(ex.tipoCarga || ex.tiempoSerie || ex.tut) &&
+              ` · ${[ex.tipoCarga, ex.tiempoSerie, ex.tut && `Tempo ${ex.tut}`].filter(Boolean).join(" · ")}`}
           </p>
           {ex.notaReps && (
             <span className="dp-bg-amber-soft dp-text-amber mt-1 block w-fit rounded-md px-1.5 py-0.5 text-[10px]">

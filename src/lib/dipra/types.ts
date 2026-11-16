@@ -362,11 +362,16 @@ export interface EjercicioSesion {
   repsSeriesReal?: (number | string)[];
   // Copiados del ejercicio del plan para que la sesión muestre exactamente
   // lo mismo que ve el profesional/atleta en la rutina (unilateral, peso
-  // c/u, tipo de carga, tiempo bajo tensión).
+  // c/u, tipo de carga, duración si es por tiempo).
   unilateral?: boolean;
   pesoCadaUno?: boolean;
   tipoCarga?: string;
   tiempoSerie?: string;
+  // Tempo de cada repetición (ej. "3/1/1") — copiado de EjercicioPlan.tut.
+  // Antes no se copiaba a la sesión, así que ni el profesional ni el
+  // cliente lo veían al registrar lo que hizo (solo quedaba en "Mi
+  // rutina"). No confundir con tiempoSerie (duración del ejercicio).
+  tut?: string;
   // Igual que en EjercicioPlan — necesario para que el volumen (ver
   // volumenEjercicioSesion) sepa que kgReal no es peso real cuando la carga
   // es banda/peso corporal/tiempo/vueltas.
