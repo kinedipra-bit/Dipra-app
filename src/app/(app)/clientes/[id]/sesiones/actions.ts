@@ -24,12 +24,88 @@ function revalidar(clienteId: string) {
   revalidatePath("/clientes");
 }
 
+// Nicolás no siempre "programa": para varios clientes, el plan se va
+// ajustando directo en la sesión (sube un peso, cambia un ejercicio) sin
+// pasar antes por Plan. Sin esto, el Plan quedaba pegado en lo que decía
+// la última vez que SÍ se editó ahí, aunque hiciera rato que la sesión real
+// fuera otra. Así que al guardar una sesión de un día del plan, lo
+// realmente hecho (nombre/series/reps/kg/unilateral/peso c/u) se vuelca de
+// vuelta al ejercicio correspondiente de la semana ACTIVA — matcheando por
+// planExercicioId (ver EjercicioSesion), no por nombre, porque el nombre es
+// justo uno de los campos que puede haber cambiado. Ejercicios extra
+// agregados en la sesión (sin planExercicioId) y sesiones sin día de
+// plan elegido quedan afuera: no tienen un lugar claro en el plan al que
+// volcarse. Queda como borrador (cambios_sin_compartir) igual que cualquier
+// otro cambio en Plan — si el cliente SÍ usa el portal, no ve el cambio
+// hasta que Nicolás comparta.
+async function sincronizarPlanConSesion(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  clienteId: string,
+  input: NuevaSesionInput
+) {
+  if (!input.dia_plan_label) return;
+  const reales = input.ejercicios.filter((e) => !e.extra && e.planExercicioId);
+  if (reales.length === 0) return;
+
+  const { data: cliente } = await supabase
+    .from("clients")
+    .select("semana_activa_id")
+    .eq("id", clienteId)
+    .single<{ semana_activa_id: string | null }>();
+  if (!cliente?.semana_activa_id) return;
+
+  const { data: semana } = await supabase
+    .from("plan_semanas")
+    .select("dias")
+    .eq("id", cliente.semana_activa_id)
+    .single<{ dias: DiaPlan[] }>();
+  if (!semana) return;
+
+  const porId = new Map(reales.map((e) => [e.planExercicioId, e]));
+  let cambio = false;
+  const dias = semana.dias.map((d) => {
+    if (d.label !== input.dia_plan_label) return d;
+    return {
+      ...d,
+      bloques: d.bloques.map((b) => ({
+        ...b,
+        exercises: b.exercises.map((ex) => {
+          const real = porId.get(ex.id);
+          if (!real) return ex;
+          cambio = true;
+          return {
+            ...ex,
+            nombre: real.nombre,
+            series: real.seriesReal,
+            reps: real.repsReal,
+            kg: real.kgReal,
+            pesosSeries: real.pesosSeriesReal,
+            repsSeries: real.repsSeriesReal,
+            unilateral: real.unilateral,
+            pesoCadaUno: real.pesoCadaUno,
+          };
+        }),
+      })),
+    };
+  });
+  if (!cambio) return;
+
+  const { error } = await supabase
+    .from("plan_semanas")
+    .update({ dias, cambios_sin_compartir: true })
+    .eq("id", cliente.semana_activa_id);
+  if (error) return;
+
+  revalidatePath(`/clientes/${clienteId}/plan`);
+}
+
 export async function crearSesion(clienteId: string, input: NuevaSesionInput) {
   const supabase = await createClient();
   const { error } = await supabase
     .from("sesiones")
     .insert({ client_id: clienteId, ...input, registrada_por_cliente: false, revisada: true });
   if (error) throw new Error(error.message);
+  await sincronizarPlanConSesion(supabase, clienteId, input);
   revalidar(clienteId);
 }
 
