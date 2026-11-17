@@ -43,6 +43,18 @@ import {
 
 type Vista = "editar" | "resumen-dia" | "resumen-semana";
 
+// Fecha en que se creó la semana — es lo más cercano a "cuándo arrancamos
+// esta semana" que hay para clientes a los que no se les comparte la
+// rutina (sin eso no queda ningún registro de fecha), mismo criterio que
+// ya usa SesionesPorDia/alertasProgramacion para acotar sesiones a la
+// semana vigente.
+function formatFechaSemana(iso: string): string {
+  const d = new Date(iso);
+  return isNaN(d.getTime())
+    ? iso.slice(0, 10)
+    : d.toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "2-digit" }).replace(/\.$/, "");
+}
+
 // Texto de solo lectura para el panel "Comparar con" — mismo criterio de
 // peso por serie que ExerciseRow (kgTexto), pero sin estado propio porque
 // acá nunca se edita, solo se muestra de referencia.
@@ -682,7 +694,7 @@ export function PlanView({
               <button
                 type="button"
                 onClick={() => seleccionarSemana(s.id)}
-                title={s.id === clienteVeSemanaId ? `Semana ${s.numero} — el cliente ve esta` : `Semana ${s.numero}`}
+                title={`${s.id === clienteVeSemanaId ? `Semana ${s.numero} — el cliente ve esta` : `Semana ${s.numero}`} · desde ${formatFechaSemana(s.created_at)}`}
                 className={`rounded-lg py-1 pl-2.5 text-xs font-medium transition-colors ${
                   s.id === semana.id ? "text-white" : "dp-body"
                 } ${semanas.length > 1 ? "pr-1" : "pr-2.5"}`}
@@ -868,6 +880,12 @@ export function PlanView({
           <span className="dp-bg-faint dp-body rounded-lg px-2.5 py-1 text-xs font-medium">
             Semana {semanaEnMesociclo} de {semana.duracion_semanas}
             {semana.mesociclo && ` — ${semana.mesociclo}`}
+          </span>
+          <span
+            className="dp-muted rounded-lg px-2.5 py-1 text-xs font-medium"
+            title="Fecha en que se creó esta semana en la app"
+          >
+            📅 Desde {formatFechaSemana(semana.created_at)}
           </span>
           {cicloCompleto && (
             <span className="dp-bg-amber-soft dp-text-amber rounded-lg px-2.5 py-1 text-xs font-medium">
