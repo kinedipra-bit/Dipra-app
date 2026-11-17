@@ -10,6 +10,7 @@ export function ejerciciosDesdeDia(dia: DiaPlan): EjercicioSesion[] {
     b.exercises.forEach((e) => {
       ejercicios.push({
         id: crypto.randomUUID(),
+        planExercicioId: e.id,
         nombre: e.nombre,
         seriesPlan: e.series,
         repsPlan: e.reps,

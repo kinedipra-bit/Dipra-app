@@ -341,6 +341,13 @@ export interface PlanKine {
 
 export interface EjercicioSesion {
   id: string;
+  // Id del EjercicioPlan de origen (ver agruparEjercicios.ejerciciosDesdeDia)
+  // — permite, al guardar la sesión, actualizar ESE mismo ejercicio en la
+  // semana activa del plan con lo realmente hecho (ver
+  // sesiones/actions.crearSesion). Ejercicios agregados en vivo durante la
+  // sesión (ver `extra`) no tienen equivalente en el plan, así que no lo
+  // traen.
+  planExercicioId?: string;
   nombre: string;
   seriesPlan: number;
   repsPlan: number;
