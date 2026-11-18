@@ -16,7 +16,7 @@ const inputClass = "rounded-lg border border-black/10 px-3 py-1.5 text-sm outlin
 // Convierte un registro ya guardado (números) al shape del draft del
 // formulario (strings, como lo escriben los <input type="number">).
 function draftDesdeEntry(entry: PrHistorialEntry) {
-  const draft = { ...nuevoDraft(), extra: {} as Record<string, string> };
+  const draft = { ...nuevoDraft(), extra: {} as Record<string, string>, notas: {} as Record<string, string> };
   draft.fecha = entry.fecha;
   draft.mesociclo = entry.mesociclo;
   draft.objetivo = entry.objetivo;
@@ -25,7 +25,44 @@ function draftDesdeEntry(entry: PrHistorialEntry) {
     draft[m.key] = String(entry[m.key] ?? "");
   });
   draft.extra = Object.fromEntries(Object.entries(entry.extra ?? {}).map(([k, v]) => [k, String(v)]));
+  draft.notas = { ...(entry.notas ?? {}) };
   return draft;
+}
+
+// Comentario puntual de una prueba (ej. "le dolió la espalda" en dead
+// hang) — colapsado por defecto para no duplicar el ancho de la grilla de
+// métricas; se abre con el ícono y, si ya tenía un comentario cargado
+// (editando un registro viejo), arranca abierto.
+function NotaPrueba({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [abierta, setAbierta] = useState(() => value.trim().length > 0);
+
+  if (!abierta) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAbierta(true)}
+        className="dp-muted self-start text-[10px] hover:underline"
+      >
+        💬 + nota
+      </button>
+    );
+  }
+
+  return (
+    <input
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onBlur={() => !value.trim() && setAbierta(false)}
+      placeholder="Nota de esta prueba (ej. le dolió la espalda)"
+      className="rounded-md border border-black/10 px-1.5 py-0.5 text-[10px] outline-none focus:dp-border-brand"
+    />
+  );
 }
 
 /**
@@ -60,7 +97,11 @@ export function NuevaMedicionForm({
   onCancelarEdicion?: () => void;
 }) {
   const [showAdd, setShowAdd] = useState(false);
-  const [draft, setDraft] = useState({ ...nuevoDraft(), extra: {} as Record<string, string> });
+  const [draft, setDraft] = useState({
+    ...nuevoDraft(),
+    extra: {} as Record<string, string>,
+    notas: {} as Record<string, string>,
+  });
   const [metricasExtra, setMetricasExtra] = useState(metricasExtraIniciales);
   const [mostrarNuevoEjercicio, setMostrarNuevoEjercicio] = useState(false);
   const [nuevoEjercicioLabel, setNuevoEjercicioLabel] = useState("");
@@ -132,6 +173,7 @@ export function NuevaMedicionForm({
       plancha_lateral_izq: 0,
       pararse_del_suelo: 0,
       extra: Object.fromEntries(metricasExtra.map((m) => [m.id, Number(draft.extra[m.id]) || 0])),
+      notas: Object.fromEntries(Object.entries(draft.notas).filter(([, v]) => v.trim())),
     };
     METRICS.forEach((m) => {
       entrada[m.key] = Number(draft[m.key]) || 0;
@@ -143,13 +185,13 @@ export function NuevaMedicionForm({
       } else {
         await crearPrHistorial(clienteId, entrada);
       }
-      setDraft({ ...nuevoDraft(), extra: {} });
+      setDraft({ ...nuevoDraft(), extra: {}, notas: {} });
       setShowAdd(false);
     });
   };
 
   const cancelar = () => {
-    setDraft({ ...nuevoDraft(), extra: {} });
+    setDraft({ ...nuevoDraft(), extra: {}, notas: {} });
     setShowAdd(false);
     onCancelarEdicion?.();
   };
@@ -229,6 +271,10 @@ export function NuevaMedicionForm({
                         <option value="Hexagonal">Hexagonal</option>
                       </select>
                     )}
+                    <NotaPrueba
+                      value={draft.notas[m.key] ?? ""}
+                      onChange={(v) => setDraft({ ...draft, notas: { ...draft.notas, [m.key]: v } })}
+                    />
                   </label>
                 ))}
               </div>
@@ -306,6 +352,10 @@ export function NuevaMedicionForm({
                       value={draft.extra[m.id] ?? ""}
                       onChange={(e) => setDraft({ ...draft, extra: { ...draft.extra, [m.id]: e.target.value } })}
                       className={`${inputClass} font-mono`}
+                    />
+                    <NotaPrueba
+                      value={draft.notas[m.id] ?? ""}
+                      onChange={(v) => setDraft({ ...draft, notas: { ...draft.notas, [m.id]: v } })}
                     />
                   </div>
                 ))}

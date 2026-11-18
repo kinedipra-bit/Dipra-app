@@ -9,15 +9,15 @@ import type {
   EvaluacionCustomEntry,
   FmsHistorialEntry,
   MetricaExtra,
-  MovilidadArticularEntry,
   MovilidadEsferaEntry,
+  PruebaEspecialEntry,
 } from "@/lib/dipra/types";
 import { EpisodiosSection } from "./EpisodiosSection";
 import { PilaresSection } from "./PilaresSection";
 import { ComposicionCorporalSection } from "./ComposicionCorporalSection";
 import { FmsSection } from "./FmsSection";
 import { MovilidadEsferasSection } from "./MovilidadEsferasSection";
-import { MovilidadArticularSection } from "./MovilidadArticularSection";
+import { PruebasEspecialesSection } from "./PruebasEspecialesSection";
 import { BateriaAdultoMayorSection } from "./BateriaAdultoMayorSection";
 import { EvaluacionesCustomSection } from "./EvaluacionesCustomSection";
 import { DiagnosticoKinesicoSection } from "./DiagnosticoKinesicoSection";
@@ -36,7 +36,7 @@ export default async function EvaluacionPage({ params }: { params: Promise<{ id:
     { data: movilidad },
     { data: evaluacionesCustom },
     { data: metricasExtra },
-    { data: movilidadArticular },
+    { data: pruebasEspeciales },
     { data: bateriaAdultoMayor },
   ] = await Promise.all([
     supabase.from("clients").select("*").eq("id", id).single<Cliente>(),
@@ -77,11 +77,11 @@ export default async function EvaluacionPage({ params }: { params: Promise<{ id:
       .order("created_at")
       .returns<MetricaExtra[]>(),
     supabase
-      .from("client_movilidad_articular_historial")
+      .from("client_pruebas_especiales_historial")
       .select("*")
       .eq("client_id", id)
       .order("fecha", { ascending: false })
-      .returns<MovilidadArticularEntry[]>(),
+      .returns<PruebaEspecialEntry[]>(),
     supabase
       .from("client_bateria_adulto_mayor")
       .select("*")
@@ -109,7 +109,7 @@ export default async function EvaluacionPage({ params }: { params: Promise<{ id:
           <>
             <FmsSection clienteId={cliente.id} initialItems={fmsHistorial ?? []} />
             <MovilidadEsferasSection clienteId={cliente.id} initialItems={movilidad ?? []} />
-            <MovilidadArticularSection clienteId={cliente.id} initialItems={movilidadArticular ?? []} />
+            <PruebasEspecialesSection clienteId={cliente.id} initialItems={pruebasEspeciales ?? []} />
           </>
         ),
         rendimiento: (

@@ -32,6 +32,9 @@ export interface NuevaMedicionInput {
   // Valores de métricas personalizadas (ver MetricaExtra), clave = su id —
   // opcional porque la evaluación grupal (EvaluacionGrupalForm) no las usa.
   extra?: Record<string, number>;
+  // Comentario puntual por prueba de esta visita (ej. "le dolió la
+  // espalda" en dead_hang) — mismo espacio de claves que `extra`.
+  notas?: Record<string, string>;
 }
 
 // El formulario de carga (NuevaMedicionForm) se reusa desde Evaluación
@@ -45,7 +48,7 @@ export async function crearPrHistorial(clienteId: string, input: NuevaMedicionIn
   const supabase = await createClient();
   const { error } = await supabase
     .from("client_pr_historial")
-    .insert({ client_id: clienteId, ...input, extra: input.extra ?? {} });
+    .insert({ client_id: clienteId, ...input, extra: input.extra ?? {}, notas: input.notas ?? {} });
   if (error) throw new Error(error.message);
   revalidar(clienteId);
 }
@@ -56,7 +59,7 @@ export async function actualizarPrHistorial(clienteId: string, id: string, input
   const supabase = await createClient();
   const { error } = await supabase
     .from("client_pr_historial")
-    .update({ ...input, extra: input.extra ?? {} })
+    .update({ ...input, extra: input.extra ?? {}, notas: input.notas ?? {} })
     .eq("id", id);
   if (error) throw new Error(error.message);
   revalidar(clienteId);
