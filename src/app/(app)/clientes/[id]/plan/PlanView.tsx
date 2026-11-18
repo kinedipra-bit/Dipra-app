@@ -683,6 +683,11 @@ export function PlanView({
         ))}
       </datalist>
 
+      <p className="dp-bg-faint dp-muted rounded-xl px-3 py-2 text-xs">
+        💡 Recordá dejar al menos 24-48h entre días de entrenamiento que trabajen los mismos grupos
+        musculares.
+      </p>
+
       <div className="dp-surface dp-card-accent dp-border-brand rounded-2xl p-5 shadow-sm">
         <p className="dp-eyebrow dp-text-brand mb-1">Rutina semanal</p>
         <div className="mb-3 flex flex-wrap items-center gap-1.5">
