@@ -772,6 +772,16 @@ export function KinePlanView({
             ) : (
               <span className="dp-muted text-xs">✓ El cliente ve esta versión</span>
             )}
+
+            <a
+              href={`/clientes/${clienteId}/tareas/rutina.pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Rutina consolidada en PDF, con QR al video de cada ejercicio — para dejarle al cliente"
+              className="dp-text-brand ml-auto rounded-lg border border-dashed border-black/15 px-3.5 py-1.5 text-sm font-medium hover:underline"
+            >
+              📄 Descargar PDF
+            </a>
           </div>
         </>
       )}
