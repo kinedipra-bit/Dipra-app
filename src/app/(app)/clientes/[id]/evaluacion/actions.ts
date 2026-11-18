@@ -12,6 +12,7 @@ import type {
   FmsHistorialEntry,
   MovilidadArticularEntry,
   MovilidadEsferaEntry,
+  PruebaEspecialEntry,
 } from "@/lib/dipra/types";
 
 function revalidar(clienteId: string) {
@@ -189,7 +190,7 @@ export async function agregarMovilidadEsfera(clienteId: string) {
 export async function actualizarMovilidadEsfera(
   clienteId: string,
   id: string,
-  patch: Partial<Pick<MovilidadEsferaEntry, "patron" | "craneo" | "torax" | "pelvis" | "tobillo">>
+  patch: Partial<Pick<MovilidadEsferaEntry, "patron" | "craneo" | "torax" | "pelvis" | "tobillo" | "tags">>
 ) {
   const supabase = await createClient();
   const { error } = await supabase.from("client_movilidad_esferas").update(patch).eq("id", id);
@@ -200,6 +201,41 @@ export async function actualizarMovilidadEsfera(
 export async function eliminarMovilidadEsfera(clienteId: string, id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("client_movilidad_esferas").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidar(clienteId);
+}
+
+// Mini pizarra de diagnóstico de cadenas — el dibujo se exporta a PNG en
+// el navegador y se sube acá, mismo patrón que subirIndicacionesPdf
+// (tareas/actions.ts) pero en el bucket "diagramas".
+const DIBUJO_CADENAS_MAX_BYTES = 2 * 1024 * 1024;
+
+export async function subirDibujoCadenas(clienteId: string, entryId: string, formData: FormData) {
+  const file = formData.get("dibujo");
+  if (!(file instanceof File) || file.size === 0) throw new Error("No se recibió ningún dibujo.");
+  if (file.size > DIBUJO_CADENAS_MAX_BYTES) throw new Error("El dibujo no puede pesar más de 2 MB.");
+
+  const supabase = await createClient();
+  const path = `${clienteId}/${entryId}.png`;
+  const { error: uploadError } = await supabase.storage
+    .from("diagramas")
+    .upload(path, file, { upsert: true, contentType: "image/png" });
+  if (uploadError) throw new Error(uploadError.message);
+
+  const { error } = await supabase.from("client_movilidad_esferas").update({ dibujo_path: path }).eq("id", entryId);
+  if (error) throw new Error(error.message);
+  revalidar(clienteId);
+  return path;
+}
+
+export async function eliminarDibujoCadenas(clienteId: string, entryId: string, path: string) {
+  const supabase = await createClient();
+  await supabase.storage.from("diagramas").remove([path]);
+
+  const { error } = await supabase
+    .from("client_movilidad_esferas")
+    .update({ dibujo_path: null })
+    .eq("id", entryId);
   if (error) throw new Error(error.message);
   revalidar(clienteId);
 }
@@ -285,6 +321,41 @@ export async function crearBateriaAdultoMayor(clienteId: string, input: NuevaBat
 export async function eliminarBateriaAdultoMayor(clienteId: string, id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("client_bateria_adulto_mayor").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidar(clienteId);
+}
+
+// Pruebas especiales --------------------------------------------------------
+// Tobillo (knee-to-wall), hombro (arco doloroso/Neer/Jobe/Hawkins), ASLR de
+// pie y rotación torácica — historial por fecha, mismo criterio que FMS.
+// Reemplaza a Movilidad articular en la pestaña, visible sin abrir el FMS.
+
+export async function crearPruebaEspecial(clienteId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("client_pruebas_especiales_historial")
+    .insert({ client_id: clienteId, fecha: new Date().toISOString().slice(0, 10) })
+    .select("*")
+    .single<PruebaEspecialEntry>();
+  if (error) throw new Error(error.message);
+  revalidar(clienteId);
+  return data;
+}
+
+export async function actualizarPruebaEspecial(
+  clienteId: string,
+  id: string,
+  patch: Partial<Omit<PruebaEspecialEntry, "id" | "client_id" | "created_at">>
+) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("client_pruebas_especiales_historial").update(patch).eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidar(clienteId);
+}
+
+export async function eliminarPruebaEspecial(clienteId: string, id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("client_pruebas_especiales_historial").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidar(clienteId);
 }

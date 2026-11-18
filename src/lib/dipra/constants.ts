@@ -90,6 +90,19 @@ export const ALICIA_CAMPOS = [
 
 export const ESFERAS = ["Cráneo", "Tórax", "Pelvis", "Tobillo"] as const;
 
+// Qué cadena domina cada esfera en un patrón evaluado (ver
+// MovilidadEsferaEntry.tags) — ej. "tobillo: Apertura (pie plano)".
+export const ESFERA_TAGS = ["Flexión", "Extensión", "Apertura", "Cierre"] as const;
+
+// Texto de ayuda del semáforo de dorsiflexión de tobillo (knee-to-wall) en
+// Pruebas especiales — el color lo elige el profesional a mano, esto solo
+// recuerda el criterio.
+export const TOBILLO_SEMAFORO_AYUDA =
+  "Un pie adelante del otro, evaluá la flexión de tobillo de la pierna de atrás (knee-to-wall): " +
+  "🔴 rojo = la rodilla no llega a pasar la parte posterior del maléolo. " +
+  "🟡 amarillo = pasa el maléolo pero queda por debajo de 10cm. " +
+  "🟢 verde = 10cm o más.";
+
 // Enfoques estándar de mesociclo (fuerza) — valores por defecto, el
 // profesional puede escribir cualquier otro con "Otro (especificar)".
 // Duración sugerida típica 5-8 semanas (ver duracion_semanas en PlanSemana).

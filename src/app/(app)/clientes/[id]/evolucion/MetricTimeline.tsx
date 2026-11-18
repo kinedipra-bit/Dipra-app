@@ -26,6 +26,7 @@ type Punto = {
   fecha: string;
   mesociclo: string;
   objetivo: string;
+  nota: string;
 };
 
 function mesesEntre(desde: Date, hasta: Date): Date[] {
@@ -104,6 +105,7 @@ export function MetricTimeline({
 
   const valorDe = (h: PrHistorialEntry) =>
     metricKey ? Number(h[metricKey]) || 0 : Number(h.extra?.[extraId ?? ""]) || 0;
+  const notaDe = (h: PrHistorialEntry) => h.notas?.[metricKey ?? extraId ?? ""] ?? "";
 
   const puntos: Punto[] = hist
     .map((h) => ({
@@ -113,6 +115,7 @@ export function MetricTimeline({
       fecha: h.fecha,
       mesociclo: h.mesociclo,
       objetivo: h.objetivo,
+      nota: notaDe(h),
     }))
     .filter((p) => p.valor > 0 && !isNaN(p.t))
     .sort((a, b) => a.t - b.t);
@@ -139,6 +142,7 @@ export function MetricTimeline({
         <p className="dp-text-heading font-mono text-sm">
           {p.valor} <span className="dp-muted text-[11px] font-normal">· {fmtFechaCorta(p.fecha)} · {p.mesociclo}</span>
         </p>
+        {p.nota && <p className="dp-body mt-0.5 text-[11px]">💬 {p.nota}</p>}
       </div>
     );
   }
@@ -178,10 +182,13 @@ export function MetricTimeline({
       <div className="mb-1 flex items-center justify-between">
         <p className="dp-muted text-xs font-medium">{label}</p>
         {activo ? (
-          <p className="dp-text-heading font-mono text-[11px]">
-            {activo.valor} · {fmtFechaCorta(activo.fecha)} · {activo.mesociclo}
-            {activo.objetivo && ` · ${activo.objetivo}`}
-          </p>
+          <div className="text-right">
+            <p className="dp-text-heading font-mono text-[11px]">
+              {activo.valor} · {fmtFechaCorta(activo.fecha)} · {activo.mesociclo}
+              {activo.objetivo && ` · ${activo.objetivo}`}
+            </p>
+            {activo.nota && <p className="dp-body text-[11px]">💬 {activo.nota}</p>}
+          </div>
         ) : (
           progreso && (
             <p
@@ -270,8 +277,13 @@ export function MetricTimeline({
           const mostrarValor = mostrarValorSiempre || esPr || esUltimo;
           return (
             <g key={p.id} onClick={() => setActivoId((prev) => (prev === p.id ? null : p.id))} style={{ cursor: "pointer" }}>
-              <title>{`${fmtFechaCorta(p.fecha)} · ${p.mesociclo}${p.objetivo ? ` · ${p.objetivo}` : ""}: ${p.valor}`}</title>
+              <title>{`${fmtFechaCorta(p.fecha)} · ${p.mesociclo}${p.objetivo ? ` · ${p.objetivo}` : ""}: ${p.valor}${p.nota ? ` — ${p.nota}` : ""}`}</title>
               <circle cx={x(p.t)} cy={y(p.valor)} r={5} fill="var(--dp-brand)" stroke="#fff" strokeWidth={2} />
+              {p.nota && (
+                <text x={x(p.t) + 8} y={y(p.valor) + 4} style={{ fontSize: 9 }}>
+                  💬
+                </text>
+              )}
               {esPr && (
                 <text x={x(p.t)} y={y(p.valor) - 12} textAnchor="middle" className="dp-text-amber" style={{ fontSize: 11 }}>
                   ★

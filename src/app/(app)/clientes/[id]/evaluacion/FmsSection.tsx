@@ -10,7 +10,7 @@ type LadoKey = "d" | "i" | "der" | "izq";
 type ParKey = "pasoValla" | "estocada" | "hombro" | "aslr" | "rotacion";
 type ClearingParKey = "clearingTobDolor" | "clearingTobMob" | "clearingHombro" | "clearingMuneca";
 
-function ClearingToggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+export function ClearingToggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
     <div className="flex w-fit overflow-hidden rounded-md border border-black/10 text-[11px] font-medium">
       <button
@@ -434,7 +434,9 @@ export function FmsSection({
             <h2 className="mb-1 font-medium dp-text-heading">Sugerencias de evaluación</h2>
             <p className="dp-muted mb-4 text-xs">
               Se actualizan solas con puntajes 0, 1 o 2 — el 0 significa dolor y es lo más urgente, luego 1 y
-              luego 2.
+              luego 2. Si el seguimiento es knee-to-wall, arco doloroso, Neer/Jobe/Hawkins, ASLR de pie o
+              rotación torácica, registralo en <strong>Pruebas especiales</strong> (más abajo en esta pestaña)
+              en vez de acá — queda con su propio semáforo/formato y se ve sin volver a abrir el FMS.
             </p>
             {sugerencias.length === 0 && !toeTouchPositivo ? (
               <p className="dp-muted py-6 text-center text-sm">

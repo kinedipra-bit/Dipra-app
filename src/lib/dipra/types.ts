@@ -110,6 +110,11 @@ export interface PrHistorialEntry {
   cooper_metros: number;
   // Valores de métricas personalizadas (ver MetricaExtra) — clave = su id.
   extra: Record<string, number>;
+  // Comentario puntual por prueba de esta visita (ej. "le dolió la
+  // espalda" en dead_hang) — clave = MetricKey o id de MetricaExtra, mismo
+  // espacio de claves que `extra`. Solo lleva las pruebas que SÍ tienen
+  // comentario, no todas.
+  notas: Record<string, string>;
 }
 
 // Movilidad articular (0-3, lógica FMS) — historial por fecha. Distinto de
@@ -157,6 +162,8 @@ export interface MetricaExtra {
   created_at: string;
 }
 
+export type EsferaKey = "craneo" | "torax" | "pelvis" | "tobillo";
+
 export interface MovilidadEsferaEntry {
   id: string;
   client_id: string;
@@ -165,6 +172,53 @@ export interface MovilidadEsferaEntry {
   torax: string;
   pelvis: string;
   tobillo: string;
+  // Qué cadena domina cada esfera para este patrón (ver ESFERA_TAGS en
+  // constants.ts) — ej. tobillo: ["Apertura"] (pie plano). El texto libre
+  // de arriba (craneo/torax/pelvis/tobillo) sigue siendo el comentario.
+  tags: Partial<Record<EsferaKey, string[]>>;
+  // Mini pizarra de diagnóstico de cadenas, dibujada a mano — path en el
+  // bucket "diagramas" (ver subirDibujoCadenas en evaluacion/actions.ts).
+  dibujo_path: string | null;
+}
+
+// Pruebas especiales — reemplaza a Movilidad articular (que queda en su
+// tabla, sin romperse, pero deja de mostrarse). Historial por fecha, igual
+// patrón que FMS.
+export interface PruebaEspecialEntry {
+  id: string;
+  client_id: string;
+  fecha: string;
+  // Dorsiflexión de tobillo (knee-to-wall) — cm de referencia + semáforo
+  // elegido a mano (no se calcula solo): rojo = no llega al maléolo
+  // posterior, amarillo = hasta 10cm, verde = 10cm o más.
+  tobillo_der_cm: number | null;
+  tobillo_der_color: "rojo" | "amarillo" | "verde" | null;
+  tobillo_izq_cm: number | null;
+  tobillo_izq_color: "rojo" | "amarillo" | "verde" | null;
+  // Hombro — positivo/negativo por lado.
+  hombro_arco_doloroso_der: boolean;
+  hombro_arco_doloroso_izq: boolean;
+  neer_der: boolean;
+  neer_izq: boolean;
+  jobe_der: boolean;
+  jobe_izq: boolean;
+  hawkins_der: boolean;
+  hawkins_izq: boolean;
+  // ASLR de pie / en punta de pies — positivo/negativo + comentario libre
+  // (no es un test estándar con una sola medida).
+  aslr_pie_der: boolean;
+  aslr_pie_izq: boolean;
+  aslr_pie_comentario: string;
+  // Rotación torácica respecto de lumbar (lumbar locked rotation test) —
+  // grados de movilidad + positivo/negativo de DOLOR aparte (para
+  // descartar componente lumbar, distinto del grado en sí).
+  rotacion_toracica_der_grados: number | null;
+  rotacion_toracica_izq_grados: number | null;
+  rotacion_toracica_dolor_der: boolean;
+  rotacion_toracica_dolor_izq: boolean;
+  rotacion_toracica_comentario: string;
+  notas: string;
+  created_at: string;
 }
 
 export interface EvaluacionCustomEntry {
