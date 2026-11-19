@@ -26,25 +26,30 @@ function revalidar(clienteId: string) {
 
 // Nicolás no siempre "programa": para varios clientes, el plan se va
 // ajustando directo en la sesión (sube un peso, cambia un ejercicio) sin
-// pasar antes por Plan. Sin esto, el Plan quedaba pegado en lo que decía
-// la última vez que SÍ se editó ahí, aunque hiciera rato que la sesión real
-// fuera otra. Así que al guardar una sesión de un día del plan, lo
-// realmente hecho (nombre/series/reps/kg/unilateral/peso c/u) se vuelca de
-// vuelta al ejercicio correspondiente de la semana ACTIVA — matcheando por
+// pasar antes por Plan — en vivo (crearSesion) o corrigiendo una sesión ya
+// guardada (actualizarEjerciciosSesion, ej. "Editar pesos/series"). Sin
+// esto, el Plan quedaba pegado en lo que decía la última vez que SÍ se
+// editó ahí, aunque hiciera rato que la sesión real fuera otra. Así que al
+// guardar/corregir una sesión de un día del plan, lo realmente hecho
+// (nombre/series/reps/kg/unilateral/peso c/u) se vuelca de vuelta al
+// ejercicio correspondiente de la semana ACTIVA — matcheando por
 // planExercicioId (ver EjercicioSesion), no por nombre, porque el nombre es
 // justo uno de los campos que puede haber cambiado. Ejercicios extra
-// agregados en la sesión (sin planExercicioId) y sesiones sin día de
-// plan elegido quedan afuera: no tienen un lugar claro en el plan al que
-// volcarse. Queda como borrador (cambios_sin_compartir) igual que cualquier
-// otro cambio en Plan — si el cliente SÍ usa el portal, no ve el cambio
-// hasta que Nicolás comparta.
+// agregados en la sesión (sin planExercicioId), sesiones sin día de plan
+// elegido, y sesiones de ANTES de que la semana activa se creara (ver el
+// chequeo de `fecha` más abajo) quedan afuera: no tienen un lugar claro en
+// el plan al que volcarse. Queda como borrador (cambios_sin_compartir)
+// igual que cualquier otro cambio en Plan — si el cliente SÍ usa el
+// portal, no ve el cambio hasta que Nicolás comparta.
 async function sincronizarPlanConSesion(
   supabase: Awaited<ReturnType<typeof createClient>>,
   clienteId: string,
-  input: NuevaSesionInput
+  diaPlanLabel: string,
+  fecha: string,
+  ejercicios: EjercicioSesion[]
 ) {
-  if (!input.dia_plan_label) return;
-  const reales = input.ejercicios.filter((e) => !e.extra && e.planExercicioId);
+  if (!diaPlanLabel) return;
+  const reales = ejercicios.filter((e) => !e.extra && e.planExercicioId);
   if (reales.length === 0) return;
 
   const { data: cliente } = await supabase
@@ -56,15 +61,22 @@ async function sincronizarPlanConSesion(
 
   const { data: semana } = await supabase
     .from("plan_semanas")
-    .select("dias")
+    .select("dias, created_at")
     .eq("id", cliente.semana_activa_id)
-    .single<{ dias: DiaPlan[] }>();
+    .single<{ dias: DiaPlan[]; created_at: string }>();
   if (!semana) return;
+  // Si la sesión que se está corrigiendo es de ANTES de que esta semana se
+  // creara (ej. se editó una sesión vieja de una semana anterior que
+  // reutilizó la misma etiqueta "Día 1"), no debe pisar el ejercicio de la
+  // semana ACTUAL con un dato de otra época — mismo criterio que
+  // SesionesPorDia/alertasProgramacion para acotar sesiones a la semana
+  // vigente.
+  if (fecha < semana.created_at.slice(0, 10)) return;
 
   const porId = new Map(reales.map((e) => [e.planExercicioId, e]));
   let cambio = false;
   const dias = semana.dias.map((d) => {
-    if (d.label !== input.dia_plan_label) return d;
+    if (d.label !== diaPlanLabel) return d;
     return {
       ...d,
       bloques: d.bloques.map((b) => ({
@@ -105,7 +117,7 @@ export async function crearSesion(clienteId: string, input: NuevaSesionInput) {
     .from("sesiones")
     .insert({ client_id: clienteId, ...input, registrada_por_cliente: false, revisada: true });
   if (error) throw new Error(error.message);
-  await sincronizarPlanConSesion(supabase, clienteId, input);
+  await sincronizarPlanConSesion(supabase, clienteId, input.dia_plan_label, input.fecha, input.ejercicios);
   revalidar(clienteId);
 }
 
@@ -267,7 +279,16 @@ export async function actualizarTipoYAutoriaSesion(
 // editar nada de una sesión pasada salvo tipo/autoría.
 export async function actualizarEjerciciosSesion(clienteId: string, sesionId: string, ejercicios: EjercicioSesion[]) {
   const supabase = await createClient();
-  const { error } = await supabase.from("sesiones").update({ ejercicios }).eq("id", sesionId);
+  const { data, error } = await supabase
+    .from("sesiones")
+    .update({ ejercicios })
+    .eq("id", sesionId)
+    .select("dia_plan_label, fecha")
+    .single<{ dia_plan_label: string; fecha: string }>();
   if (error) throw new Error(error.message);
+  // Corregir pesos/series de una sesión pasada es otra forma de "lo
+  // realmente hecho cambió" — mismo criterio que crearSesion, para que el
+  // Plan no quede pegado si la corrección se hizo acá en vez de en vivo.
+  await sincronizarPlanConSesion(supabase, clienteId, data.dia_plan_label, data.fecha, ejercicios);
   revalidar(clienteId);
 }
