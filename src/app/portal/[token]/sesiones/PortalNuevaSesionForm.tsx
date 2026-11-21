@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { PILARES_KEYS, emptySesionPilares } from "@/lib/dipra/constants";
-import { agruparPorBloque, ejerciciosDesdeDia } from "@/lib/dipra/agruparEjercicios";
+import { agruparPorBloque, conValoresReales, ejerciciosDesdeDia } from "@/lib/dipra/agruparEjercicios";
 import { EscalaUnoADiez } from "@/app/(app)/clientes/[id]/sesiones/EscalaUnoADiez";
 import { esYoutubeVertical, normalizeLink, youtubeEmbedUrl } from "@/lib/youtube";
 import { tonoEscalaPilar } from "@/lib/dipra/calc";
-import type { DiaPlan, EjercicioSesion } from "@/lib/dipra/types";
+import type { DiaPlan, EjercicioSesion, Sesion } from "@/lib/dipra/types";
 import { crearSesionPortal } from "./actions";
 import { BloqueFocuseable } from "../BloqueFocuseable";
 
@@ -96,23 +96,32 @@ function borrarDraft(token: string) {
   }
 }
 
+type SesionParaCarryForward = Pick<Sesion, "fecha" | "dia_plan_label" | "ejercicios">;
+
 // Arma la lista de ejercicios de un día a partir de la planificación — el
 // atleta ve su rutina de ESE día puntual y comenta/ajusta ahí mismo, en vez
 // de comentar en "Mi rutina" (donde el comentario queda pisado en el
 // ejercicio y no se sabe de qué sesión/fecha era). Reusa el mismo helper que
 // la vista del profesional (antes tenía su propia copia que no traía
 // notaReps — la nota del profesional nunca le llegaba al cliente).
-function ejerciciosDelDia(dia: DiaPlan | undefined): EjercicioSesion[] {
-  return dia ? ejerciciosDesdeDia(dia) : [];
+//
+// Igual que en Sesiones (profesional), arranca con lo REALMENTE hecho la
+// última vez que se registró ese mismo día, no con lo planificado — antes
+// esto solo pasaba del lado del profesional, así que si el cliente subía un
+// peso en la sesión, la próxima vez que él mismo elegía el día volvía a
+// verlo en el número viejo.
+function ejerciciosDelDia(dia: DiaPlan | undefined, sesiones: SesionParaCarryForward[]): EjercicioSesion[] {
+  if (!dia) return [];
+  return conValoresReales(ejerciciosDesdeDia(dia), sesiones, dia.label);
 }
 
-function nuevoDraft(dias: DiaPlan[], publicadoAt: string | null): Draft {
+function nuevoDraft(dias: DiaPlan[], publicadoAt: string | null, sesiones: SesionParaCarryForward[]): Draft {
   const primerDia = dias[0];
   return {
     diaPlanLabel: primerDia?.label ?? "",
     pilares: emptySesionPilares(),
     comentarios: "",
-    ejercicios: ejerciciosDelDia(primerDia),
+    ejercicios: ejerciciosDelDia(primerDia, sesiones),
     publicadoAt,
   };
 }
@@ -121,13 +130,15 @@ export function PortalNuevaSesionForm({
   token,
   dias,
   publicadoAt,
+  sesiones,
 }: {
   token: string;
   dias: DiaPlan[];
   publicadoAt: string | null;
+  sesiones: SesionParaCarryForward[];
 }) {
   const [abierto, setAbierto] = useState(false);
-  const [draft, setDraft] = useState<Draft>(() => nuevoDraft(dias, publicadoAt));
+  const [draft, setDraft] = useState<Draft>(() => nuevoDraft(dias, publicadoAt, sesiones));
   const [pending, startTransition] = useTransition();
   const [enviado, setEnviado] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -165,7 +176,7 @@ export function PortalNuevaSesionForm({
       diaPlanLabel: dia?.label ?? "",
       pilares: guardado.pilares,
       comentarios: guardado.comentarios,
-      ejercicios: ejerciciosDelDia(dia),
+      ejercicios: ejerciciosDelDia(dia, sesiones),
       publicadoAt,
     });
     setAbierto(true);
@@ -181,7 +192,7 @@ export function PortalNuevaSesionForm({
 
   const elegirDia = (label: string) => {
     const dia = dias.find((d) => d.label === label);
-    setDraft((prev) => ({ ...prev, diaPlanLabel: label, ejercicios: ejerciciosDelDia(dia) }));
+    setDraft((prev) => ({ ...prev, diaPlanLabel: label, ejercicios: ejerciciosDelDia(dia, sesiones) }));
     setBloqueActivoIdx(null);
   };
 
@@ -205,7 +216,7 @@ export function PortalNuevaSesionForm({
           ejercicios: draft.ejercicios,
         });
         borrarDraft(token);
-        setDraft(nuevoDraft(dias, publicadoAt));
+        setDraft(nuevoDraft(dias, publicadoAt, sesiones));
         setEnviado(true);
         setAbierto(false);
       } catch {
@@ -226,7 +237,7 @@ export function PortalNuevaSesionForm({
         <button
           type="button"
           onClick={() => {
-            setDraft((prev) => (prev.diaPlanLabel ? prev : nuevoDraft(dias, publicadoAt)));
+            setDraft((prev) => (prev.diaPlanLabel ? prev : nuevoDraft(dias, publicadoAt, sesiones)));
             setAbierto(true);
             setEnviado(false);
           }}

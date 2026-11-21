@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sincronizarPlanConSesion } from "@/lib/dipra/sincronizarPlan";
 import type { DiaEntrenamiento, EjercicioSesion } from "@/lib/dipra/types";
 
 export interface NuevaSesionPortalInput {
@@ -36,6 +37,11 @@ export async function crearSesionPortal(token: string, input: NuevaSesionPortalI
     revisada: false,
   });
   if (error) throw new Error(error.message);
+
+  // Mismo criterio que crearSesion (profesional): lo realmente hecho en la
+  // sesión vuelve al Plan, para que la próxima vez que se arme la semana
+  // siguiente ya arranque con lo que el cliente hizo de verdad.
+  await sincronizarPlanConSesion(admin, cliente.id, input.dia_plan_label, input.fecha, input.ejercicios);
 
   revalidatePath(`/portal/${token}/sesiones`);
   revalidatePath(`/clientes/${cliente.id}/sesiones`);

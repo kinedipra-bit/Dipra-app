@@ -1,4 +1,4 @@
-import type { DiaPlan, EjercicioSesion } from "./types";
+import type { DiaPlan, EjercicioSesion, Sesion } from "./types";
 
 // Arma los EjercicioSesion de un día del plan tal como se ven recién
 // elegidos (real = plan todavía sin ejecutar) — usado al iniciar una sesión
@@ -35,6 +35,49 @@ export function ejerciciosDesdeDia(dia: DiaPlan): EjercicioSesion[] {
     })
   );
   return ejercicios;
+}
+
+type SesionParaCarryForward = Pick<Sesion, "fecha" | "dia_plan_label" | "ejercicios">;
+
+// La sesión más reciente (cualquier semana, no solo la activa — un Día 1 de
+// hace dos semanas sigue valiendo si todavía no se registró ninguna sesión
+// de Día 1 en la semana nueva) para ese mismo día del plan — usado para
+// arrancar una sesión nueva con lo realmente hecho, no con lo programado.
+export function ultimaSesionConDia<T extends SesionParaCarryForward>(sesiones: T[], label: string): T | undefined {
+  return [...sesiones].filter((s) => s.dia_plan_label === label).sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
+}
+
+// Al elegir un día para una sesión nueva, arranca con lo que REALMENTE se
+// hizo la última vez que se registró ese mismo día (no con lo planificado)
+// — si programado dice 20kg pero la última sesión real fue a 25kg, tiene
+// que seguir mostrando 25kg. Nombre/bloque/video/unilateral siguen viniendo
+// del plan vigente (por si el ejercicio cambió desde la última vez); solo
+// los números de desempeño (series/reps/kg/rpe) se traen de la sesión
+// anterior. Si nunca se registró ese día antes, sigue mostrando lo
+// planificado como punto de partida. Usado tanto desde Sesiones
+// (profesional) como desde el portal (el cliente registra su propia
+// sesión) — mismo criterio en los dos lados.
+export function conValoresReales(
+  ejercicios: EjercicioSesion[],
+  sesiones: SesionParaCarryForward[],
+  label: string
+): EjercicioSesion[] {
+  const anterior = ultimaSesionConDia(sesiones, label);
+  if (!anterior) return ejercicios;
+  const porNombre = new Map(anterior.ejercicios.map((e) => [e.nombre.trim().toLowerCase(), e]));
+  return ejercicios.map((ex) => {
+    const real = porNombre.get(ex.nombre.trim().toLowerCase());
+    if (!real) return ex;
+    return {
+      ...ex,
+      seriesReal: real.seriesReal,
+      repsReal: real.repsReal,
+      kgReal: real.kgReal,
+      pesosSeriesReal: real.pesosSeriesReal,
+      repsSeriesReal: real.repsSeriesReal,
+      rpeSeries: real.rpeSeries,
+    };
+  });
 }
 
 export interface GrupoEjerciciosSesion {
