@@ -32,6 +32,7 @@ import {
   eliminarSesion,
   guardarComentarioProfesional,
   marcarSesionRevisada,
+  marcarVariasRevisadas,
   type NuevaSesionInput,
 } from "./actions";
 import { guardarEnBiblioteca } from "../plan/actions";
@@ -510,6 +511,22 @@ export function SesionesClient({
   const revisarSesion = (id: string) => {
     startTransition(async () => {
       await marcarSesionRevisada(clienteId, id);
+    });
+  };
+
+  // Sesiones sin revisar que no tienen nada que leer (sin comentario del
+  // cliente) — las que SÍ tienen comentario quedan afuera a propósito, para
+  // no marcarlas como revisadas sin haberlas leído.
+  const sinRevisarSinComentario = sesiones.filter(
+    (s) => s.registrada_por_cliente && !s.revisada && !s.comentarios.trim()
+  );
+
+  const revisarTodasSinComentario = () => {
+    startTransition(async () => {
+      await marcarVariasRevisadas(
+        clienteId,
+        sinRevisarSinComentario.map((s) => s.id)
+      );
     });
   };
 
@@ -1030,7 +1047,20 @@ export function SesionesClient({
         </p>
       ) : (
         <div className="flex flex-col gap-3">
-          <p className="dp-eyebrow dp-muted">Historial</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="dp-eyebrow dp-muted">Historial</p>
+            {sinRevisarSinComentario.length > 0 && (
+              <button
+                type="button"
+                onClick={revisarTodasSinComentario}
+                disabled={pending}
+                title="Marca como revisadas las sesiones sin comentario del cliente — las que sí tienen comentario quedan para revisar una por una"
+                className="dp-text-brand text-xs font-medium hover:underline disabled:opacity-50"
+              >
+                ✓ Revisar todas sin comentario ({sinRevisarSinComentario.length})
+              </button>
+            )}
+          </div>
           {sesiones.map((s) => {
             const expanded = expandedId === s.id;
             const alerta = tieneAlerta(s);
