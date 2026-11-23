@@ -49,6 +49,19 @@ export async function marcarSesionRevisada(clienteId: string, sesionId: string) 
   revalidar(clienteId);
 }
 
+// "Revisar todas" — para cuando hay varias sesiones sin revisar que no
+// tienen nada que leer (sin comentario del cliente), en vez de entrar una
+// por una solo para tocar el mismo botón. El filtro de "sin comentario" lo
+// decide quien llama (ver SesionesClient), acá solo se marca el lote que
+// ya vino filtrado.
+export async function marcarVariasRevisadas(clienteId: string, sesionIds: string[]) {
+  if (sesionIds.length === 0) return;
+  const supabase = await createClient();
+  const { error } = await supabase.from("sesiones").update({ revisada: true }).in("id", sesionIds);
+  if (error) throw new Error(error.message);
+  revalidar(clienteId);
+}
+
 // Nota interna del profesional sobre una sesión puntual (ver Sesion.
 // comentario_profesional) — privada, nunca se muestra en el portal del
 // cliente, así que alcanza con revalidar las rutas del profesional.
