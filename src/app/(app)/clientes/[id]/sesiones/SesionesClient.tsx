@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { tonoEscalaPilar } from "@/lib/dipra/calc";
 import { agruparPorBloque, conValoresReales, ejerciciosDesdeDia } from "@/lib/dipra/agruparEjercicios";
 import { PILARES_KEYS, TIPOS_SESION, emptySesionPilares } from "@/lib/dipra/constants";
@@ -280,6 +281,8 @@ export function SesionesClient({
   const [sesionFuenteId, setSesionFuenteId] = useState("");
   const [biblioteca, setBiblioteca] = useState<EjercicioBiblioteca[]>(bibliotecaInicial);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const router = useRouter();
+  const [actualizando, startActualizar] = useTransition();
   const [pending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [videoAbiertoId, setVideoAbiertoId] = useState<string | null>(null);
@@ -313,6 +316,13 @@ export function SesionesClient({
   const sesiones = [...sesionesIniciales].sort((a, b) => b.fecha.localeCompare(a.fecha));
   const sesionesConEjercicios = sesiones.filter((s) => s.ejercicios.length > 0);
   const sesionFuente = sesionesConEjercicios.find((s) => s.id === sesionFuenteId);
+
+  // Esta pantalla no se refresca sola si el Plan se editó en otra pestaña
+  // (o el cliente registró algo desde el portal) mientras esta ya estaba
+  // abierta — Next.js no empuja esos cambios a una pestaña ya cargada.
+  // Este botón vuelve a pedir los datos frescos del servidor sin recargar
+  // toda la página.
+  const actualizarPagina = () => startActualizar(() => router.refresh());
 
   const iniciarNueva = () => {
     setDraft(nuevoDraft(sesiones.length === 0));
@@ -1031,7 +1041,16 @@ export function SesionesClient({
         </div>
       )}
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={actualizarPagina}
+          disabled={actualizando}
+          title="Volver a pedir los datos frescos — útil si editaste Plan en otra pestaña, o el cliente registró algo desde el portal"
+          className="dp-muted rounded-xl border border-black/10 px-3.5 py-2 text-sm font-medium disabled:opacity-50"
+        >
+          {actualizando ? "Actualizando…" : "🔄 Actualizar"}
+        </button>
         <button
           type="button"
           onClick={iniciarNueva}
