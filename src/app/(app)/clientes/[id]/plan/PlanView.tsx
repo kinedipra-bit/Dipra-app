@@ -59,9 +59,24 @@ function formatFechaSemana(iso: string): string {
 // peso por serie que ExerciseRow (kgTexto), pero sin estado propio porque
 // acá nunca se edita, solo se muestra de referencia.
 function resumenEjercicioPlan(e: EjercicioPlan): string {
+  const repsActivo = (e.repsSeries ?? []).some((r) => Number(r) > 0);
+  const repsTexto = repsActivo ? (e.repsSeries ?? []).map((r) => Number(r) || 0).join("/") : String(e.reps ?? 0);
+  const base = `${e.series}×${repsTexto}${e.unilateral ? " c/u" : ""}`;
+
+  if (e.cargaTipo === "tiempo") {
+    const tiempoActivo = (e.tiempoSeries ?? []).some((t) => t.trim());
+    const tiempoTexto = tiempoActivo
+      ? (e.tiempoSeries ?? []).filter((t) => t.trim()).join("/")
+      : e.tiempoSerie || "—";
+    return `${base}×${tiempoTexto}`;
+  }
+  if (e.cargaTipo === "vueltas") return `${base}×${e.vueltas ?? 0} vueltas`;
+  if (e.cargaTipo === "peso_corporal") return `${base} — peso corporal`;
+  if (e.cargaTipo === "banda") return `${base} — ${e.tipoCarga || "banda"}`;
+
   const pesosActivo = (e.pesosSeries ?? []).some((p) => Number(p) > 0);
   const kgTexto = pesosActivo ? (e.pesosSeries ?? []).map((p) => Number(p) || 0).join("/") : String(e.kg ?? 0);
-  return `${e.series}×${e.reps}${e.unilateral ? " c/u" : ""}×${kgTexto}kg${e.pesoCadaUno ? " c/u" : ""}`;
+  return `${base}×${kgTexto}kg${e.pesoCadaUno ? " c/u" : ""}`;
 }
 
 function nuevoEjercicio(): EjercicioPlan {
