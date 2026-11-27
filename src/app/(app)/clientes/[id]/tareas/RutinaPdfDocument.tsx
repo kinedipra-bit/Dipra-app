@@ -28,7 +28,13 @@ const styles = StyleSheet.create({
 // Tiempo/vueltas no tienen "reps" real (quedan en 0), así que se muestran
 // aparte en vez de como "3×0".
 function resumenEjercicio(e: EjercicioPlan): string {
-  if (e.cargaTipo === "tiempo") return `${e.series} × ${e.tiempoSerie || "tiempo"}`;
+  if (e.cargaTipo === "tiempo") {
+    const tiempoActivo = (e.tiempoSeries ?? []).some((t) => t.trim());
+    const tiempoTexto = tiempoActivo
+      ? (e.tiempoSeries ?? []).filter((t) => t.trim()).join("/")
+      : e.tiempoSerie || "tiempo";
+    return `${e.series} × ${tiempoTexto}`;
+  }
   if (e.cargaTipo === "vueltas") return `${e.series} × ${e.vueltas ?? ""} vueltas`;
 
   const reps = (e.repsSeries ?? []).some((r) => Number(r) > 0)

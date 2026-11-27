@@ -253,6 +253,12 @@ export interface EjercicioPlan {
   // isométrico. Es la DURACIÓN del ejercicio, no confundir con `tut` (el
   // tempo de cada repetición, ver más abajo). Texto libre.
   tiempoSerie?: string;
+  // Duración por serie individual (ej. "50 seg" la primera, "40 seg" la
+  // segunda) — mismo criterio que pesosSeries/repsSeries: si tiene algún
+  // valor cargado, tiene prioridad sobre tiempoSerie para mostrar; el campo
+  // de arriba queda como valor uniforme de respaldo. Solo tiene sentido con
+  // cargaTipo "tiempo".
+  tiempoSeries?: string[];
   // Qué tipo de carga usa el ejercicio — determina qué campo se pide en vez
   // del Kg (banda/peso corporal no piden nada más, tiempo pide
   // `tiempoSerie`, vueltas pide `vueltas`). Sin setear = "kg" (default,

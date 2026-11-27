@@ -89,11 +89,14 @@ export function ExerciseRow({
   const esPliometria = (ex.cualidad ?? etiquetaBloque?.cualidad) === "Pliometría";
   const pesosSeriesActivo = (ex.pesosSeries ?? []).some((p) => Number(p) > 0);
   const repsSeriesActivo = (ex.repsSeries ?? []).some((r) => Number(r) > 0);
+  const tiempoSeriesActivo = (ex.tiempoSeries ?? []).some((t) => t.trim());
 
-  // El toggle "peso por serie" / "reps por serie" arranca abierto si el
-  // ejercicio ya trae valores cargados (ej. al reabrir un plan guardado).
+  // El toggle "peso por serie" / "reps por serie" / "tiempo por serie"
+  // arranca abierto si el ejercicio ya trae valores cargados (ej. al
+  // reabrir un plan guardado).
   const [pesoPorSerieAbierto, setPesoPorSerieAbierto] = useState(pesosSeriesActivo);
   const [repsPorSerieAbierto, setRepsPorSerieAbierto] = useState(repsSeriesActivo);
+  const [tiempoPorSerieAbierto, setTiempoPorSerieAbierto] = useState(tiempoSeriesActivo);
   const [videoAbierto, setVideoAbierto] = useState(false);
   // El toggle de grupo/cualidad propios arranca abierto solo si el ejercicio
   // ya tiene algo cargado ahí — si no, queda oculto para no repetir en cada
@@ -183,6 +186,27 @@ export function ExerciseRow({
     onChange({ ...ex, repsSeries: current });
   };
 
+  // Igual que togglePesoPorSerie pero para tiempo por serie (ej. isométrico
+  // que baja de 50'' a 40'' a medida que avanza la sesión) — solo tiene
+  // sentido con cargaTipo "tiempo".
+  const toggleTiempoPorSerie = () => {
+    if (tiempoPorSerieAbierto) {
+      setTiempoPorSerieAbierto(false);
+      onChange({ ...ex, tiempoSeries: [] });
+      return;
+    }
+    const base = ex.tiempoSeries ?? [];
+    const next = Array.from({ length: Math.max(seriesCount, 1) }, (_, i) => base[i] ?? ex.tiempoSerie ?? "");
+    onChange({ ...ex, tiempoSeries: next });
+    setTiempoPorSerieAbierto(true);
+  };
+
+  const handleTiempoSerieChange = (i: number, value: string) => {
+    const current = Array.from({ length: seriesCount }, (_, idx) => ex.tiempoSeries?.[idx] ?? ex.tiempoSerie ?? "");
+    current[i] = value;
+    onChange({ ...ex, tiempoSeries: current });
+  };
+
   const campoInputClass =
     "font-mono text-xs border border-black/10 rounded-md px-1 py-0.5 outline-none focus:dp-border-brand text-center";
 
@@ -192,6 +216,9 @@ export function ExerciseRow({
   const repsTexto = repsSeriesActivo
     ? (ex.repsSeries ?? []).map((r) => Number(r) || 0).join("/")
     : String(ex.reps ?? 0);
+  const tiempoTexto = tiempoSeriesActivo
+    ? (ex.tiempoSeries ?? []).filter((t) => t.trim()).join("/")
+    : ex.tiempoSerie || "—";
   // Columna "Kg": si la carga no es en Kg, se muestra lo que corresponda
   // (banda/peso corporal/duración/vueltas) en vez de forzar un número sin
   // sentido — y el volumen en kg solo aplica/se muestra para carga en Kg.
@@ -201,7 +228,7 @@ export function ExerciseRow({
       : tipo === "peso_corporal"
         ? "Peso corporal"
         : tipo === "tiempo"
-          ? ex.tiempoSerie || "—"
+          ? tiempoTexto
           : tipo === "vueltas"
             ? `${ex.vueltas ?? 0} vueltas`
             : kgTexto;
@@ -276,6 +303,12 @@ export function ExerciseRow({
                   (_, i) => ex.repsSeries?.[i] ?? ex.reps ?? 0
                 );
               }
+              if (tiempoSeriesActivo) {
+                patch.tiempoSeries = Array.from(
+                  { length: Math.max(nuevaSeries, 0) },
+                  (_, i) => ex.tiempoSeries?.[i] ?? ex.tiempoSerie ?? ""
+                );
+              }
               onChange({ ...ex, ...patch });
             }}
             onFocus={seleccionarAlEnfocar}
@@ -322,13 +355,22 @@ export function ExerciseRow({
             {ex.pesoCadaUno && <span className="dp-text-brand text-[10px] font-semibold">c/u</span>}
           </span>
         ) : tipo === "tiempo" ? (
-          <input
-            value={ex.tiempoSerie || ""}
-            onChange={(e) => onChange({ ...ex, tiempoSerie: e.target.value })}
-            placeholder="30 seg"
-            style={{ minWidth: 40 }}
-            className="flex-1 rounded-lg border border-black/10 px-2 py-1 text-center font-mono text-sm outline-none focus:dp-border-brand"
-          />
+          tiempoPorSerieAbierto ? (
+            <span
+              className="dp-muted flex items-center justify-center gap-1 text-center font-mono text-xs"
+              title="Editando tiempo por serie más abajo"
+            >
+              por serie
+            </span>
+          ) : (
+            <input
+              value={ex.tiempoSerie || ""}
+              onChange={(e) => onChange({ ...ex, tiempoSerie: e.target.value })}
+              placeholder="30 seg"
+              style={{ minWidth: 40 }}
+              className="flex-1 rounded-lg border border-black/10 px-2 py-1 text-center font-mono text-sm outline-none focus:dp-border-brand"
+            />
+          )
         ) : tipo === "vueltas" ? (
           <input
             type="number"
@@ -521,6 +563,15 @@ export function ExerciseRow({
               {repsPorSerieAbierto ? "− Reps uniforme" : "+ Reps por serie"}
             </button>
           )}
+          {seriesCount > 1 && tipo === "tiempo" && (
+            <button
+              type="button"
+              onClick={toggleTiempoPorSerie}
+              className="dp-text-brand text-[11px] font-medium hover:underline"
+            >
+              {tiempoPorSerieAbierto ? "− Tiempo uniforme" : "+ Tiempo por serie"}
+            </button>
+          )}
         </div>
       )}
 
@@ -629,20 +680,47 @@ export function ExerciseRow({
         </div>
       )}
 
+      {/* Inputs de tiempo por serie individual — ej. isométrico que baja de
+          50'' a 40'' a medida que avanza la sesión */}
+      {!readOnly && tipo === "tiempo" && tiempoPorSerieAbierto && seriesCount > 0 && (
+        <div className="dp-bg-faint mt-1 ml-0.5 flex flex-wrap items-center gap-2 rounded-lg px-2 py-1">
+          <span className="dp-muted text-[10px] font-medium">Tiempo</span>
+          {Array.from({ length: seriesCount }).map((_, i) => (
+            <div key={i} className="flex items-center gap-1">
+              <span className="dp-muted text-[10px] font-medium">S{i + 1}</span>
+              <input
+                value={ex.tiempoSeries?.[i] ?? ex.tiempoSerie ?? ""}
+                onChange={(e) => handleTiempoSerieChange(i, e.target.value)}
+                placeholder="30 seg"
+                style={{ width: 56 }}
+                className={campoInputClass}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Badges de solo lectura para tipo de carga / tiempo (iso) / nota de reps
           (unilateral ya se ve junto a reps). El tiempo lleva aclaración de que
           es duración de ejecución, NO descanso — eso va aparte más abajo. */}
       {readOnly &&
-        (ex.tipoCarga || ex.tiempoSerie || ex.notaReps || ex.saltoIniciacion || ex.saltoMovimiento || ex.saltoDireccion || ex.saltoEnfasis) && (
+        (ex.tipoCarga ||
+          ex.tiempoSerie ||
+          tiempoSeriesActivo ||
+          ex.notaReps ||
+          ex.saltoIniciacion ||
+          ex.saltoMovimiento ||
+          ex.saltoDireccion ||
+          ex.saltoEnfasis) && (
         <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-0.5">
           {ex.tipoCarga && (
             <span className="dp-bg-faint dp-body rounded-full px-2 py-0.5 text-[10px] font-medium">
               {ex.tipoCarga}
             </span>
           )}
-          {ex.tiempoSerie && (
+          {(tiempoSeriesActivo || ex.tiempoSerie) && (
             <span className="dp-bg-faint dp-body rounded-full px-2 py-0.5 text-[10px] font-medium">
-              ⏱ Duración del ejercicio: {ex.tiempoSerie}
+              ⏱ Duración del ejercicio: {tiempoTexto}
             </span>
           )}
           {ex.notaReps && (
