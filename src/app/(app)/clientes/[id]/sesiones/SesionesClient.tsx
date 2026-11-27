@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { tonoEscalaPilar } from "@/lib/dipra/calc";
-import { agruparPorBloque, conValoresReales, ejerciciosDesdeDia } from "@/lib/dipra/agruparEjercicios";
+import { agruparPorBloque, ejerciciosDesdeDia } from "@/lib/dipra/agruparEjercicios";
 import { PILARES_KEYS, TIPOS_SESION, emptySesionPilares } from "@/lib/dipra/constants";
 import { FilaEjercicioDraft } from "./FilaEjercicioDraft";
 import {
@@ -340,10 +340,19 @@ export function SesionesClient({
     setModo("list");
   };
 
+  // Antes acá se pisaban los números del plan con los de la última sesión
+  // real (ver commit "traer últimos valores reales"). Pero ahora que
+  // sincronizarPlanConSesion mantiene el Plan sincronizado con lo
+  // realmente hecho en CADA sesión guardada (ver sesiones/actions.ts),
+  // esa pisada quedó mal pensada: si el profesional sube el peso a mano en
+  // Plan (una progresión deliberada) ANTES de la próxima sesión, acá se
+  // le volvía a mostrar el número viejo de la sesión anterior, tapando el
+  // cambio que acababa de hacer. El Plan ya es la fuente de verdad
+  // (se actualiza solo con lo real), así que alcanza con leerlo directo.
   const elegirDia = (label: string) => {
     if (!draft) return;
     const dia = diasPlan.find((d) => d.label === label);
-    const ejercicios = dia ? conValoresReales(ejerciciosDesdeDia(dia), sesiones, label) : [];
+    const ejercicios = dia ? ejerciciosDesdeDia(dia) : [];
     setDraft({ ...draft, dia_plan_label: label, ejercicios });
   };
 

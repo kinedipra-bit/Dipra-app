@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { enmascararCorreo } from "@/lib/dipra/portalPin";
-import type { PlanSemana, Sesion } from "@/lib/dipra/types";
+import type { PlanSemana } from "@/lib/dipra/types";
 import { obtenerClientePortal, sesionValidaPara } from "../acceso";
 import { PortalAcceso } from "../PortalAcceso";
 import { AyudaSeccion } from "../AyudaSeccion";
@@ -32,7 +32,7 @@ export default async function PortalSesionesPage({ params }: { params: Promise<{
 
   const admin = createAdminClient();
 
-  const [{ data: semana }, diasConfirmados, { data: sesiones }] = await Promise.all([
+  const [{ data: semana }, diasConfirmados] = await Promise.all([
     cliente.semana_activa_id
       ? admin
           .from("plan_semanas")
@@ -41,11 +41,6 @@ export default async function PortalSesionesPage({ params }: { params: Promise<{
           .single<Pick<PlanSemana, "dias_publicado" | "publicado_at">>()
       : Promise.resolve({ data: null }),
     obtenerDiasConfirmados(cliente.id, toISODate(new Date())),
-    admin
-      .from("sesiones")
-      .select("fecha, dia_plan_label, ejercicios")
-      .eq("client_id", cliente.id)
-      .returns<Pick<Sesion, "fecha" | "dia_plan_label" | "ejercicios">[]>(),
   ]);
 
   return (
@@ -64,7 +59,6 @@ export default async function PortalSesionesPage({ params }: { params: Promise<{
         token={token}
         dias={semana?.dias_publicado ?? []}
         publicadoAt={semana?.publicado_at ?? null}
-        sesiones={sesiones ?? []}
       />
 
       <p className="dp-muted text-center text-xs">
