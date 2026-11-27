@@ -24,11 +24,17 @@ export function MovilidadEsferasSection({
 }) {
   const [items, setItems] = useState<MovilidadEsferaEntry[]>(initialItems);
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   const agregar = () => {
+    setError(null);
     startTransition(async () => {
-      const nuevo = await agregarMovilidadEsfera(clienteId);
-      setItems((prev) => [...prev, nuevo]);
+      try {
+        const nuevo = await agregarMovilidadEsfera(clienteId);
+        setItems((prev) => [...prev, nuevo]);
+      } catch {
+        setError("No se pudo agregar — revisá tu conexión y volvé a intentar.");
+      }
     });
   };
 
@@ -84,6 +90,8 @@ export function MovilidadEsferasSection({
         cráneo, tórax, pelvis, tobillo (ej. tobillo: Apertura = pie plano) — y anotá el resto como comentario.
         También podés dibujar el diagnóstico de cadenas a mano. Los cambios se guardan al salir del campo.
       </p>
+
+      {error && <p className="dp-alert mb-2 text-xs font-medium">⚠ {error}</p>}
 
       {items.length === 0 && (
         <p className="dp-muted py-4 text-center text-sm">Sin patrones evaluados todavía.</p>

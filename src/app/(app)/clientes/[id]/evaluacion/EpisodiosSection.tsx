@@ -43,6 +43,11 @@ export function EpisodiosSection({
   const [alicia, setAlicia] = useState<Record<string, string>>(items[0]?.dolor_alicia ?? emptyAlicia());
   const [pending, startTransition] = useTransition();
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  // Antes, si crearEpisodio/actualizarEpisodio fallaba (red, Supabase caído
+  // un instante), no había ningún aviso — el formulario se quedaba igual
+  // sin "Guardado.", pero nada le decía al profesional que en realidad no
+  // se guardó nada.
+  const [error, setError] = useState<string | null>(null);
 
   const setCampoAlicia = (key: string, value: string) => setAlicia((prev) => ({ ...prev, [key]: value }));
 
@@ -64,29 +69,41 @@ export function EpisodiosSection({
 
   const guardar = () => {
     if (!fecha) return;
+    setError(null);
     startTransition(async () => {
-      if (editingId === "new") {
-        const nuevo = await crearEpisodio(clienteId, fecha, motivo, alicia);
-        setItems((prev) => [nuevo, ...prev].sort((a, b) => b.fecha.localeCompare(a.fecha)));
-        setEditingId(nuevo.id);
-      } else if (editingId) {
-        await actualizarEpisodio(clienteId, editingId, fecha, motivo, alicia);
-        setItems((prev) =>
-          prev
-            .map((it) => (it.id === editingId ? { ...it, fecha, motivo_consulta: motivo, dolor_alicia: alicia } : it))
-            .sort((a, b) => b.fecha.localeCompare(a.fecha))
-        );
+      try {
+        if (editingId === "new") {
+          const nuevo = await crearEpisodio(clienteId, fecha, motivo, alicia);
+          setItems((prev) => [nuevo, ...prev].sort((a, b) => b.fecha.localeCompare(a.fecha)));
+          setEditingId(nuevo.id);
+        } else if (editingId) {
+          await actualizarEpisodio(clienteId, editingId, fecha, motivo, alicia);
+          setItems((prev) =>
+            prev
+              .map((it) =>
+                it.id === editingId ? { ...it, fecha, motivo_consulta: motivo, dolor_alicia: alicia } : it
+              )
+              .sort((a, b) => b.fecha.localeCompare(a.fecha))
+          );
+        }
+        setSavedAt(Date.now());
+      } catch {
+        setError("No se pudo guardar — revisá tu conexión y volvé a intentar. Lo que escribiste sigue acá.");
       }
-      setSavedAt(Date.now());
     });
   };
 
   const eliminar = (id: string) => {
     if (!confirm("¿Eliminar este episodio? Esta acción no se puede deshacer.")) return;
+    setError(null);
     startTransition(async () => {
-      await eliminarEpisodio(clienteId, id);
-      setItems((prev) => prev.filter((it) => it.id !== id));
-      if (editingId === id) setEditingId(null);
+      try {
+        await eliminarEpisodio(clienteId, id);
+        setItems((prev) => prev.filter((it) => it.id !== id));
+        if (editingId === id) setEditingId(null);
+      } catch {
+        setError("No se pudo eliminar — revisá tu conexión y volvé a intentar.");
+      }
     });
   };
 
@@ -106,6 +123,8 @@ export function EpisodiosSection({
         Un episodio por fecha — si el paciente vuelve por un motivo distinto, agregá uno nuevo en vez de
         editar el anterior. Los anteriores quedan siempre accesibles abajo.
       </p>
+
+      {error && <p className="dp-alert mb-2 text-xs font-medium">⚠ {error}</p>}
 
       {items.length > 1 && (
         <div className="mb-3 flex flex-wrap gap-1.5">

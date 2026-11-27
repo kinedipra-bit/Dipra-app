@@ -51,11 +51,17 @@ export function PruebasEspecialesSection({
     [...initialItems].sort((a, b) => b.fecha.localeCompare(a.fecha))
   );
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   const agregar = () => {
+    setError(null);
     startTransition(async () => {
-      const nueva = await crearPruebaEspecial(clienteId);
-      setItems((prev) => [nueva, ...prev]);
+      try {
+        const nueva = await crearPruebaEspecial(clienteId);
+        setItems((prev) => [nueva, ...prev]);
+      } catch {
+        setError("No se pudo agregar — revisá tu conexión y volvé a intentar.");
+      }
     });
   };
 
@@ -98,6 +104,8 @@ export function PruebasEspecialesSection({
         Dorsiflexión de tobillo, hombro (arco doloroso/Neer/Jobe/Hawkins), ASLR de pie y rotación torácica —
         se ven acá sin tener que abrir el FMS.
       </p>
+
+      {error && <p className="dp-alert mb-2 text-xs font-medium">⚠ {error}</p>}
 
       {items.length === 0 ? (
         <p className="dp-muted py-4 text-center text-sm">Sin pruebas especiales registradas todavía.</p>
