@@ -136,7 +136,7 @@ export default async function InicioPage() {
                 <span className="dp-body">
                   <span className="dp-text-heading font-mono font-medium">{c.hora}</span> —{" "}
                   {c.client_id ? (
-                    <Link href={`/clientes/${c.client_id}/ficha`} className="dp-text-brand hover:underline">
+                    <Link href={`/clientes/${c.client_id}/resumen`} className="dp-text-brand hover:underline">
                       {c.cliente_nombre}
                     </Link>
                   ) : (
@@ -158,7 +158,7 @@ export default async function InicioPage() {
           <ul className="flex flex-col divide-y divide-black/5">
             {clientesConAlerta.map((c) => (
               <li key={c.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-                <Link href={`/clientes/${c.id}/ficha`} className="dp-text-brand hover:underline">
+                <Link href={`/clientes/${c.id}/resumen`} className="dp-text-brand hover:underline">
                   {c.nombre}
                 </Link>
                 <div className="flex flex-wrap justify-end gap-1.5">
@@ -188,7 +188,7 @@ export default async function InicioPage() {
             {sinSeguimiento.map((c) => (
               <li key={c.citaId} className="flex items-center justify-between gap-3 py-2 text-sm">
                 <span className="dp-body">
-                  <Link href={`/clientes/${c.clienteId}/ficha`} className="dp-text-brand hover:underline">
+                  <Link href={`/clientes/${c.clienteId}/resumen`} className="dp-text-brand hover:underline">
                     {c.clienteNombre}
                   </Link>{" "}
                   <span className="dp-text-faint">
@@ -213,7 +213,7 @@ export default async function InicioPage() {
           <ul className="flex flex-col divide-y divide-black/5">
             {proximosCumpleanos.map((c) => (
               <li key={c.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-                <Link href={`/clientes/${c.id}/ficha`} className="dp-text-brand hover:underline">
+                <Link href={`/clientes/${c.id}/resumen`} className="dp-text-brand hover:underline">
                   {c.nombre}
                 </Link>
                 <span className="dp-muted text-xs">
