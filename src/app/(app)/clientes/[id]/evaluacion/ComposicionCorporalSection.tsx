@@ -42,33 +42,49 @@ export function ComposicionCorporalSection({
   const [showAdd, setShowAdd] = useState(false);
   const [draft, setDraft] = useState<Draft>(draftVacio());
   const [pending, startTransition] = useTransition();
+  // Antes, si agregarComposicion/eliminarComposicion fallaba (red, Supabase
+  // caído un instante), no pasaba nada visible: el formulario se cerraba
+  // igual o se quedaba ahí sin avisar, así que parecía guardado cuando en
+  // realidad nunca llegó a la base — de ahí mediciones "perdidas" que en
+  // realidad nunca se guardaron.
+  const [error, setError] = useState<string | null>(null);
 
   const inputClass =
     "mt-1 w-full rounded-md border border-black/10 bg-white px-2 py-1 text-sm outline-none focus:dp-border-brand";
 
   const agregar = () => {
     if (!draft.talla && !draft.peso) return;
+    setError(null);
     startTransition(async () => {
-      const nueva = await agregarComposicion(clienteId, {
-        fecha: draft.fecha,
-        talla: numOrNull(draft.talla),
-        peso: numOrNull(draft.peso),
-        grasa_pct: numOrNull(draft.grasaPct),
-        masa_muscular: numOrNull(draft.masaMuscular),
-        agua_pct: numOrNull(draft.aguaPct),
-        masa_osea: numOrNull(draft.masaOsea),
-      });
-      setItems((prev) => [nueva, ...prev].sort((a, b) => b.fecha.localeCompare(a.fecha)));
-      setDraft(draftVacio());
-      setShowAdd(false);
+      try {
+        const nueva = await agregarComposicion(clienteId, {
+          fecha: draft.fecha,
+          talla: numOrNull(draft.talla),
+          peso: numOrNull(draft.peso),
+          grasa_pct: numOrNull(draft.grasaPct),
+          masa_muscular: numOrNull(draft.masaMuscular),
+          agua_pct: numOrNull(draft.aguaPct),
+          masa_osea: numOrNull(draft.masaOsea),
+        });
+        setItems((prev) => [nueva, ...prev].sort((a, b) => b.fecha.localeCompare(a.fecha)));
+        setDraft(draftVacio());
+        setShowAdd(false);
+      } catch {
+        setError("No se pudo guardar — revisá tu conexión y volvé a intentar. Lo que escribiste sigue acá.");
+      }
     });
   };
 
   const eliminar = (id: string) => {
     if (!confirm("¿Eliminar esta medición?")) return;
+    setError(null);
     startTransition(async () => {
-      await eliminarComposicion(clienteId, id);
-      setItems((prev) => prev.filter((c) => c.id !== id));
+      try {
+        await eliminarComposicion(clienteId, id);
+        setItems((prev) => prev.filter((c) => c.id !== id));
+      } catch {
+        setError("No se pudo eliminar — revisá tu conexión y volvé a intentar.");
+      }
     });
   };
 
@@ -88,6 +104,8 @@ export function ComposicionCorporalSection({
         Talla, peso e IMC siempre; % grasa, masa muscular, % agua y masa ósea si tienes los datos (ej.
         balanza Body Pro).
       </p>
+
+      {error && <p className="dp-alert mb-2 text-xs font-medium">⚠ {error}</p>}
 
       {showAdd && (
         <div className="dp-bg-faint mb-3 grid grid-cols-4 gap-2 rounded-xl p-3">

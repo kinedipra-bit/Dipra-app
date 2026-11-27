@@ -134,6 +134,10 @@ export function FmsSection({
   const [fecha, setFecha] = useState("");
   const [fms, setFms] = useState<FmsData>(emptyFms());
   const [pending, startTransition] = useTransition();
+  // Antes, si fallaba el guardado (red, Supabase caído un instante), no
+  // había ningún aviso visible — parecía guardado cuando en realidad nunca
+  // llegó a la base.
+  const [error, setError] = useState<string | null>(null);
 
   const abrirNueva = () => {
     setEditingId("new");
@@ -173,28 +177,38 @@ export function FmsSection({
 
   const guardar = () => {
     if (!fecha) return;
+    setError(null);
     startTransition(async () => {
-      if (editingId === "new") {
-        const nueva = await crearFmsHistorial(clienteId, fecha, fms);
-        setItems((prev) => [nueva, ...prev].sort((a, b) => b.fecha.localeCompare(a.fecha)));
-      } else if (editingId) {
-        await actualizarFmsHistorial(clienteId, editingId, fecha, fms);
-        setItems((prev) =>
-          prev
-            .map((it) => (it.id === editingId ? { ...it, fecha, fms } : it))
-            .sort((a, b) => b.fecha.localeCompare(a.fecha))
-        );
+      try {
+        if (editingId === "new") {
+          const nueva = await crearFmsHistorial(clienteId, fecha, fms);
+          setItems((prev) => [nueva, ...prev].sort((a, b) => b.fecha.localeCompare(a.fecha)));
+        } else if (editingId) {
+          await actualizarFmsHistorial(clienteId, editingId, fecha, fms);
+          setItems((prev) =>
+            prev
+              .map((it) => (it.id === editingId ? { ...it, fecha, fms } : it))
+              .sort((a, b) => b.fecha.localeCompare(a.fecha))
+          );
+        }
+        setEditingId(null);
+      } catch {
+        setError("No se pudo guardar — revisá tu conexión y volvé a intentar. Lo que cargaste sigue acá.");
       }
-      setEditingId(null);
     });
   };
 
   const eliminar = (id: string) => {
     if (!confirm("¿Eliminar esta evaluación FMS? Esta acción no se puede deshacer.")) return;
+    setError(null);
     startTransition(async () => {
-      await eliminarFmsHistorial(clienteId, id);
-      setItems((prev) => prev.filter((it) => it.id !== id));
-      if (editingId === id) setEditingId(null);
+      try {
+        await eliminarFmsHistorial(clienteId, id);
+        setItems((prev) => prev.filter((it) => it.id !== id));
+        if (editingId === id) setEditingId(null);
+      } catch {
+        setError("No se pudo eliminar — revisá tu conexión y volvé a intentar.");
+      }
     });
   };
 
@@ -216,6 +230,8 @@ export function FmsSection({
         Cada evaluación queda guardada con su fecha — podés cambiarla si estás cargando una evaluación
         antigua.
       </p>
+
+      {error && <p className="dp-alert mb-2 text-xs font-medium">⚠ {error}</p>}
 
       {items.length === 0 && editingId === null ? (
         <p className="dp-muted py-3 text-center text-sm">Sin evaluaciones FMS registradas todavía.</p>

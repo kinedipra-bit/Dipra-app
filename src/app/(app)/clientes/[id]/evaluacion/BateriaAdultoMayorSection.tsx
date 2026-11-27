@@ -98,6 +98,10 @@ export function BateriaAdultoMayorSection({
   const [abierto, setAbierto] = useState(false);
   const [draft, setDraft] = useState<Draft>(draftVacio());
   const [pending, startTransition] = useTransition();
+  // Antes, si fallaba el guardado (red, Supabase caído un instante), no
+  // había ningún aviso visible — parecía guardado cuando en realidad nunca
+  // llegó a la base.
+  const [error, setError] = useState<string | null>(null);
 
   const abrirNueva = () => {
     setDraft(draftVacio());
@@ -115,23 +119,33 @@ export function BateriaAdultoMayorSection({
 
   const guardar = () => {
     if (!draft.fecha) return;
+    setError(null);
     startTransition(async () => {
-      const input = {
-        fecha: draft.fecha,
-        notas: draft.notas,
-        ...draftNums,
-      } as Omit<BateriaAdultoMayorEntry, "id" | "client_id" | "created_at">;
-      const nueva = await crearBateriaAdultoMayor(clienteId, input);
-      setItems((prev) => [nueva, ...prev].sort((a, b) => b.fecha.localeCompare(a.fecha)));
-      setAbierto(false);
+      try {
+        const input = {
+          fecha: draft.fecha,
+          notas: draft.notas,
+          ...draftNums,
+        } as Omit<BateriaAdultoMayorEntry, "id" | "client_id" | "created_at">;
+        const nueva = await crearBateriaAdultoMayor(clienteId, input);
+        setItems((prev) => [nueva, ...prev].sort((a, b) => b.fecha.localeCompare(a.fecha)));
+        setAbierto(false);
+      } catch {
+        setError("No se pudo guardar — revisá tu conexión y volvé a intentar. Lo que cargaste sigue acá.");
+      }
     });
   };
 
   const eliminar = (id: string) => {
     if (!confirm("¿Eliminar esta batería adulto mayor? Esta acción no se puede deshacer.")) return;
+    setError(null);
     startTransition(async () => {
-      await eliminarBateriaAdultoMayor(clienteId, id);
-      setItems((prev) => prev.filter((it) => it.id !== id));
+      try {
+        await eliminarBateriaAdultoMayor(clienteId, id);
+        setItems((prev) => prev.filter((it) => it.id !== id));
+      } catch {
+        setError("No se pudo eliminar — revisá tu conexión y volvé a intentar.");
+      }
     });
   };
 
@@ -153,6 +167,8 @@ export function BateriaAdultoMayorSection({
         TUG, sit-to-stand, balance unipodal, step up y velocidad de marcha — tests funcionales validados
         para riesgo de caída y capacidad física en adultos mayores.
       </p>
+
+      {error && <p className="dp-alert mb-2 text-xs font-medium">⚠ {error}</p>}
 
       {items.length === 0 && !abierto ? (
         <p className="dp-muted py-3 text-center text-sm">Sin baterías registradas todavía.</p>
