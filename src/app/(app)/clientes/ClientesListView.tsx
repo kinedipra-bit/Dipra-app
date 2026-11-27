@@ -44,7 +44,7 @@ export function ClientesListView({ clientes }: { clientes: ClienteFila[] }) {
           {filtrados.map((c) => (
             <Link
               key={c.id}
-              href={`/clientes/${c.id}/ficha`}
+              href={`/clientes/${c.id}/resumen`}
               className="flex items-center gap-3 p-3 transition-colors hover:dp-bg-faint"
             >
               <Avatar iniciales={c.iniciales} size={36} />

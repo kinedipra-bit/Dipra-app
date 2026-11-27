@@ -37,7 +37,7 @@ export async function createCliente(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/clientes");
-  redirect(`/clientes/${data.id}/ficha`);
+  redirect(`/clientes/${data.id}/resumen`);
 }
 
 export async function deleteCliente(clienteId: string) {
